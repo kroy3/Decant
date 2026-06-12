@@ -1,0 +1,22 @@
+Package: Decant
+Title: Benchmark-First Toolkit for Ambient RNA Decontamination Research
+Version: 0.1.0.9000
+Authors@R:
+    person("Kushal Raj", "Roy", email = "kushalrajroy1@gmail.com",
+           role = c("aut", "cre"), comment = c(ORCID = "0000-0002-4664-7462"))
+Description: A research scaffold for developing and HONESTLY evaluating ambient
+    RNA decontamination methods for single-cell and single-nucleus RNA-seq.
+    Ships a ground-truth simulator, a global-soup baseline (the assumption used
+    by SoupX and DecontX), a structured-soup experimental method, a
+    mass-conserving correction step that cannot fabricate counts, and a metric
+    suite mirroring the published benchmarks. The design principle is
+    benchmark-first: a method is not added to the claims until the harness can
+    show, against ground truth, that it earns its place. NOTE: name "Decant" is
+    a working placeholder and must be checked against CRAN/Bioconductor/GitHub
+    before any release.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends: R (>= 4.1)
+Imports: stats
+Suggests: Matrix, testthat (>= 3.0.0)
+RoxygenNote: 7.3.1

@@ -1,0 +1,31 @@
+# core
+export(simulate_experiment)
+export(ambient_global)
+export(ambient_structured)
+export(cluster_basis)
+export(correct_counts)
+export(estimate_rho)
+export(score_correction)
+export(soup_profile_error)
+export(run_benchmark)
+export(summarise_benchmark)
+# competitors (reimplementations for benchmarking)
+export(decontx_em)
+export(quick_labels)
+# multimodal simulator
+export(simulate_multimodal)
+# modules
+export(correct_splice_aware)        # GAP1  (passed)
+export(correct_total_then_split)
+export(pool_soup)                   # GAP3  (passed)
+export(simulate_allelic)            # GAP5  (passed)
+export(estimate_rho_allelic)
+export(simulate_de)                 # GAP2  (FAILED gate)
+export(de_naive)
+export(de_ambient_aware)
+# assembled pipeline
+export(decant)
+export(decant_de_experimental)
+# gates
+export(gate_splice); export(gate_hier); export(gate_allelic)
+export(gate_diagnose); export(gate_de)
