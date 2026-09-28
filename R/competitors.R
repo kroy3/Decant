@@ -20,8 +20,11 @@
 #' @param observed genes x cells counts.
 #' @param labels integer cluster labels per cell (length = ncol).
 #' @param iters EM iterations.
+#' @param eps numerical floor.
 #' @return list with $corrected (genes x cells) and $theta (per-cell contamination).
+#' @export
 decontx_em <- function(observed, labels, iters = 30, eps = 1e-10) {
+  observed <- as.matrix(observed)
   G <- nrow(observed); N <- ncol(observed)
   K <- length(unique(labels)); ulab <- sort(unique(labels))
   cs <- colSums(observed); cs[cs == 0] <- 1
@@ -66,15 +69,4 @@ decontx_em <- function(observed, labels, iters = 30, eps = 1e-10) {
     }, numeric(G))
   }
   list(corrected = native, theta = theta)
-}
-
-#' Simple k-means labels for feeding DecontX-style EM (kept separate so the
-#' clustering choice is explicit and shared across methods that need it).
-quick_labels <- function(observed, k = 6, n_hvg = 200, seed = 1) {
-  set.seed(seed)
-  cs <- colSums(observed); cs[cs == 0] <- 1
-  logn <- log1p(sweep(observed, 2, cs, "/") * 1e4)
-  v <- apply(logn, 1, var)
-  hvg <- order(v, decreasing = TRUE)[seq_len(min(n_hvg, nrow(logn)))]
-  kmeans(t(logn[hvg, ]), centers = k, nstart = 5, iter.max = 50)$cluster
 }

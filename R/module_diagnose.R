@@ -8,6 +8,8 @@
 #' GATE: with a clean (oracle) program basis, do recovered lysis weights track
 #' the true lysis weights? Reported as rank correlation; clustering noise lowers
 #' this in real use.
+#' @param seeds replicate seeds.
+#' @export
 gate_diagnose <- function(seeds = 1:4) {
   rhos <- c()
   for (s in seeds) {

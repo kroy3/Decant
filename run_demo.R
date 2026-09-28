@@ -6,10 +6,8 @@
 ##   soup_bias > 0  -> soup is biased toward fragile types, global is wrong,
 ##                     structured should recover the true soup and correct better.
 
-pkg <- file.path(dirname(sub("--file=", "",
-        grep("--file=", commandArgs(trailingOnly = FALSE), value = TRUE)[1])), "Decant", "R")
-if (!dir.exists(pkg)) pkg <- "Decant/R"
-for (f in list.files(pkg, pattern = "\\.R$", full.names = TRUE)) source(f)
+## Run from the repo root. Uses the installed package, or the source tree via pkgload.
+if (requireNamespace("pkgload", quietly = TRUE)) pkgload::load_all(".", quiet = TRUE) else library(Decant)
 
 cat("Running benchmark (global soup vs structured soup) ...\n\n")
 df  <- run_benchmark(soup_bias_grid = c(0, 1, 2, 4), reps = 3, rho_mean = 0.2)
