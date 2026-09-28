@@ -134,6 +134,36 @@ did not survive, and they are corrected here rather than quietly edited:
   stress simulator exists because the original one made rho estimation too
   easy.
 
+## Real-data validation (in progress)
+
+`validation/species_mix.R` scores Decant on public 10x human/mouse mixtures
+(`hgmm_1k_v3`, `hgmm_5k_v3`, `hgmm_10k_v3`), where every cross-species read is
+known contamination, so rho is measured experimentally instead of simulated.
+It runs the OFFICIAL SoupX and DecontX when they are installed (never the
+in-repo reimplementations), and reports each missing comparator as "not run".
+
+```bash
+Rscript validation/species_mix.R              # all datasets
+Rscript validation/species_mix.R hgmm_1k_v3   # one dataset
+```
+
+Two tests per dataset:
+
+- **full**: all cells, both genomes. Comparable to published benchmarks, but
+  easy for absent-gene estimators, because the other genome is a perfect set
+  of absent genes. A good score here alone shows little.
+- **hidden**: majority-species cells with that species' genes only. The
+  estimator has to work as it would on ordinary single-species data, while the
+  truth still comes from the cross-species reads it cannot see. This is the
+  test that matters.
+
+The truth derivation is unit-tested on a synthetic mixture with known rho (it
+recovers the mean within 0.01). **No real-data numbers are reported yet:** the
+datasets have not been run. Downloads need network access to
+`cf.10xgenomics.com`. Alternatively, place the extracted
+`raw_feature_bc_matrix/` and `filtered_feature_bc_matrix/` folders under
+`validation/data/<dataset>/raw/` and `validation/data/<dataset>/filtered/`.
+
 ## The non-negotiable next step
 
 Nothing here is a real-world claim until it is re-run on experimental ground
