@@ -37,13 +37,35 @@
 #' @param rho_mean mean contamination fraction per cell (snRNA-seq tends to run
 #'   higher than scRNA-seq; try 0.1 vs 0.3).
 #' @param n_empty number of empty droplets profiled (the soup observation).
+#' @param rho_conc Beta concentration of per-cell rho (higher = less spread).
+#' @param lib_mean mean library size.
+#' @param seed RNG seed.
+#' @param shared_frac in [0,1): fraction of every type's profile drawn from one
+#'   shared "housekeeping" program. Higher = fewer genes that are cleanly absent
+#'   from any type, which is exactly what makes rho hard to identify. 0 (default)
+#'   reproduces the original, easy simulator.
+#' @param overdispersion cell-level gamma noise on the expression profile
+#'   (variance of the multiplicative factor). 0 (default) = pure multinomial.
+#' @param type_prob optional length-n_types relative abundances (e.g. to create
+#'   rare types). NULL (default) = equal abundances.
+#' @param lib_sdlog log-scale sd of library sizes.
 #' @return list with $observed, $truth (clean own counts), $empty, $soup_true,
-#'   $lysis_true, $rho_true, $labels. Matrices are genes x cells.
+#'   $lysis_true, $rho_true, $labels, $profiles. Matrices are genes x cells.
+#' @details The three stress knobs (`shared_frac`, `overdispersion`,
+#'   `type_prob`) consume no random draws when left at their defaults, so
+#'   results for a given seed are identical to earlier versions.
+#' @export
 simulate_experiment <- function(n_genes = 600, n_types = 6, n_cells = 1200,
                                 soup_bias = 3, rho_mean = 0.2, rho_conc = 25,
-                                n_empty = 4000, lib_mean = 3000, seed = 1) {
+                                n_empty = 4000, lib_mean = 3000, seed = 1,
+                                shared_frac = 0, overdispersion = 0,
+                                type_prob = NULL, lib_sdlog = 0.4) {
   set.seed(seed)
   prof <- .make_profiles(n_genes, n_types)
+  if (shared_frac > 0) {
+    hk <- rgamma(n_genes, shape = 0.3, rate = 1); hk <- hk / sum(hk)
+    prof <- shared_frac * hk + (1 - shared_frac) * prof
+  }
 
   ## lysis weights: which types bleed into the soup. soup_bias=0 -> uniform.
   fragility <- exp(soup_bias * scale(seq_len(n_types))[, 1])
@@ -52,8 +74,9 @@ simulate_experiment <- function(n_genes = 600, n_types = 6, n_cells = 1200,
   soup_true <- soup_true / sum(soup_true)
 
   ## cells
-  labels <- sample(seq_len(n_types), n_cells, replace = TRUE)
-  libs   <- round(rlnorm(n_cells, log(lib_mean), 0.4))
+  labels <- if (is.null(type_prob)) sample(seq_len(n_types), n_cells, replace = TRUE)
+            else sample(seq_len(n_types), n_cells, replace = TRUE, prob = type_prob)
+  libs   <- round(rlnorm(n_cells, log(lib_mean), lib_sdlog))
   rho    <- rbeta(n_cells, rho_mean * rho_conc, (1 - rho_mean) * rho_conc)
 
   observed <- matrix(0L, n_genes, n_cells)
@@ -62,7 +85,12 @@ simulate_experiment <- function(n_genes = 600, n_types = 6, n_cells = 1200,
     T_c <- libs[c]
     n_own  <- rbinom(1, T_c, 1 - rho[c])
     n_soup <- T_c - n_own
-    own  <- rmultinom(1, n_own,  prof[, labels[c]])[, 1]
+    p_own <- prof[, labels[c]]
+    if (overdispersion > 0) {
+      p_own <- p_own * rgamma(n_genes, 1 / overdispersion, 1 / overdispersion)
+      p_own <- p_own / sum(p_own)
+    }
+    own  <- rmultinom(1, n_own,  p_own)[, 1]
     soup <- rmultinom(1, n_soup, soup_true)[, 1]
     truth[, c]    <- own              # what a perfect method must recover
     observed[, c] <- own + soup       # what the sequencer actually reports
