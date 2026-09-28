@@ -7,7 +7,8 @@
 ## soup to the span of cell programs project the junk away and beat the global
 ## estimate that swallows it whole?
 
-for (f in list.files("Decant/R", pattern="\\.R$", full.names=TRUE)) source(f)
+## Run from the repo root. Uses the installed package, or the source tree via pkgload.
+if (requireNamespace("pkgload", quietly = TRUE)) pkgload::load_all(".", quiet = TRUE) else library(Decant)
 
 run_one <- function(junk_frac, seed) {
   sim <- simulate_experiment(soup_bias = 3, rho_mean = 0.2, n_empty = 4000, seed = seed)
@@ -29,7 +30,8 @@ run_one <- function(junk_frac, seed) {
   empty_corrupt <- empty_corrupt + add
 
   soup0   <- ambient_global(empty_corrupt)
-  rho_hat <- estimate_rho(sim$observed, soup0)
+  rho_hat <- as.numeric(estimate_rho_cluster(sim$observed, soup0,
+                                             quick_labels(sim$observed, k = 6, seed = seed)))
 
   ## global: uses corrupted empties directly
   soup_g <- ambient_global(empty_corrupt)

@@ -3,9 +3,13 @@
 ## simulated data, holding rho estimation FIXED so the comparison isolates the
 ## ambient-profile model. Sweep soup_bias to expose the regime where each wins.
 
+#' Global vs structured soup benchmark.
+#'
 #' @param soup_bias_grid vector of soup-bias values to test (0 = uniform soup).
 #' @param reps replicate simulations per setting (different seeds).
+#' @param rho_mean,n_genes,n_types,n_cells,n_empty passed to [simulate_experiment()].
 #' @return data.frame, one row per (method, soup_bias, rep).
+#' @export
 run_benchmark <- function(soup_bias_grid = c(0, 1, 2, 4),
                           reps = 3, rho_mean = 0.2,
                           n_genes = 600, n_types = 6, n_cells = 1200, n_empty = 4000) {
@@ -20,7 +24,8 @@ run_benchmark <- function(soup_bias_grid = c(0, 1, 2, 4),
       ## SHARED rho, estimated once from a neutral (global) soup so neither
       ## method is advantaged on the rho axis.
       soup0 <- ambient_global(sim$empty)
-      rho_hat <- estimate_rho(sim$observed, soup0)
+      rho_hat <- as.numeric(estimate_rho_cluster(
+        sim$observed, soup0, quick_labels(sim$observed, k = n_types, seed = r)))
 
       ## --- baseline: global soup ---
       soup_g <- ambient_global(sim$empty)
@@ -54,6 +59,8 @@ run_benchmark <- function(soup_bias_grid = c(0, 1, 2, 4),
 }
 
 #' Aggregate to mean +/- sd per (method, soup_bias).
+#' @param df output of [run_benchmark()].
+#' @export
 summarise_benchmark <- function(df) {
   agg <- aggregate(cbind(sensitivity, residual_contam, signal_destroyed,
                          preservation, soup_err, fabricated) ~ method + soup_bias,

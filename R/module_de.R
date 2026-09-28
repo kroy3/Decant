@@ -9,6 +9,11 @@
 #'   null      : no difference anywhere
 #'   true_de   : differs in NATIVE expression between conditions (real signal)
 #'   ambient_de: native identical, but SOUP differs between conditions (a trap)
+#' @param n_genes,n_true,n_amb,n_rep gene-class sizes and replicates per condition.
+#' @param rho_bar mean contamination.
+#' @param fc,amb_fc native and ambient fold changes.
+#' @param seed RNG seed.
+#' @export
 simulate_de <- function(n_genes = 400, n_true = 40, n_amb = 40, n_rep = 5,
                         rho_bar = 0.2, fc = 2.5, amb_fc = 3, seed = 1) {
   set.seed(seed)
@@ -44,19 +49,36 @@ simulate_de <- function(n_genes = 400, n_true = 40, n_amb = 40, n_rep = 5,
 
 .logcpm <- function(m) log1p(sweep(m, 2, colSums(m), "/") * 1e6)
 
+## log-normalised counts with median-of-ratios size factors (DESeq2-style).
+## Plain CPM is NOT composition-robust: when 40 genes go up 2.5x in condition B,
+## every other gene's CPM drops, and at this depth that shift alone made naive
+## DE call ~58% of NULL genes significant -- which invalidated the v0 gate.
+.lognorm_mor <- function(m) {
+  pos <- rowSums(m > 0) == ncol(m)
+  lref <- rowMeans(log(m[pos, , drop = FALSE]))
+  sf <- apply(m[pos, , drop = FALSE], 2, function(x) exp(stats::median(log(x) - lref)))
+  log1p(sweep(m, 2, sf, "/"))
+}
+
 #' Naive: subtract ambient point estimate, then test condition per gene.
+#' @param sim output of [simulate_de()].
+#' @return per-gene p-values.
+#' @export
 de_naive <- function(sim) {
   corrected <- sim$obs - sweep(sim$amb_load, 2, colSums(sim$obs), "*")
   corrected[corrected < 0] <- 0
-  y <- .logcpm(corrected)
+  y <- .lognorm_mor(corrected)
   apply(y, 1, function(g) tryCatch(
     summary(lm(g ~ sim$cond))$coefficients[2, 4], error = function(e) NA))
 }
 
 #' Decant: test condition on OBSERVED data with the ambient load as a covariate,
 #' so condition-correlated ambient is absorbed instead of mistaken for signal.
+#' @inheritParams de_naive
+#' @return per-gene p-values.
+#' @export
 de_ambient_aware <- function(sim) {
-  y <- .logcpm(sim$obs)
+  y <- .lognorm_mor(sim$obs)
   al <- .logcpm(sim$amb_load + 1e-9)
   vapply(seq_len(nrow(y)), function(i) tryCatch(
     summary(lm(y[i, ] ~ sim$cond + al[i, ]))$coefficients["sim$condB", 4],
@@ -64,9 +86,14 @@ de_ambient_aware <- function(sim) {
 }
 
 #' GATE: false-positive rate on ambient-trap genes (should be low for Decant,
-#' inflated for naive) while preserving power on true_de genes.
+#' inflated for naive) while preserving power on true_de genes. Also reports
+#' the NULL-gene false-positive rate: if that is not near alpha the simulator or
+#' normalisation is broken and the gate result is meaningless.
+#' @param seeds replicate seeds.
+#' @param alpha significance level.
+#' @export
 gate_de <- function(seeds = 1:4, alpha = 0.05) {
-  fp_n <- c(); fp_d <- c(); pw_n <- c(); pw_d <- c()
+  fp_n <- c(); fp_d <- c(); pw_n <- c(); pw_d <- c(); nl_n <- c(); nl_d <- c()
   for (s in seeds) {
     sim <- simulate_de(seed = s)
     pn <- de_naive(sim); pd <- de_ambient_aware(sim)
@@ -74,7 +101,12 @@ gate_de <- function(seeds = 1:4, alpha = 0.05) {
     fp_d <- c(fp_d, mean(pd[sim$amb_idx] < alpha, na.rm = TRUE))
     pw_n <- c(pw_n, mean(pn[sim$true_idx] < alpha, na.rm = TRUE))
     pw_d <- c(pw_d, mean(pd[sim$true_idx] < alpha, na.rm = TRUE))
+    nl_n <- c(nl_n, mean(pn[sim$null_idx] < alpha, na.rm = TRUE))
+    nl_d <- c(nl_d, mean(pd[sim$null_idx] < alpha, na.rm = TRUE))
   }
+  cat(sprintf("  NULL-gene FP rate (calibration)    | naive=%.2f  Decant=%.2f  %s\n",
+              mean(nl_n), mean(nl_d),
+              if (mean(nl_n) < 2 * alpha) "benchmark calibrated" else "BENCHMARK MISCALIBRATED: gate invalid"))
   cat(sprintf("  ambient-trap FALSE POSITIVE rate | naive=%.2f  Decant=%.2f  %s\n",
               mean(fp_n), mean(fp_d),
               if (mean(fp_d) < mean(fp_n) - 0.05) "DECANT CONTROLS FP" else "no gain"))

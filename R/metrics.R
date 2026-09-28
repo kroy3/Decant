@@ -3,9 +3,15 @@
 ## the published benchmarks: contamination removed, endogenous signal preserved,
 ## and an explicit fabrication audit.
 
+#' Score a corrected matrix against ground truth.
+#'
 #' @param observed,corrected,truth genes x cells matrices (truth = clean own counts).
-#' @return named list of scalar metrics.
+#' @return named list of scalar metrics. `l1_error` = sum|corrected - truth| /
+#'   sum(truth): residual contamination and destroyed signal on one scale, so a
+#'   method cannot look good by trading one for the other.
+#' @export
 score_correction <- function(observed, corrected, truth) {
+  observed <- as.matrix(observed); corrected <- as.matrix(corrected); truth <- as.matrix(truth)
   injected  <- observed - truth                # the soup counts that were added (>=0)
   removed   <- observed - corrected            # what the method took out (>=0 by guarantee)
   injected[injected < 0] <- 0
@@ -37,18 +43,25 @@ score_correction <- function(observed, corrected, truth) {
   ## FABRICATION AUDIT: must be exactly 0 for a mass-conserving method.
   fabricated <- sum(pmax(corrected - observed, 0))
 
+  l1_error <- sum(abs(corrected - truth)) / tot_truth
+
   list(
     sensitivity            = sensitivity,            # higher better (0-1)
     residual_contam_frac   = residual_contam_frac,   # lower better
     signal_destroyed_frac  = signal_destroyed_frac,  # lower better
     preservation_cosine    = preservation,           # higher better (~1)
+    l1_error               = l1_error,               # lower better
     counts_fabricated      = fabricated               # MUST be 0
   )
 }
 
+#' Soup-profile recovery error.
+#'
 #' Soup-profile recovery error: how close the estimated ambient profile is to
 #' the true soup. This is the mechanism the structured method is meant to fix,
 #' so report it directly. L1 distance between probability vectors (0 = perfect).
+#' @param soup_hat,soup_true ambient profiles (normalised internally).
+#' @export
 soup_profile_error <- function(soup_hat, soup_true) {
   sum(abs(soup_hat / sum(soup_hat) - soup_true / sum(soup_true)))
 }

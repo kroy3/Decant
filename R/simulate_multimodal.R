@@ -8,28 +8,20 @@
 ## its signal is dead; a module that wins here still must be re-tested on real
 ## species/genotype-mixing data before any claim.
 
-.profiles <- function(n_genes, n_types, n_markers = 15, marker_strength = 40, alpha = 0.3) {
-  prof <- matrix(0, n_genes, n_types)
-  for (k in seq_len(n_types)) {
-    base <- rgamma(n_genes, alpha, 1)
-    idx <- ((k - 1) * n_markers + 1):(k * n_markers); idx <- idx[idx <= n_genes]
-    base[idx] <- base[idx] + marker_strength
-    prof[, k] <- base / sum(base)
-  }
-  prof
-}
-
 #' Multi-sample, splice-resolved contaminated experiment with ground truth.
 #'
 #' @param n_samples number of samples; each gets its own soup that shares a global
 #'   structure but deviates (between_sample_var), and its own empty-droplet pool.
 #' @param empty_per_sample vector (length n_samples) of empties per sample; set
 #'   some low to stress hierarchical pooling.
-#' @param splice_distinct in [0,1]: how differently ambient vs native split into
+#' @param splice_distinct in 0-1: how differently ambient vs native split into
 #'   unspliced/spliced. 0 = identical (negative control for the splice module).
+#' @param n_genes,n_types,n_cells dimensions.
+#' @param soup_bias,rho_mean,rho_conc,between_sample_var,lib_mean,seed simulation knobs.
 #' @return list of layers (genes x cells) for spliced/unspliced observed and
 #'   truth, per-sample empties (with splice layers), sample/label vectors, and
 #'   the true soup profiles.
+#' @export
 simulate_multimodal <- function(n_genes = 600, n_types = 6, n_cells = 1500,
                                 n_samples = 6, empty_per_sample = NULL,
                                 soup_bias = 3, rho_mean = 0.2, rho_conc = 25,
@@ -38,7 +30,7 @@ simulate_multimodal <- function(n_genes = 600, n_types = 6, n_cells = 1500,
   set.seed(seed)
   if (is.null(empty_per_sample))
     empty_per_sample <- rep(c(3000, 300), length.out = n_samples)  # mix of rich/poor
-  prof <- .profiles(n_genes, n_types)
+  prof <- unname(.make_profiles(n_genes, n_types))
 
   ## native vs ambient splice fractions (prob a molecule is UNSPLICED/intronic).
   ## nuclei native skews unspliced (high); ambient (cytoplasmic) skews spliced (low).

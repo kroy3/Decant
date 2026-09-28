@@ -6,10 +6,12 @@
 #' Empirical-Bayes-style shrinkage of per-sample soup profiles.
 #' @param empties_total list of genes x droplets matrices, one per sample.
 #' @return list with $pooled (genes x samples) and $independent (genes x samples).
+#' @export
 pool_soup <- function(empties_total) {
+  empties_total <- lapply(empties_total, .as_counts, what = "empties")
   S <- length(empties_total)
   ## independent per-sample estimate + the count mass behind it
-  indep <- vapply(empties_total, function(e) { p <- rowSums(e); p / sum(p) },
+  indep <- vapply(empties_total, function(e) { p <- .row_sums(e); p / sum(p) },
                   numeric(nrow(empties_total[[1]])))
   mass <- vapply(empties_total, function(e) sum(e), numeric(1))
   global <- rowMeans(indep)
@@ -29,6 +31,8 @@ pool_soup <- function(empties_total) {
 #' GATE: for empty-poor samples, is the pooled soup closer to truth than the
 #' independent estimate? For empty-rich samples, are they about equal (pooling
 #' should not hurt)?
+#' @param seeds replicate seeds.
+#' @export
 gate_hier <- function(seeds = 1:3) {
   poor_gain <- c(); rich_gain <- c()
   for (s in seeds) {
