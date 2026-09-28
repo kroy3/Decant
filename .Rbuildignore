@@ -6,3 +6,4 @@
 ^compare_methods\.R$
 ^steelman_empty_mismatch\.R$
 ^LICENSE\.md$
+^validation$
