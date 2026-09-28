@@ -6,6 +6,11 @@
 ## marker-based one -- because it uses strictly more information.
 
 #' Simulate a pooled multi-genotype experiment with allele-resolved SNP genes.
+#' @param n_cells,n_donors,n_snp dimensions.
+#' @param rho_mean,rho_conc Beta parameters of per-cell contamination.
+#' @param snp_lib mean SNP-covering reads per cell.
+#' @param seed RNG seed.
+#' @export
 #' @return list with per-cell own/other allele counts and true rho.
 simulate_allelic <- function(n_cells = 1500, n_donors = 8, n_snp = 300,
                              rho_mean = 0.2, rho_conc = 25, snp_lib = 800, seed = 1) {
@@ -32,6 +37,9 @@ simulate_allelic <- function(n_cells = 1500, n_donors = 8, n_snp = 300,
 #' Allelic rho estimate. Fraction of mismatched-allele reads = rho * P(soup read
 #' is from another donor). With pool abundances a_d, for a cell of donor d that
 #' probability is (1 - a_d). Invert to recover rho.
+#' @param allelic list with own, other, donor, abund (see [simulate_allelic()]).
+#' @return per-cell rho.
+#' @export
 estimate_rho_allelic <- function(allelic) {
   tot <- allelic$own + allelic$other
   mismatch_frac <- allelic$other / pmax(tot, 1)
@@ -42,6 +50,8 @@ estimate_rho_allelic <- function(allelic) {
 
 #' GATE: allelic rho error vs a marker-style proxy (here: assuming uniform pool,
 #' the naive 1/n_donors correction a non-allelic method would implicitly make).
+#' @param seeds replicate seeds.
+#' @export
 gate_allelic <- function(seeds = 1:3) {
   e_allelic <- c(); e_naive <- c()
   for (s in seeds) {
