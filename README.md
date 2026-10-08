@@ -31,6 +31,31 @@ res$corrected             # corrected counts, still a sparse dgCMatrix
 res$rho_diagnostics       # per-cluster rho, absent-gene power, borrowing
 ```
 
+### From a Seurat object
+
+```r
+obj <- RunDecant(obj, raw = "sample/outs/raw_feature_bc_matrix")
+obj <- NormalizeData(obj, assay = "Decant")   # then your usual workflow
+obj$decant_rho                                # per-cell contamination
+Misc(obj, "decant")$rho_diagnostics           # per-cluster reliability
+```
+
+`RunDecant()` uses your `Idents()` as clusters and writes the corrected counts
+to a new `Decant` assay, leaving `RNA` untouched. It handles the bookkeeping
+that usually breaks this step. Seurat renames `_` to `-` in gene names, so the
+raw matrix is renamed the same way. Barcodes prefixed by
+`merge(add.cell.ids=)` or suffixed by integration are matched back to the raw
+matrix, and every cell must match or it stops with examples. Split v5 layers
+are joined. Normalised or SCTransformed data is refused, because Decant needs
+raw UMI counts. For a merged multi-sample object, pass one raw matrix per
+sample:
+
+```r
+obj <- RunDecant(obj, raw = list(A = "A/raw_feature_bc_matrix",
+                                 B = "B/raw_feature_bc_matrix"),
+                 sample_col = "sample")
+```
+
 Pass your own clusters (Seurat / SCE) when you have them; otherwise k-means is
 run. Inputs may be dense matrices or `Matrix::dgCMatrix`. Sparse inputs stay
 sparse end to end: a 20k-gene x 20k-cell sparse matrix (229 MB) runs in
