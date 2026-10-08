@@ -1,6 +1,6 @@
 Package: Decant
 Title: Benchmark-First Toolkit for Ambient RNA Decontamination Research
-Version: 0.2.0
+Version: 0.3.0
 Authors@R:
     person("Kushal Raj", "Roy", email = "kushalrajroy1@gmail.com",
            role = c("aut", "cre"), comment = c(ORCID = "0000-0002-4664-7462"))
@@ -24,6 +24,7 @@ Imports:
     stats,
     utils
 Suggests:
+    SeuratObject (>= 5.0.0),
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
