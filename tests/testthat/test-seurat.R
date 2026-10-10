@@ -92,3 +92,30 @@ test_that("raw given as a Cell Ranger directory (symbols, as Read10X uses)", {
   expect_equal(LayerData(from_dir[["Decant"]], layer = "counts"),
                LayerData(from_mat[["Decant"]], layer = "counts"))
 })
+
+test_that("DecantDE runs end to end from a Seurat object and flags leakage", {
+  skip_if_not_installed("edgeR")
+  st <- simulate_ambient_study(seed = 4, G = 500, n_cells = 400, n_per = 4)
+  rownames(st$X) <- paste0("GENE_", seq_len(nrow(st$X)))           # Seurat renames "_" -> "-"
+  emp <- lapply(st$empties, function(e) { rownames(e) <- rownames(st$X); e })
+  bc <- paste0("S", st$sample, "x", seq_len(ncol(st$X)))
+  colnames(st$X) <- bc
+  raw <- lapply(seq_along(emp), function(s) {
+    e <- emp[[s]]; colnames(e) <- paste0("S", s, "e", seq_len(ncol(e)))
+    methods::as(cbind(st$X[, st$sample == s], e), "CsparseMatrix") })
+  names(raw) <- paste0("d", seq_along(raw))
+  obj <- suppressWarnings(CreateSeuratObject(methods::as(st$X, "CsparseMatrix")))
+  obj$donor <- paste0("d", st$sample)
+  obj$status <- as.character(st$cond)[st$sample]
+  obj$type <- st$label
+  res <- DecantDE(obj, cell_type = "R", sample_col = "donor", formula = ~ status,
+                  raw = raw, celltype_col = "type")
+  expect_true(all(c("PValue", "FDR", "ambient_driven") %in% names(res)))
+  gi <- as.integer(sub("GENE-", "", res$gene))
+  expect_equal(sum(res$FDR[gi %in% st$de_abund] < 0.1), 0)
+  expect_equal(nrow(attr(res, "samples")), 8)
+  ## design variable not constant within sample
+  obj$bad <- sample(c("a", "b"), ncol(obj), TRUE)
+  expect_error(DecantDE(obj, "R", "donor", ~ bad, raw = raw, celltype_col = "type"),
+               "not constant")
+})
