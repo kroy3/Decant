@@ -11,7 +11,7 @@
   design <- stats::model.matrix(~st$cond)
   res <- ambient_de(Y, st$empties, design, naive = FALSE)
   kn <- edgeR::filterByExpr(edgeR::DGEList(Y), design)
-  d0 <- edgeR::estimateDisp(edgeR::calcNormFactors(edgeR::DGEList(Y[kn, ])), design)
+  d0 <- edgeR::estimateDisp(.norm_lib_sizes(edgeR::DGEList(Y[kn, ])), design)
   pn <- edgeR::glmQLFTest(edgeR::glmQLFit(d0, design), coef = 2)$table$PValue
   names(pn) <- rownames(Y)[kn]
   gi <- seq_len(nrow(Y))
