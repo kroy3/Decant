@@ -101,7 +101,7 @@ ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
 
   keep <- edgeR::filterByExpr(native, design = design, min.count = min_count)
   if (sum(keep) < 2) stop("fewer than 2 genes pass filtering", call. = FALSE)
-  nf <- edgeR::calcNormFactors(native[keep, , drop = FALSE])
+  nf <- .norm_lib_sizes(native[keep, , drop = FALSE])
   N <- (1 - rho) * T_s * nf
 
   ## ---- NB dispersion from the soup-removed counts ----
@@ -125,7 +125,7 @@ ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
                     ambient_frac = rowMeans(e / pmax(y, 1)),
                     stringsAsFactors = FALSE, row.names = NULL)
   if (naive) {
-    d0 <- edgeR::calcNormFactors(edgeR::DGEList(Y[keep, , drop = FALSE]))
+    d0 <- .norm_lib_sizes(edgeR::DGEList(Y[keep, , drop = FALSE]))
     d0 <- edgeR::estimateDisp(d0, design)
     t0 <- edgeR::glmQLFTest(edgeR::glmQLFit(d0, design), coef = coef)$table
     out$naive_PValue <- t0$PValue
@@ -140,6 +140,14 @@ ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
 }
 
 `%||%` <- function(a, b) if (is.null(a)) b else a
+
+## TMM factors. edgeR >= 4.0 renamed calcNormFactors() to normLibSizes() and
+## prints a message on every call to the old name; use whichever exists.
+.norm_lib_sizes <- function(x, ...) {
+  f <- if ("normLibSizes" %in% getNamespaceExports("edgeR")) edgeR::normLibSizes
+       else edgeR::calcNormFactors
+  f(x, ...)
+}
 
 ## Vectorised Fisher scoring for y ~ NB(mu = N * exp(X beta) + e), all genes at
 ## once. Variance V = mu + phi * m^2 + ve (moment-matched NB, with the soup's
