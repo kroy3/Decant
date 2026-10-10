@@ -4,7 +4,7 @@
 \alias{decant_de_experimental}
 \title{EXPERIMENTAL and OFF by default: failed its gate (made ambient-driven DE
 false positives worse via covariate collinearity). Kept only so the negative
-result is reproducible. Do not use for real inference.}
+result is reproducible. Superseded by \code{\link[=ambient_de]{ambient_de()}} / \code{\link[=DecantDE]{DecantDE()}}.}
 \usage{
 decant_de_experimental(...)
 }
@@ -14,5 +14,5 @@ decant_de_experimental(...)
 \description{
 EXPERIMENTAL and OFF by default: failed its gate (made ambient-driven DE
 false positives worse via covariate collinearity). Kept only so the negative
-result is reproducible. Do not use for real inference.
+result is reproducible. Superseded by \code{\link[=ambient_de]{ambient_de()}} / \code{\link[=DecantDE]{DecantDE()}}.
 }
