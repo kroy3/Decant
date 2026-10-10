@@ -185,7 +185,7 @@ print.decant <- function(x, ...) {
 
 #' EXPERIMENTAL and OFF by default: failed its gate (made ambient-driven DE
 #' false positives worse via covariate collinearity). Kept only so the negative
-#' result is reproducible. Do not use for real inference.
+#' result is reproducible. Superseded by [ambient_de()] / [DecantDE()].
 #' @param ... passed to [de_ambient_aware()].
 #' @export
 decant_de_experimental <- function(...) {

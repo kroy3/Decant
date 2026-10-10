@@ -102,7 +102,49 @@ over-correction.
 | 3 | Hierarchical multi-sample soup pooling | PASS. Reduces soup error for empty-poor samples; neutral for empty-rich. | ON |
 | 5 | Allelic / genotype-aware rho | PASS. Near-ground-truth rho in pooled designs. (Gate contrast is soft, 0.015 vs 0.017 RMSE; the absolute accuracy is the real point.) | ON when allelic data present |
 | 4 | Structured-soup lysis diagnostic | PASS as QC only, with an oracle basis. It is a diagnostic readout, never a corrector (that use was falsified). | ON as diagnostic |
-| 2 | Decontamination-aware differential expression | FAIL. With the benchmark fixed (see below), the covariate model has 90% false positives on ambient-trap genes vs 8% for naive subtract-then-test, and 16% on null genes. | OFF (experimental) |
+| 2 | Decontamination-aware DE, v1 (ambient load as a log-scale covariate) | FAIL. 90% false positives on ambient-trap genes, 16% on null genes. | OFF, superseded |
+| 2 | **Contamination-aware DE, v2** (`ambient_de()`, `DecantDE()`) | **PASS** (`gate_ambient_de`). 0 leaked genes called in every case, against 17-57 for standard edgeR pseudobulk; null false-positive rate 0.048-0.056; power kept, including on genes truly DE in both cell types. | ON |
+
+## Contamination-aware differential expression
+
+When ambient RNA differs between samples (fragile disease tissue lyses
+more), standard pseudobulk DE reports an abundant cell type's disease genes
+as DE in rare cell types. **Correcting counts first does not stop this**: the
+residual after subtraction still tracks the condition (99% of leaked genes
+still called in simulation). `DecantDE()` models each sample's measured soup
+inside the test instead:
+
+```r
+res <- DecantDE(obj, cell_type = "Microglia", sample_col = "donor",
+                formula = ~ diagnosis, raw = raw_paths_by_donor)
+subset(res, FDR < 0.05)        # contamination-aware hits
+subset(res, ambient_driven)    # standard-pipeline hits explained by soup
+```
+
+The model: negative binomial with mean `native + ambient`, where the ambient
+term is each sample's own soup (from its empty droplets, shrunk by empirical
+Bayes only as far as its noise warrants), scaled by an ambient fraction
+re-estimated from the target cell type's own pseudobulk. The soup's sampling
+variance enters the variance, TMM handles composition, and a quasi-likelihood
+F-test keeps small-sample tests calibrated. `ambient_de()` takes plain
+pseudobulk matrices.
+
+Results of `gate_ambient_de()` (6 vs 6 samples, contamination ~5% vs 12%):
+
+| case | leaked genes called (naive / Decant) | null FP (naive / Decant) | FDP (naive / Decant) |
+|---|---|---|---|
+| more soup in disease | 56.5 / **0** | 0.246 / **0.048** | 0.84 / 0.15 |
+| equal soup, disease-shifted composition | 17.0 / **0** | 0.061 / **0.056** | 0.40 / 0.07 |
+| genes truly DE in both types | 31.5 / **0** | 0.235 / **0.049** | 0.72 / 0.10 |
+
+Limits:
+- With very few empty droplets (150) some leakage returns.
+- With 3 samples per group, power drops (0.58 vs 0.68 for naive).
+- The base case's false discovery proportion (0.15) sits exactly at the gate's
+  threshold.
+- All results are simulated, from a simulator built around the mechanism the
+  model assumes. The full development history, including the variants that
+  were rejected, is in `experiments/contamination_aware_de/`.
 
 ## Corrections to v0.1 claims
 
@@ -119,9 +161,9 @@ did not survive, and they are corrected here rather than quietly edited:
    compared plain CPM, so naive DE called 58% of NULL genes significant. With
    median-of-ratios normalisation the benchmark is calibrated (7% null FP), and
    naive subtract-then-test has only 8% FP on ambient-trap genes *when given the
-   true ambient load*. The remaining risk is ambient **estimation** error, which
-   this benchmark does not yet model. The gate now prints its own calibration
-   line and declares itself invalid if that line fails.
+   true ambient load*. With the ambient load *estimated* and soups differing
+   between samples (the realistic case, `gate_ambient_de`), leakage is
+   severe, which is what the v2 contamination-aware test addresses.
 3. **"Default rho estimator overestimates ~2x."** It was 1.5-4x, and
    catastrophically worse under realistic heterogeneity. Replaced (see above).
 

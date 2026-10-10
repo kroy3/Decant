@@ -49,8 +49,9 @@ jobs:
           use-public-rspm: true
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::pkgload
+          extra-packages: any::pkgload, bioc::edgeR, bioc::limma
       - name: Run falsification gates
         run: |
           Rscript run_all_gates.R | tee gates.txt
           Rscript -e 'pkgload::load_all(".", quiet = TRUE); stopifnot(attr(gate_rho(verbose = FALSE), "pass"))'
+          Rscript -e 'pkgload::load_all(".", quiet = TRUE); stopifnot(attr(gate_ambient_de(verbose = FALSE), "pass"))'
