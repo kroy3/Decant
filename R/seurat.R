@@ -78,23 +78,8 @@ RunDecant <- function(object, raw = NULL, empties = NULL, assay = "RNA",
   }
 
   ## ---- empties per sample, aligned to the object's features ----
-  emp <- lapply(names(src), function(s) {
-    x <- src[[s]]
-    if (is.character(x)) x <- read_10x_counts(x, gene_column = 2)
-    x <- .as_counts(x, if (is.null(raw)) "empties" else "raw")
-    rownames(x) <- .seurat_feature_names(rownames(x))
-    x <- .align_features(x, rownames(counts), s)
-    if (is.null(raw)) return(x)
-    idx <- .match_barcodes(cells[samp == s], colnames(x), s)
-    tot <- .col_sums(x)
-    is_emp <- !(seq_len(ncol(x)) %in% idx) &
-      tot >= empty_umi_range[1] & tot <= empty_umi_range[2]
-    if (sum(is_emp) < 100)
-      warning("sample '", s, "': only ", sum(is_emp), " empty droplets; the soup ",
-              "estimate will be noisy. Is `raw` the UNFILTERED matrix?", call. = FALSE)
-    x[, is_emp, drop = FALSE]
-  })
-  names(emp) <- names(src)
+  emp <- .seurat_empties(src, cells, samp, rownames(counts), is_raw = !is.null(raw),
+                         empty_umi_range = empty_umi_range)
 
   ## ---- clusters ----
   cl <- if (is.null(clusters)) {
@@ -125,6 +110,31 @@ RunDecant <- function(object, raw = NULL, empties = NULL, assay = "RNA",
     ambient = res$ambient, modules = res$modules, source_assay = assay)
   if (set_default) SeuratObject::DefaultAssay(object) <- new_assay
   object
+}
+
+## Empty-droplet matrices per sample, aligned to `genes`. `src` is a named
+## list (one entry per sample) of raw matrices / Cell Ranger paths
+## (is_raw = TRUE: empties are the non-cell droplets in empty_umi_range) or of
+## empty-droplet matrices (is_raw = FALSE).
+.seurat_empties <- function(src, cells, samp, genes, is_raw, empty_umi_range) {
+  emp <- lapply(names(src), function(s) {
+    x <- src[[s]]
+    if (is.character(x)) x <- read_10x_counts(x, gene_column = 2)
+    x <- .as_counts(x, if (is_raw) "raw" else "empties")
+    rownames(x) <- .seurat_feature_names(rownames(x))
+    x <- .align_features(x, genes, s)
+    if (!is_raw) return(x)
+    idx <- .match_barcodes(cells[samp == s], colnames(x), s)
+    tot <- .col_sums(x)
+    is_emp <- !(seq_len(ncol(x)) %in% idx) &
+      tot >= empty_umi_range[1] & tot <= empty_umi_range[2]
+    if (sum(is_emp) < 100)
+      warning("sample '", s, "': only ", sum(is_emp), " empty droplets; the soup ",
+              "estimate will be noisy. Is `raw` the UNFILTERED matrix?", call. = FALSE)
+    x[, is_emp, drop = FALSE]
+  })
+  names(emp) <- names(src)
+  emp
 }
 
 ## Raw counts from an Assay or Assay5, joining split v5 layers.
