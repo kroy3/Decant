@@ -61,6 +61,12 @@ run_all <- function(st, target = "R", rho_scale = 1, clusters = c("true", "kmean
        naive = edger_test(Y0, st$cond, genes),
        corrected = edger_test(Y1, st$cond, genes),
        caware = caware_test(Y0, E, N, st$cond, genes, d1$tagwise.dispersion),
+       caware2 = caware2_test(Y0, pool_soup(st$empties)$pooled,
+                              vapply(st$empties, sum, 1), st$cond, genes, d1$tagwise.dispersion),
+       caware3 = caware3_test(Y0, st$empties, st$cond, genes, d1$tagwise.dispersion),
+       caware4 = caware4_test(Y0, st$empties, st$cond, genes, d1$tagwise.dispersion),
+       caware2_nopool = caware2_test(Y0, pool_soup(st$empties)$independent,
+                              vapply(st$empties, sum, 1), st$cond, genes, d1$tagwise.dispersion),
        rho_est = tapply(rho[keepR], st$sample[keepR], mean))
 }
 
@@ -68,7 +74,7 @@ score <- function(st, r, alpha = 0.05, fdr = 0.1) {
   gi <- as.integer(sub("g", "", r$genes))
   is_de <- gi %in% st$de_rare; is_leak <- gi %in% st$de_abund
   is_sh <- gi %in% st$shared
-  do.call(rbind, lapply(c("naive", "corrected", "caware"), function(m) {
+  do.call(rbind, lapply(c("naive", "corrected", "caware", "caware3", "caware4"), function(m) {
     p <- r[[m]]; q <- p.adjust(p, "BH")
     data.frame(method = m,
                fp_leak = mean(p[is_leak] < alpha),         # A's disease genes called DE in R

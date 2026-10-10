@@ -18,7 +18,7 @@ Methods (`methods.R`), all testing type R:
   KNOWN additive term (identity scale, not a log covariate). LRT on b1,
   dispersion borrowed from edgeR on the corrected counts.
 
-Run from this directory: `Rscript run1.R`, `Rscript run2.R`
+Run from this directory: `Rscript run1.R` (v1), `Rscript run2.R` (v1-v4 stress grid)
 (set `DECANT_ROOT` if not run from inside the repo).
 
 ## Results (mean of 3 seeds)
@@ -37,13 +37,43 @@ Run from this directory: `Rscript run1.R`, `Rscript run2.R`
 Other-null false-positive rate at p < 0.05: caware 0.045-0.09 vs naive
 0.20-0.24. Power on true R genes: ~0.93 for all methods.
 
+## Iteration: making the model robust (`methods2.R`, `run2.R`)
+
+v1 trusted the ambient load and broke when it was under-estimated or the soup
+was noisy. Changes, each kept only if it helped:
+
+- **Self-calibration (kept):** re-estimate each sample's ambient fraction from
+  the target type's own pseudobulk with the absent-gene estimator. Removes
+  the dependence on upstream cell-level rho: leakage under a 30% rho
+  under-estimate went 0.52 -> 0.01.
+- **Fixed-rule soup pooling (rejected):** `pool_soup()` shrinks every sample
+  toward the global soup by a fixed rule, erasing real sample-specific soup
+  differences; null false positives rose to 0.107.
+- **Empirical-Bayes soup (kept):** per gene, shrink by sampling variance vs
+  between-sample variance, and carry the remaining soup variance into the
+  likelihood. Few-empties leakage 0.46 -> 0.23 without harming rich samples.
+- **TMM composition normalisation on the soup-removed counts (kept):** fixed
+  null-gene inflation (0.13 -> 0.07) when a few genes change strongly.
+
+| case (fp_leak) | naive | corrected | v1 | **v4** |
+|---|---|---|---|---|
+| base | 1.00 | 0.99 | 0.00 | 0.012 |
+| negative control | 0.59 | 0.18 | 0.00 | 0.008 |
+| rho under-estimated 30% | 1.00 | 0.99 | 0.52 | 0.012 |
+| only 150 empty droplets | 1.00 | 0.99 | 0.46 | 0.23 |
+| genes truly DE in both A and R | 1.00 | 0.98 | 0.02 | 0.043 |
+
+v4: null FP rate 0.065-0.071 at nominal 0.05 (slightly liberal; LRT with
+plug-in dispersion), FDP 0.13-0.15 at a 0.10 target, power 0.98-0.99, and
+power 1.00 on genes truly DE in both types.
+
 ## What this does and does not show
 
 - Shows: correcting counts first does NOT stop leakage (0.99); the residual
   after subtraction still tracks condition. Modelling the soup in the test does.
-- Weakness: caware trusts the ambient load. Under-estimating it, or a noisy
-  soup from few empties, brings leakage back. Next: (1) re-calibrate the
-  ambient load per sample from the target type's own pseudobulk, (2) carry the
-  soup's sampling variance into the likelihood, (3) pool soups across samples.
+- Remaining weaknesses: (1) extreme soup scarcity (150 empties, ~3.7k soup
+  UMIs) still leaks 23%; (2) slightly liberal tests (0.07 vs 0.05); a
+  quasi-likelihood F-test, as edgeR uses, is the likely fix; (3) one test per
+  gene via optim is slow for whole transcriptomes.
 - Simulated data only; the contamination model matches the test's assumption.
   The k-means arm was uninformative here (types were perfectly separable).

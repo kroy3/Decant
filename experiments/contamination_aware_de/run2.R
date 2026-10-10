@@ -1,10 +1,8 @@
-source("sim.R"); source("methods.R")
+source("sim.R"); source("methods.R"); source("methods2.R")
 cases <- list(
   base            = list(sim = list(), run = list()),
   neg_control     = list(sim = list(rho_dis = 0.05), run = list()),
-  kmeans_clusters = list(sim = list(), run = list(clusters = "kmeans")),
   rho_under30     = list(sim = list(), run = list(rho_scale = 0.7)),
-  rho_over30      = list(sim = list(), run = list(rho_scale = 1.3)),
   few_empties     = list(sim = list(n_empty = 150), run = list()),
   shared_true_de  = list(sim = list(n_shared = 20), run = list()))
 all <- list()
