@@ -1,0 +1,7 @@
+url: https://kroy3.github.io/Decant/
+template:
+  bootstrap: 5
+navbar:
+  structure:
+    left: [intro, reference, articles, news]
+    right: [search, github]

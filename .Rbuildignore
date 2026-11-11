@@ -7,3 +7,6 @@
 ^steelman_empty_mismatch\.R$
 ^LICENSE\.md$
 ^validation$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
