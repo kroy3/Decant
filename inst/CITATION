@@ -1,0 +1,8 @@
+bibentry(
+  bibtype = "Manual",
+  title = "Decant: Benchmark-First Toolkit for Ambient RNA Decontamination Research",
+  author = person("Kushal Raj", "Roy"),
+  year = format(Sys.Date(), "%Y"),
+  note = paste("R package version", meta$Version),
+  url = "https://github.com/kroy3/Decant"
+)

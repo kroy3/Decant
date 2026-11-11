@@ -1,0 +1,113 @@
+---
+title: "Contamination-aware differential expression"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Contamination-aware differential expression}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+has_deps <- requireNamespace("edgeR", quietly = TRUE) &&
+  requireNamespace("limma", quietly = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", eval = has_deps)
+```
+
+## The problem
+
+In a case/control single-cell study, samples differ in how much ambient RNA
+they carry. Fragile disease tissue lyses more, so its soup is larger and is
+enriched for the disease genes of whichever cell type is abundant. Those
+reads land in every droplet. A pseudobulk test on a rare cell type then
+reports the abundant type's disease genes as differentially expressed in the
+rare type.
+
+`ambient_de()` does not subtract the soup. It puts each sample's measured
+soup inside the model as a known additive term:
+
+$$y_{gs} \sim \mathrm{NB}\big(N_s \exp(x_s^\top \beta_g) + \rho_s T_s\,\mathrm{soup}_{gs}\big)$$
+
+and tests $\beta_g$ with a quasi-likelihood F-test.
+
+## A simulated study with known truth
+
+`simulate_ambient_study()` makes 6 control and 6 disease samples. Cell type
+`A` is abundant and has 80 disease genes. Cell type `R` is rare and has 40
+disease genes of its own. Disease samples carry about 12% ambient RNA,
+controls about 5%.
+
+```{r simulate}
+library(Decant)
+st <- simulate_ambient_study(seed = 3, G = 600, n_cells = 500)
+table(st$cond)
+round(tapply(st$rho_true, st$cond, mean), 3)
+```
+
+Pseudobulk the rare type, one column per sample:
+
+```{r pseudobulk}
+is_R <- st$label == "R"
+samples <- sort(unique(st$sample))
+Y <- vapply(samples, function(s)
+  rowSums(st$X[, is_R & st$sample == s, drop = FALSE]), numeric(nrow(st$X)))
+rownames(Y) <- rownames(st$X)
+dim(Y)
+```
+
+## Run the test
+
+`empties` is a list with one empty-droplet matrix per sample, in the same
+order as the columns of `Y`.
+
+```{r test}
+design <- model.matrix(~ st$cond)
+res <- ambient_de(Y, st$empties, design)
+head(res[, c("gene", "logFC", "PValue", "FDR", "ambient_frac", "naive_FDR", "ambient_driven")])
+```
+
+`naive_FDR` is standard edgeR on the same pseudobulk. `ambient_driven` marks
+genes that edgeR calls and the contamination-aware test does not.
+
+## Score against the truth
+
+```{r score}
+gi <- as.integer(sub("g", "", res$gene))
+leaked <- gi %in% st$de_abund   # A's disease genes: any call in R is false
+true_de <- gi %in% st$de_rare   # R's own disease genes
+c(leaked_called_naive  = sum(res$naive_FDR[leaked] < 0.1),
+  leaked_called_decant = sum(res$FDR[leaked] < 0.1),
+  power_naive  = mean(res$naive_FDR[true_de] < 0.1),
+  power_decant = mean(res$FDR[true_de] < 0.1))
+```
+
+The per-sample ambient fractions the test estimated:
+
+```{r samples}
+attr(res, "samples")
+```
+
+## On a Seurat object
+
+`DecantDE()` does the pseudobulking and reads each donor's raw matrix:
+
+```{r seurat, eval = FALSE}
+res <- DecantDE(obj, cell_type = "Microglia", sample_col = "donor",
+                formula = ~ diagnosis, raw = raw_paths_by_donor)
+subset(res, ambient_driven)
+```
+
+## What this does not show
+
+- The simulator is built around the additive-soup mechanism the test
+  assumes. This vignette shows the method does what it is designed to do. It
+  is not real-data evidence.
+- Correcting counts first and then testing is not always worse. In
+  `validation/de_comparators.R`, official SoupX followed by edgeR removes
+  almost all leakage on this simulator, at some cost in power. See the
+  README for the table.
+- With very few empty droplets, or three samples per group, the test leaks
+  or loses power. The README lists the measured limits.
+
+```{r session}
+sessionInfo()
+```
