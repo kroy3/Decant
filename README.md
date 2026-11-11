@@ -109,10 +109,12 @@ over-correction.
 
 When ambient RNA differs between samples (fragile disease tissue lyses
 more), standard pseudobulk DE reports an abundant cell type's disease genes
-as DE in rare cell types. **Correcting counts first does not stop this**: the
-residual after subtraction still tracks the condition (99% of leaked genes
-still called in simulation). `DecantDE()` models each sample's measured soup
-inside the test instead:
+as DE in rare cell types. Correcting counts with Decant's default `subtract`
+rule and then testing does not stop this (about half of the leaked genes are
+still called, see the comparator table below). Official SoupX followed by
+edgeR does remove almost all of it on the simulator, so "correct first" is
+not a lost cause in general. `DecantDE()` takes the other route and models
+each sample's measured soup inside the test:
 
 ```r
 res <- DecantDE(obj, cell_type = "Microglia", sample_col = "donor",
@@ -136,6 +138,48 @@ Results of `gate_ambient_de()` (6 vs 6 samples, contamination ~5% vs 12%):
 | more soup in disease | 56.5 / **0** | 0.246 / **0.048** | 0.84 / 0.15 |
 | equal soup, disease-shifted composition | 17.0 / **0** | 0.061 / **0.056** | 0.40 / 0.07 |
 | genes truly DE in both types | 31.5 / **0** | 0.235 / **0.049** | 0.72 / 0.10 |
+
+### Against correct-then-test with the official tools
+
+`validation/de_comparators.R` corrects each sample with a tool, pseudobulks
+the rare type, and runs edgeR QL. Mean of 4 seeds, 6 vs 6 samples, same
+scoring as the gate. Every corrector gets the true cell-type labels.
+
+| case | method | leaked genes called | null FP | power | FDP |
+|---|---|---|---|---|---|
+| more soup in disease | naive edgeR | 52.8 / 80 | 0.223 | 0.91 | 0.82 |
+| | **`ambient_de`** | **0 / 80** | 0.051 | 0.91 | 0.13 |
+| | Decant `subtract` + edgeR | 41.5 / 80 | 0.132 | 0.91 | 0.70 |
+| | Decant `redistribute` + edgeR | 4.0 / 80 | 0.083 | 0.90 | 0.31 |
+| | SoupX + edgeR | 1.5 / 80 | 0.043 | 0.85 | 0.13 |
+| equal soup, shifted composition | naive edgeR | 12.5 / 80 | 0.060 | 0.92 | 0.35 |
+| | **`ambient_de`** | **0 / 80** | 0.055 | 0.94 | 0.10 |
+| | Decant `subtract` + edgeR | 1.5 / 80 | 0.055 | 0.93 | 0.13 |
+| | Decant `redistribute` + edgeR | 0.25 / 80 | 0.066 | 0.93 | 0.17 |
+| | SoupX + edgeR | 0.25 / 80 | 0.042 | 0.89 | 0.09 |
+| genes truly DE in both types | naive edgeR | 30.8 / 60 | 0.227 | 0.92 | 0.71 |
+| | **`ambient_de`** | **0 / 60** | 0.054 | 0.96 | 0.11 |
+| | Decant `subtract` + edgeR | 23.5 / 60 | 0.146 | 0.96 | 0.58 |
+| | Decant `redistribute` + edgeR | 7.0 / 60 | 0.119 | 0.94 | 0.43 |
+| | SoupX + edgeR | 2.3 / 60 | 0.051 | 0.90 | 0.14 |
+
+What this says, including the parts that do not favour Decant:
+
+- SoupX + edgeR is close to `ambient_de` on leakage and FDP. The measured
+  advantage of `ambient_de` over it is 5 to 6 points of power and the last
+  1 to 2 leaked genes. That is a modest margin on a simulator that matches
+  `ambient_de`'s own assumptions.
+- SoupX's `autoEstCont` found no marker genes at its defaults on every
+  sample of this simulator. It was rerun with `soupQuantile = 0.5`, the
+  remedy its own error message gives. The rule is fixed and not tuned to the
+  truth.
+- Decant's default `subtract` correction is the weak arm. It estimates rho
+  well but clamps at zero without redistributing, so it removes less than rho
+  of each cell's counts (about 5% removed at a true rho of 6%).
+- DecontX, FastCAR and CellBender were **not run** (not installed where this
+  table was produced). The wrappers are in `validation/comparators.R`; the
+  FastCAR and CellBender wrappers have never been executed. See
+  `validation/README.md`.
 
 Limits:
 - With very few empty droplets (150) some leakage returns.
@@ -238,8 +282,9 @@ truth: species-mixing (human/mouse, e.g. 10x hgmm) and genotype-mixing
 (demuxlet/souporcell-style) datasets, where cross-species or wrong-genotype
 reads measure contamination directly. They should be scored with this same
 metric suite, with the official SoupX, DecontX (celda), and CellBender as
-comparators. `read_10x_counts()` and `split_droplets()` now get such data in;
-the comparator wrappers are next.
+comparators. `read_10x_counts()` and `split_droplets()` now get such data in.
+Wrappers for the official SoupX, DecontX, FastCAR and CellBender are in
+`validation/comparators.R`; so far only the SoupX one has been run.
 
 ## Development
 

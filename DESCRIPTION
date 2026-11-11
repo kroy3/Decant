@@ -16,6 +16,10 @@ Description: A research toolkit for developing and honestly evaluating ambient
     working placeholder and must be checked against CRAN/Bioconductor/GitHub
     before any release.
 License: MIT + file LICENSE
+URL: https://github.com/kroy3/Decant
+BugReports: https://github.com/kroy3/Decant/issues
+biocViews: SingleCell, RNASeq, Transcriptomics, GeneExpression,
+    DifferentialExpression, QualityControl, Preprocessing, Software
 Encoding: UTF-8
 Depends: R (>= 4.1)
 Imports:
@@ -25,9 +29,12 @@ Imports:
     utils
 Suggests:
     edgeR,
+    knitr,
     limma,
+    rmarkdown,
     SeuratObject (>= 5.0.0),
     testthat (>= 3.0.0)
+VignetteBuilder: knitr
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.1
