@@ -39,15 +39,18 @@ test_that("input validation", {
   expect_error(estimate_rho_cluster(sim$observed, soup[-1], rep(1, 400)), "soup")
 })
 
-test_that("junk in the empties does not fail silently", {
-  ## Known failure mode: material in the empties that no cell contains makes
-  ## rho collapse. The estimator must at least flag it.
-  sim <- simulate_experiment(n_genes = 600, n_cells = 800, n_empty = 2000,
-                             rho_mean = 0.2, seed = 3)
-  set.seed(9)
-  G <- nrow(sim$empty)
-  junk <- stats::rgamma(G, 0.05); junk[sample(G, 20)] <- junk[sample(G, 20)] + 50
-  emp <- sim$empty + vapply(seq_len(ncol(sim$empty)), function(i)
-    stats::rmultinom(1, round(0.2 * sum(sim$empty[, i])), junk)[, 1], numeric(G))
-  expect_warning(decant(sim$observed, emp, k = 6), "UNDERestimated")
+test_that("genes that are in the empties but not in any cell are dropped from the soup", {
+  sim <- simulate_experiment(n_genes = 600, n_cells = 800, n_empty = 2000, rho_mean = 0.1, seed = 4)
+  G <- nrow(sim$observed)
+  obs <- rbind(sim$observed, matrix(0, 15, ncol(sim$observed)))
+  set.seed(1)
+  extra <- matrix(stats::rpois(15 * ncol(sim$empty), 0.3 * sum(sim$empty) / ncol(sim$empty) / 15), 15)
+  emp <- rbind(sim$empty, extra)
+  rownames(obs) <- rownames(emp) <- paste0("g", seq_len(G + 15))
+  expect_warning(res <- decant(obs, emp, k = 6), "cells do not contain")
+  expect_true("soup_only_genes_dropped" %in% res$modules)
+  expect_equal(unname(res$ambient[G + 1:15, 1]), rep(0, 15))
+  expect_lt(abs(stats::median(res$rho) - mean(sim$rho_true)), 0.04)
+  clean <- suppressWarnings(decant(sim$observed, sim$empty, k = 6))
+  expect_false("soup_only_genes_dropped" %in% clean$modules)
 })

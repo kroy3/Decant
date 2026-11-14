@@ -11,7 +11,7 @@ decant(
   clusters = NULL,
   k = 8,
   rho = NULL,
-  correction = c("subtract", "redistribute", "bayes"),
+  correction = c("bayes", "subtract", "redistribute"),
   obs_unspliced = NULL,
   obs_spliced = NULL,
   empties_unspliced = NULL,
@@ -38,8 +38,12 @@ Used by the rho estimator. If NULL, k-means with \code{k} clusters is run.}
 \item{rho}{optional user-supplied per-cell (or scalar) contamination
 fraction; skips estimation entirely.}
 
-\item{correction}{correction rule, see \code{\link[=correct_counts]{correct_counts()}}. The default is the
-winner of \code{\link[=gate_correction]{gate_correction()}}.}
+\item{correction}{correction rule, see \code{\link[=correct_counts]{correct_counts()}}. The default is
+"bayes". On simulated data the three rules are within a few percent of
+each other (\code{\link[=gate_correction]{gate_correction()}}); on real PBMC data
+(\code{validation/pbmc_soupx.R}) "bayes" removed 83 to 94\% of marker counts
+in cell types that do not express them, against 19 to 57\% for
+"subtract", at the same loss in the cell types that do.}
 
 \item{obs_unspliced, obs_spliced}{genes x cells layers; if both given with
 empty layers, correction is splice-aware (Gap 1).}

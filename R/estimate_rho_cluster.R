@@ -11,23 +11,28 @@
 ##   1. pool counts per cluster (per-cell counts on absent genes are too sparse);
 ##   2. start from the lowest decile of observed/expected ratios among
 ##      well-powered genes;
-##   3. iterate: absent set A = genes NOT significantly above rho*expected
-##      (one-sided Poisson test); rho = sum_A counts / sum_A expected;
+##   3. iterate: absent set A = well-powered genes (expected ambient count
+##      >= min_expected) NOT significantly above rho*expected (one-sided
+##      Poisson test); rho = sum_A counts / sum_A expected;
 ##   4. per cell, shrink toward the cluster rho with a Gamma-Poisson empirical
 ##      Bayes posterior mean over the same absent set.
 ## When almost no gene is cleanly absent from a cluster, rho is genuinely not
 ## identifiable from counts; the estimator then biases UP, and says so via the
 ## per-cluster diagnostics (low_power) rather than hiding it.
 ##
-## KNOWN FAILURE MODE (not fixed, detected): if the empty droplets contain
-## material that is absent from the cells (debris, cell types filtered out of
-## the cell set), those genes sit far BELOW rho*expected, the fixed point
-## collapses toward 0, and rho is badly UNDERestimated (10% junk in empties took
-## a true 0.2 to 0.005 in testing). A two-sided variant is robust to this but
-## biased up on clean data, so it is used only as a tripwire: when the two
-## disagree sharply across the DATASET (cell-weighted; per-cluster comparisons
-## were too noisy and false-alarmed on clean data) the fit is flagged
-## `soup_mismatch`.
+## KNOWN FAILURE MODE: empties that do not match what the cells were bathed in.
+##  * Genes in the empties that no cell contains at all are detected and
+##    dropped from the soup (see `floor_rho`); a large share raises
+##    `soup_mismatch`.
+##  * Genes the cells do contain but the empties over-represent (debris of a
+##    cell type that is under-sampled among the cells) are NOT detected. They
+##    sit below rho*expected, the fixed point settles on them, and rho is
+##    UNDERestimated (10% such junk took a true 0.2 to 0.005 in simulation).
+##    A two-sided variant of the fit used to serve as a tripwire for this. On
+##    real PBMC data it raised a false alarm (it runs away in the clusters
+##    that dominate the soup), and with the coverage requirement it no longer
+##    separates the junk case from a true rho of zero. It is still reported
+##    per cluster (rho_two_sided) but no longer raises a warning.
 
 #' Cluster-pooled, absent-gene rho estimator with per-cell shrinkage.
 #'
@@ -41,17 +46,26 @@
 #' @param min_absent_soup a cluster whose absent set covers less than this
 #'   fraction of soup mass is flagged `low_power`.
 #' @param max_iter iteration cap for the absent-set fixed point.
+#' @param min_expected a gene can join the absent set only if its expected
+#'   ambient count in the cluster, at the current rho, is at least this. Below
+#'   it the Poisson test cannot tell a weakly expressed gene from an absent
+#'   one, and on real data (tens of thousands of low-count genes) letting
+#'   those genes in drove rho to several times its true value.
+#' @param floor_rho the smallest contamination considered possible. Genes
+#'   whose total count in the cells is significantly below this fraction of
+#'   their soup expectation are treated as soup-only and dropped from the soup.
 #' @return numeric vector of per-cell rho, with attribute `"clusters"`: a
 #'   data.frame of per-cluster diagnostics (n_cells, rho, n_absent_genes,
 #'   absent_soup_frac, absent_counts, low_power, borrowed, rho_two_sided), and
-#'   attribute `"soup_mismatch"` (logical). Low-power clusters take the
+#'   attributes `"soup_mismatch"` (logical), `"soup_only"` (logical per gene)
+#'   and `"soup_only_frac"` (their share of the soup). Low-power clusters take the
 #'   evidence-weighted rho of the other clusters (`borrowed = TRUE`).
-#'   `soup_mismatch = TRUE` means the soup profile looks inconsistent with the
-#'   cells and rho is probably UNDERestimated -- inspect the empties or supply
-#'   rho yourself.
+#'   `soup_mismatch = TRUE` means more than 5% of the soup was in genes no
+#'   cell contains; those genes are dropped, but the empties deserve a look.
 #' @export
 estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
-                                 min_absent_soup = 0.02, max_iter = 100) {
+                                 min_absent_soup = 0.02, max_iter = 100, min_expected = 5,
+                                 floor_rho = 0.005) {
   observed <- .as_counts(observed, "observed")
   N <- ncol(observed)
   if (length(clusters) != N) stop("length(clusters) must equal ncol(observed)", call. = FALSE)
@@ -60,6 +74,18 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
   T_c <- .col_sums(observed)
   ks <- sort(unique(clusters))
   Xk <- .cluster_sums(observed, clusters, ks)
+  ## Soup-only genes. Ambient RNA lands in cells too, so a gene at soup
+  ## fraction s must show at least rho * s in the cells as a whole. A gene
+  ## whose total count is significantly below even 0.5% contamination is in
+  ## the empties but not in what the cells were bathed in (debris, cell types
+  ## lost before capture). Left in, such genes sit far below the line and drag
+  ## the absent-gene fixed point toward zero, so they are removed from the
+  ## soup and the rest is renormalised.
+  e_all <- soup * sum(T_c)
+  soup_only <- floor_rho * e_all >= min_expected &
+    stats::ppois(rowSums(Xk), floor_rho * e_all) < alpha
+  soup_only_frac <- sum(soup[soup_only])
+  if (any(soup_only)) { soup[soup_only] <- 0; soup <- soup / sum(soup) }
   rho_c <- numeric(N)
   diag <- vector("list", length(ks))
   absent <- vector("list", length(ks))
@@ -73,11 +99,16 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
     rho <- rho2 <- 0; A <- rep(FALSE, length(X))
     if (sum(X) > 0 && any(ok)) {
       r <- X / pmax(e, 1e-300)
-      pw <- ok & e >= stats::quantile(e[ok], 0.5)
+      ## start among well-covered genes when there are enough of them (real
+      ## data: most genes have almost no soup, and the upper half by soup is
+      ## still mostly zeros); otherwise the upper half by soup
+      pw <- ok & e >= 4 * min_expected
+      if (sum(pw) < 50) pw <- ok & e >= stats::quantile(e[ok], 0.5)
       lo <- pw & r <= stats::quantile(r[pw], 0.1)
       rho0 <- sum(X[lo]) / sum(e[lo])
-      fit <- .absent_fixed_point(X, e, ok, rho0, alpha, max_iter, two_sided = FALSE)
+      fit <- .absent_fixed_point(X, e, ok, rho0, alpha, max_iter, two_sided = FALSE, min_expected)
       rho <- fit$rho; A <- fit$A
+      ## two-sided variant, reported as a diagnostic only
       rho2 <- .absent_fixed_point(X, e, ok, rho0, alpha, max_iter, two_sided = TRUE)$rho
     }
     absent[[i]] <- which(A)
@@ -94,13 +125,16 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
 
   ## A cluster with (almost) no absent genes -- typically the fragile type that
   ## dominates the soup itself -- cannot identify its own rho. Rather than keep
-  ## an arbitrary value, it borrows the evidence-weighted rho of the powered
-  ## clusters as its prior (assumes rho does not depend strongly on cell type;
+  ## an arbitrary value, it borrows the evidence-weighted median rho of the
+  ## powered clusters as its prior (assumes rho does not depend strongly on cell type;
   ## flagged, not hidden). Its own per-cell evidence, if any, still counts.
   weak <- diag$low_power
   if (any(weak) && any(!weak)) {
-    w <- diag$absent_counts[!weak]
-    diag$rho[weak] <- if (sum(w) > 0) sum(diag$rho[!weak] * w) / sum(w) else mean(diag$rho[!weak])
+    ## weighted MEDIAN, by how much soup each powered cluster's absent set
+    ## covers: a count-weighted mean let one small cluster whose fit had run
+    ## away (high rho, hence many counts) set the value for a large one
+    w <- (diag$n_cells * diag$absent_soup_frac)[!weak]
+    diag$rho[weak] <- if (sum(w) > 0) .weighted_median(diag$rho[!weak], w) else stats::median(diag$rho[!weak])
     diag$borrowed[weak] <- TRUE
   }
 
@@ -124,21 +158,37 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
   out <- pmin(pmax(rho_c, 0), 0.99)
   names(out) <- colnames(observed)
   attr(out, "clusters") <- diag
-  r1 <- stats::weighted.mean(diag$rho, diag$n_cells)
-  r2 <- stats::weighted.mean(diag$rho_two_sided, diag$n_cells)
-  attr(out, "soup_mismatch") <- r1 < 0.5 * r2 && r2 - r1 > 0.05
+  attr(out, "soup_mismatch") <- soup_only_frac > 0.05
+  attr(out, "soup_only") <- soup_only
+  attr(out, "soup_only_frac") <- soup_only_frac
   out
+}
+
+.weighted_median <- function(x, w) {
+  o <- order(x); cw <- cumsum(w[o]) / sum(w)
+  x[o][which(cw >= 0.5)[1]]
 }
 
 ## Absent-set fixed point: rho = sum_A X / sum_A e, where A = genes consistent
 ## with pure soup at the current rho (one-sided: not significantly ABOVE;
 ## two-sided: also not significantly BELOW).
-.absent_fixed_point <- function(X, e, ok, rho, alpha, max_iter, two_sided) {
+.absent_fixed_point <- function(X, e, ok, rho, alpha, max_iter, two_sided, min_expected = 0,
+                                n_top = 50) {
   A <- rep(FALSE, length(X))
+  ## the best-covered soup genes stay eligible whatever rho is, so that small
+  ## data sets and a true rho near zero still have a candidate set
+  top <- ok & e >= sort(e[ok], decreasing = TRUE)[min(n_top, sum(ok))]
   for (it in seq_len(max_iter)) {
-    A <- ok & stats::ppois(X - 1, rho * e, lower.tail = FALSE) > alpha
-    if (two_sided) A <- A & stats::ppois(X, rho * e) > alpha
-    if (!any(A)) break
+    cons <- ok & stats::ppois(X - 1, rho * e, lower.tail = FALSE) > alpha
+    if (two_sided) cons <- cons & stats::ppois(X, rho * e) > alpha
+    ## when rho is so low that no gene reaches min_expected (true rho near
+    ## zero, or very small data), coverage cannot be asked for: every
+    ## consistent gene counts, as before
+    covered <- rho * e >= min_expected
+    new_A <- if (any(covered[ok])) cons & (covered | top) else cons
+    if (!any(new_A)) new_A <- cons
+    if (!any(new_A)) break
+    A <- new_A
     new <- sum(X[A]) / sum(e[A])
     if (abs(new - rho) < 1e-8) { rho <- new; break }
     rho <- new
