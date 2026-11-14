@@ -148,38 +148,45 @@ scoring as the gate. Every corrector gets the true cell-type labels.
 | case | method | leaked genes called | null FP | power | FDP |
 |---|---|---|---|---|---|
 | more soup in disease | naive edgeR | 52.8 / 80 | 0.223 | 0.91 | 0.82 |
-| | **`ambient_de`** | **0 / 80** | 0.051 | 0.91 | 0.13 |
-| | Decant `subtract` + edgeR | 41.5 / 80 | 0.132 | 0.91 | 0.70 |
-| | Decant `redistribute` + edgeR | 4.0 / 80 | 0.083 | 0.90 | 0.31 |
+| | `ambient_de` | 0 / 80 | 0.048 | 0.92 | 0.13 |
+| | Decant `bayes` (default) + edgeR | 0 / 80 | 0.045 | 0.89 | 0.11 |
+| | Decant `redistribute` + edgeR | 6.0 / 80 | 0.081 | 0.90 | 0.31 |
 | | SoupX + edgeR | 1.5 / 80 | 0.043 | 0.85 | 0.13 |
 | equal soup, shifted composition | naive edgeR | 12.5 / 80 | 0.060 | 0.92 | 0.35 |
-| | **`ambient_de`** | **0 / 80** | 0.055 | 0.94 | 0.10 |
-| | Decant `subtract` + edgeR | 1.5 / 80 | 0.055 | 0.93 | 0.13 |
-| | Decant `redistribute` + edgeR | 0.25 / 80 | 0.066 | 0.93 | 0.17 |
+| | `ambient_de` | 0 / 80 | 0.051 | 0.94 | 0.11 |
+| | Decant `bayes` (default) + edgeR | 0 / 80 | 0.051 | 0.94 | 0.10 |
+| | Decant `redistribute` + edgeR | 0.5 / 80 | 0.060 | 0.94 | 0.12 |
 | | SoupX + edgeR | 0.25 / 80 | 0.042 | 0.89 | 0.09 |
 | genes truly DE in both types | naive edgeR | 30.8 / 60 | 0.227 | 0.92 | 0.71 |
-| | **`ambient_de`** | **0 / 60** | 0.054 | 0.96 | 0.11 |
-| | Decant `subtract` + edgeR | 23.5 / 60 | 0.146 | 0.96 | 0.58 |
-| | Decant `redistribute` + edgeR | 7.0 / 60 | 0.119 | 0.94 | 0.43 |
+| | `ambient_de` | 0 / 60 | 0.057 | 0.97 | 0.11 |
+| | Decant `bayes` (default) + edgeR | 0 / 60 | 0.045 | 0.95 | 0.09 |
+| | Decant `redistribute` + edgeR | 9.0 / 60 | 0.114 | 0.94 | 0.43 |
 | | SoupX + edgeR | 2.3 / 60 | 0.051 | 0.90 | 0.14 |
 
 What this says, including the parts that do not favour Decant:
 
-- SoupX + edgeR is close to `ambient_de` on leakage and FDP. The measured
-  advantage of `ambient_de` over it is 5 to 6 points of power and the last
-  1 to 2 leaked genes. That is a modest margin on a simulator that matches
-  `ambient_de`'s own assumptions.
+- **Correcting with Decant's `bayes` rule and then running edgeR is as good as
+  `ambient_de` here.** It calls no leaked gene, is calibrated, and has a
+  slightly lower false discovery proportion. `ambient_de` has 0 to 3 points
+  more power. In this 6 vs 6 two-group simulation, modelling the ambient term
+  inside the test buys almost nothing over a good correction. (With the
+  earlier `subtract` default, correct-then-test called 41.5 of 80 leaked
+  genes; that gap was the correction rule, not the testing strategy.)
+- SoupX + edgeR is close on leakage and FDP, with 4 to 7 points less power
+  and 0.25 to 2.3 leaked genes called. That is a modest margin on a
+  simulator that matches Decant's own assumptions.
 - SoupX's `autoEstCont` found no marker genes at its defaults on every
   sample of this simulator. It was rerun with `soupQuantile = 0.5`, the
   remedy its own error message gives. The rule is fixed and not tuned to the
   truth.
-- Decant's default `subtract` correction is the weak arm. It estimates rho
-  well but clamps at zero without redistributing, so it removes less than rho
-  of each cell's counts (about 5% removed at a true rho of 6%).
 - DecontX, FastCAR and CellBender were **not run** (not installed where this
   table was produced). The wrappers are in `validation/comparators.R`; the
   FastCAR and CellBender wrappers have never been executed. See
   `validation/README.md`.
+- Where `ambient_de` is still expected to matter is outside this table: when
+  the ambient estimate is noisy enough that its uncertainty has to enter the
+  test (few empties, few cells), and at small sample sizes with covariates.
+  Neither has been compared against `bayes` + edgeR yet.
 
 ### Large cohorts, outlier samples and covariates
 

@@ -72,8 +72,33 @@ See `results/de_comparators.csv`. Six control and six disease samples;
 disease samples carry more ambient RNA; 80 genes that are disease genes only
 in an abundant cell type can leak into the rare type being tested.
 
-The table for this release is being regenerated (the rho estimator changed);
-it will replace this paragraph.
+Mean of 4 seeds. Every corrector gets the true cell-type labels.
+
+| case | method | leaked genes called | null FP | power | FDP |
+|---|---|---|---|---|---|
+| more soup in disease | naive edgeR | 52.8 / 80 | 0.223 | 0.91 | 0.82 |
+| | `ambient_de` | 0 / 80 | 0.048 | 0.92 | 0.13 |
+| | Decant `bayes` (default) + edgeR | 0 / 80 | 0.045 | 0.89 | 0.11 |
+| | Decant `redistribute` + edgeR | 6.0 / 80 | 0.081 | 0.90 | 0.31 |
+| | SoupX + edgeR | 1.5 / 80 | 0.043 | 0.85 | 0.13 |
+| equal soup, shifted composition | naive edgeR | 12.5 / 80 | 0.060 | 0.92 | 0.35 |
+| | `ambient_de` | 0 / 80 | 0.051 | 0.94 | 0.11 |
+| | Decant `bayes` (default) + edgeR | 0 / 80 | 0.051 | 0.94 | 0.10 |
+| | Decant `redistribute` + edgeR | 0.5 / 80 | 0.060 | 0.94 | 0.12 |
+| | SoupX + edgeR | 0.25 / 80 | 0.042 | 0.89 | 0.09 |
+| genes truly DE in both types | naive edgeR | 30.8 / 60 | 0.227 | 0.92 | 0.71 |
+| | `ambient_de` | 0 / 60 | 0.057 | 0.97 | 0.11 |
+| | Decant `bayes` (default) + edgeR | 0 / 60 | 0.045 | 0.95 | 0.09 |
+| | Decant `redistribute` + edgeR | 9.0 / 60 | 0.114 | 0.94 | 0.43 |
+| | SoupX + edgeR | 2.3 / 60 | 0.051 | 0.90 | 0.14 |
+
+**Correcting with Decant's default rule and then running edgeR matches
+`ambient_de`**: no leaked gene, calibrated, slightly lower false discovery
+proportion, 0 to 3 points less power. SoupX followed by edgeR is close
+behind, with 4 to 7 points less power and up to 2.3 leaked genes. On this
+simulation the gain from modelling the ambient term inside the test, over a
+good correction, is within noise. SoupX needed its `soupQuantile = 0.5`
+fallback on every sample.
 
 ## 4. What each tool does
 
@@ -135,7 +160,7 @@ against the papers before being cited.
 | Preserves native signal as well as SoupX | level on 2 of 3 sets, behind on monocytes | section 1 |
 | Never adds counts | level with SoupX; ahead of scAR and CellClear per a preprint, not tested here | sections 1, 5 |
 | Per-cell contamination estimate | ahead of SoupX (one value per channel); level with DecontX, CellBender, AmbiDose by design; accuracy of the per-cell values untested on real data | section 4 |
-| DE without leakage, power kept | see section 3; simulated only | section 3 |
+| DE without leakage, power kept | level with Decant-correct-then-edgeR; slightly ahead of SoupX-then-edgeR (4 to 7 points of power); simulated only | section 3 |
 | DE with covariates in large cohorts | ahead of subtract-then-rank-test in simulation | `experiments/large_cohort_calibration/` |
 | Accuracy against CellBender, DecontX, scAR, AmbiDose | unknown, not run | - |
 | Accuracy on data with experimental ground truth | unknown, not run | species and genotype mixture scripts exist, data unreachable |
@@ -148,7 +173,9 @@ What appears to be new, as far as the searches above show:
 1. **The ambient term inside the DE model.** `ambient_de()` fits
    `mu = N exp(X beta) + E` with `E` the per-sample ambient expectation and
    its uncertainty in the variance, instead of correcting counts and testing
-   afterwards. No tool found in the searches does this.
+   afterwards. No tool found in the searches does this. It is new, but
+   section 3 shows it has not yet been shown to be *better* than correcting
+   well and then testing.
 2. **Falsification gates in CI.** Every default has a gate that can fail the
    build, and results that went against the package are kept in the README.
 
