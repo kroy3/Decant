@@ -181,6 +181,31 @@ What this says, including the parts that do not favour Decant:
   FastCAR and CellBender wrappers have never been executed. See
   `validation/README.md`.
 
+### Large cohorts and outlier samples
+
+NB tests lose false-positive control in population-scale cohorts when a few
+samples carry extreme counts (Li et al. 2022, Genome Biology 23:79), and
+`ambient_de()` did too. It now down-weights outlier samples per gene
+(`robust = TRUE`, the default). `gate_ambient_de_cohort()`, 50 samples per
+group, null false-positive rate at a nominal 0.05:
+
+| case | `ambient_de` | without down-weighting | naive edgeR | naive Wilcoxon | subtract + Wilcoxon |
+|---|---|---|---|---|---|
+| clean | 0.056 | 0.050 | 0.402 | 0.393 | 0.048 |
+| 1% outlier entries | 0.050 | 0.338 | 0.430 | 0.333 | 0.054 |
+| heavy-tailed noise | 0.049 | 0.155 | 0.303 | 0.261 | 0.050 |
+
+- A rank test does not fix contamination: naive Wilcoxon is as inflated as
+  naive edgeR when contamination differs between groups.
+- Subtracting the ambient estimate and then running Wilcoxon matches
+  `ambient_de` from 50 per group up. `ambient_de` has more power below that
+  (0.75 vs 0.50 at 15 per group) and supports covariates.
+- With 100 per group both drift to about 0.06, because the bias in the
+  per-sample contamination estimate does not shrink with sample size.
+
+The sweep over 6 to 100 per group is in
+`experiments/large_cohort_calibration/`.
+
 Limits:
 - With very few empty droplets (150) some leakage returns.
 - With 3 samples per group, power drops (0.58 vs 0.68 for naive).
