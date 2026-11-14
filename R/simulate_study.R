@@ -100,17 +100,22 @@ simulate_ambient_study <- function(n_per = 6, G = 1000, n_cells = 700,
 #' @param out_fold median fold of an outlier.
 #' @param heavy_df if finite, biological noise is log-t with this many degrees
 #'   of freedom instead of gamma.
+#' @param n_batch,batch_fc number of rare-type genes shifted by a batch, and
+#'   their fold. The genes are not disease genes.
+#' @param batch_imbalance probability that a disease sample is in batch 1
+#'   (a control sample is with one minus this), so batch confounds condition.
 #' @param depth mean pseudobulk depth of the rare type per sample.
 #' @param soup_umis empty-droplet UMIs per sample.
 #' @param seed RNG seed.
 #' @return list: Y (genes x samples pseudobulk of the rare type), empties
-#'   (list per sample), cond, de_rare, de_abund, rho_true.
+#'   (list per sample), cond, batch, de_rare, de_abund, batch_genes, rho_true.
 #' @export
 simulate_ambient_cohort <- function(n_per = 50, G = 2000, rho_ctrl = 0.05, rho_dis = 0.12,
                                     bcv = 0.25, n_de_rare = 40, fc_rare = 1.5,
                                     n_de_abund = 80, fc_abund = 3,
                                     frac = c(A = 0.55, B = 0.2, C = 0.15, R = 0.10),
                                     out_p = 0, out_fold = 10, heavy_df = Inf,
+                                    n_batch = 0, batch_fc = 1.5, batch_imbalance = 0.7,
                                     depth = 175000, soup_umis = 50000, seed = 1) {
   if (!all(c("A", "R") %in% names(frac))) stop("`frac` must name types 'A' and 'R'", call. = FALSE)
   set.seed(seed)
@@ -124,6 +129,10 @@ simulate_ambient_cohort <- function(n_per = 50, G = 2000, rho_ctrl = 0.05, rho_d
   cand <- setdiff(order(prof[, "R"], decreasing = TRUE)[seq_len(min(800, G))], de_abund)
   de_rare <- sample(cand, n_de_rare); dir_rare <- sample(c(-1, 1), n_de_rare, TRUE)
   cond <- rep(c("ctrl", "dis"), each = n_per); S <- length(cond)
+  ## a batch that is over-represented in disease and shifts `n_batch` genes
+  batch_genes <- if (n_batch > 0) sample(setdiff(cand, de_rare), n_batch) else integer(0)
+  dir_batch <- sample(c(-1, 1), n_batch, TRUE)
+  batch <- stats::rbinom(S, 1, ifelse(cond == "dis", batch_imbalance, 1 - batch_imbalance))
   Y <- matrix(0, G, S); emp <- vector("list", S); rho_true <- numeric(S)
   for (s in seq_len(S)) {
     dis <- cond[s] == "dis"
@@ -138,6 +147,7 @@ simulate_ambient_cohort <- function(n_per = 50, G = 2000, rho_ctrl = 0.05, rho_d
       P[de_abund, "A"] <- P[de_abund, "A"] * fc_abund
       P[de_rare, "R"] <- P[de_rare, "R"] * fc_rare^dir_rare
     }
+    if (n_batch > 0 && batch[s] == 1) P[batch_genes, "R"] <- P[batch_genes, "R"] * batch_fc^dir_batch
     P <- sweep(P, 2, colSums(P), "/")
     rho_s <- min(max(stats::rnorm(1, if (dis) rho_dis else rho_ctrl, 0.015), 0.005), 0.5)
     rho_true[s] <- rho_s
@@ -148,6 +158,6 @@ simulate_ambient_cohort <- function(n_per = 50, G = 2000, rho_ctrl = 0.05, rho_d
   }
   rownames(Y) <- paste0("g", seq_len(G)); colnames(Y) <- paste0("s", seq_len(S))
   emp <- lapply(emp, function(e) { rownames(e) <- rownames(Y); e })
-  list(Y = Y, empties = emp, cond = factor(cond), de_rare = de_rare, de_abund = de_abund,
-       rho_true = rho_true)
+  list(Y = Y, empties = emp, cond = factor(cond), batch = factor(batch), de_rare = de_rare,
+       de_abund = de_abund, batch_genes = batch_genes, rho_true = rho_true)
 }

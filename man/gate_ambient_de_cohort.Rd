@@ -5,7 +5,7 @@
 \title{GATE: does contamination-aware DE stay calibrated in large cohorts whose
 counts are not negative binomial?}
 \usage{
-gate_ambient_de_cohort(seeds = 1:2, n_per = 50, verbose = TRUE)
+gate_ambient_de_cohort(seeds = 1:4, n_per = 50, verbose = TRUE)
 }
 \arguments{
 \item{seeds}{replicate seeds.}
@@ -19,8 +19,10 @@ invisibly, a data.frame with attribute \code{"pass"}.
 }
 \description{
 Simulated case/control cohorts (\code{\link[=simulate_ambient_cohort]{simulate_ambient_cohort()}}) with
-\code{n_per} samples per group, in three cases: clean NB-like counts, per-gene
-outlier samples, and heavy-tailed biological noise. Compared against
+\code{n_per} samples per group, in four cases: clean NB-like counts, per-gene
+outlier samples, heavy-tailed biological noise, and a batch that confounds
+condition and shifts 200 genes (the model-based methods adjust for it; a
+rank test cannot). Compared against
 ambient_de without outlier down-weighting, naive edgeR (robust QL), a naive
 Wilcoxon rank-sum test, and a Wilcoxon test on ambient-subtracted counts.
 Pass requires of ambient_de, averaged over seeds, in every case: at most 1

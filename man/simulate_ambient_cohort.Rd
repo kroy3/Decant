@@ -18,6 +18,9 @@ simulate_ambient_cohort(
   out_p = 0,
   out_fold = 10,
   heavy_df = Inf,
+  n_batch = 0,
+  batch_fc = 1.5,
+  batch_imbalance = 0.7,
   depth = 175000,
   soup_umis = 50000,
   seed = 1
@@ -46,6 +49,12 @@ type) is an outlier.}
 \item{heavy_df}{if finite, biological noise is log-t with this many degrees
 of freedom instead of gamma.}
 
+\item{n_batch, batch_fc}{number of rare-type genes shifted by a batch, and
+their fold. The genes are not disease genes.}
+
+\item{batch_imbalance}{probability that a disease sample is in batch 1
+(a control sample is with one minus this), so batch confounds condition.}
+
 \item{depth}{mean pseudobulk depth of the rare type per sample.}
 
 \item{soup_umis}{empty-droplet UMIs per sample.}
@@ -54,7 +63,7 @@ of freedom instead of gamma.}
 }
 \value{
 list: Y (genes x samples pseudobulk of the rare type), empties
-(list per sample), cond, de_rare, de_abund, rho_true.
+(list per sample), cond, batch, de_rare, de_abund, batch_genes, rho_true.
 }
 \description{
 The same ambient mechanism as \code{\link[=simulate_ambient_study]{simulate_ambient_study()}}, but drawing the

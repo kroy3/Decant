@@ -4,11 +4,15 @@
 \alias{soup_eb}
 \title{Empirical-Bayes soup profiles per sample.}
 \usage{
-soup_eb(empties)
+soup_eb(empties, design = NULL)
 }
 \arguments{
 \item{empties}{list of genes x droplets empty-droplet matrices, one per
 sample (same genes, same order).}
+
+\item{design}{optional sample-level design matrix. Each sample's soup is
+then shrunk toward the design-fitted soup instead of the overall mean, so
+real soup differences between conditions are not shrunk away.}
 }
 \value{
 list(soup = genes x samples, var = genes x samples posterior
