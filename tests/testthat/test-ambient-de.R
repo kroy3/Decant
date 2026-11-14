@@ -61,3 +61,42 @@ test_that("input validation", {
   expect_error(ambient_de(Y, st$empties, d[-1, ]), "nrow\\(design\\)")
   expect_error(ambient_de(Y, st$empties, d, coef = "nope"), "coef")
 })
+
+test_that("observation weights enter the fit: a down-weighted outlier stops moving beta", {
+  set.seed(4)
+  G <- 20; S <- 40; X <- cbind(1, rep(0:1, each = 20)); N <- rep(1, S)
+  e <- matrix(5, G, S); y <- e + matrix(rnbinom(G * S, mu = 100, size = 20), G)
+  phi <- rep(0.05, G); ve <- matrix(0, G, S)
+  clean <- .fit_ambient_nb(y, e, ve, N, X, phi, 100, 1e-10)
+  y2 <- y; y2[, S] <- y2[, S] * 20                     # one extreme sample in group 2
+  hit <- .fit_ambient_nb(y2, e, ve, N, X, phi, 100, 1e-10)
+  w <- matrix(1, G, S); w[, S] <- 1e-6
+  wtd <- .fit_ambient_nb(y2, e, ve, N, X, phi, 100, 1e-10, w)
+  expect_gt(median(abs(hit$beta[, 2] - clean$beta[, 2])), 0.3)
+  expect_lt(median(abs(wtd$beta[, 2] - clean$beta[, 2])), 0.05)
+  expect_equal(dim(wtd$pearson), c(G, S))
+})
+
+test_that("robust weighting keeps a cohort with outlier samples calibrated", {
+  st <- simulate_ambient_cohort(n_per = 25, G = 800, out_p = 0.01, seed = 2)
+  d <- model.matrix(~st$cond)
+  null <- function(res) {
+    gi <- as.integer(sub("g", "", res$gene))
+    mean(res$PValue[!gi %in% c(st$de_rare, st$de_abund)] < 0.05)
+  }
+  rb <- suppressWarnings(ambient_de(st$Y, st$empties, d, naive = FALSE))
+  nr <- suppressWarnings(ambient_de(st$Y, st$empties, d, naive = FALSE, robust = FALSE))
+  expect_lt(null(rb), 0.085)
+  expect_gt(null(nr), 0.15)                                      # the failure being guarded
+  gi <- as.integer(sub("g", "", rb$gene))
+  expect_equal(sum(rb$FDR[gi %in% st$de_abund] < 0.1), 0)
+})
+
+test_that("simulate_ambient_cohort returns a consistent study", {
+  st <- simulate_ambient_cohort(n_per = 4, G = 300, seed = 1)
+  expect_equal(dim(st$Y), c(300, 8))
+  expect_length(st$empties, 8)
+  expect_equal(nrow(st$empties[[1]]), 300)
+  expect_true(mean(st$rho_true[st$cond == "dis"]) > mean(st$rho_true[st$cond == "ctrl"]))
+  expect_error(simulate_ambient_cohort(frac = c(A = 1)), "must name types")
+})

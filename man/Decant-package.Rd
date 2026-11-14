@@ -10,6 +10,14 @@ Start with \code{\link[=decant]{decant()}} for correction, \code{\link[=split_dr
 \code{\link[=read_10x_counts]{read_10x_counts()}} to get real data in, and the \verb{gate_*()} functions to
 re-derive every default from ground truth.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/kroy3/Decant}
+  \item Report bugs at \url{https://github.com/kroy3/Decant/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Kushal Raj Roy \email{kushalrajroy1@gmail.com} (\href{https://orcid.org/0000-0002-4664-7462}{ORCID})
 

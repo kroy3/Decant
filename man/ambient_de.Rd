@@ -12,6 +12,9 @@ ambient_de(
   soup = NULL,
   min_count = 10,
   naive = TRUE,
+  robust = TRUE,
+  huber_k = 2,
+  robust_iter = 2,
   maxit = 50,
   tol = 1e-08
 )
@@ -34,6 +37,18 @@ passes edgeR's \code{filterByExpr} at this \code{min.count}.}
 
 \item{naive}{also run standard edgeR QL on the raw pseudobulk and report
 which of its hits the contamination-aware test does not support.}
+
+\item{robust}{down-weight outlier samples per gene (Huber weights on
+Pearson residuals, with the dispersion re-estimated under those weights).
+Guards against the false positives NB tests produce in large cohorts
+when a few samples carry extreme counts.}
+
+\item{huber_k}{Huber tuning constant, in Pearson-residual units. The
+default 2 kept null genes calibrated with and without outliers in
+\code{\link[=gate_ambient_de_cohort]{gate_ambient_de_cohort()}}; smaller values over-trim clean data and
+inflate false positives, larger ones let outliers through.}
+
+\item{robust_iter}{number of re-weighting rounds.}
 
 \item{maxit, tol}{Fisher-scoring controls.}
 }
