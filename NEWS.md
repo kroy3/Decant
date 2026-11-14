@@ -1,5 +1,22 @@
 # Decant (development version)
 
+* **Bug fix, found on real data.** `estimate_rho_cluster()` overestimated rho
+  several-fold on real 10x data (median 0.22 on PBMC 4k, where SoupX gives
+  0.06 to 0.077). Low-count genes passed the absent-gene test for lack of
+  power. The absent set now requires an expected ambient count of at least
+  `min_expected = 5`; the PBMC estimate is 0.063 (median).
+* `decant()` now defaults to `correction = "bayes"`: on the PBMC data it
+  removed 83 to 94% of marker counts from cell types that do not express
+  them, against 19 to 57% for `subtract`.
+* Genes present in the empties but absent from every cell are dropped from
+  the soup (`floor_rho`), and reported in the mismatch warning.
+* The two-sided soup/cell mismatch tripwire is retired: it raised a false
+  alarm on the PBMC data. `soup_mismatch` now means more than 5% of the soup
+  was in soup-only genes. Empties that over-represent genes the cells do
+  contain are no longer flagged; this is a known limitation.
+* A cluster that cannot identify its own rho borrows the weighted median of
+  the others, not a count-weighted mean.
+* New `validation/pbmc_soupx.R`, the first validation run on real data.
 * `ambient_de()` gains `robust = TRUE` (default): outlier samples are
   down-weighted per gene by Huber weights, the dispersion is re-estimated
   under them, and the residual degrees of freedom are reduced to match.

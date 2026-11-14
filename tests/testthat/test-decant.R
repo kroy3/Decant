@@ -2,7 +2,7 @@ test_that("single-sample pipeline runs and reports modules", {
   sim <- small_sim()
   res <- decant(sim$observed, sim$empty, k = 4)
   expect_s3_class(res, "decant")
-  expect_true(all(c("kmeans_clusters", "cluster_rho", "correction_subtract") %in% res$modules))
+  expect_true(all(c("kmeans_clusters", "cluster_rho", "correction_bayes") %in% res$modules))
   expect_equal(dim(res$corrected), dim(sim$observed))
   expect_length(res$rho, ncol(sim$observed))
   expect_output(print(res), "decant")

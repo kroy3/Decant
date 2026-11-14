@@ -20,8 +20,12 @@
 #' @param k number of clusters when `clusters` is NULL.
 #' @param rho optional user-supplied per-cell (or scalar) contamination
 #'   fraction; skips estimation entirely.
-#' @param correction correction rule, see [correct_counts()]. The default is the
-#'   winner of [gate_correction()].
+#' @param correction correction rule, see [correct_counts()]. The default is
+#'   "bayes". On simulated data the three rules are within a few percent of
+#'   each other ([gate_correction()]); on real PBMC data
+#'   (`validation/pbmc_soupx.R`) "bayes" removed 83 to 94% of marker counts
+#'   in cell types that do not express them, against 19 to 57% for
+#'   "subtract", at the same loss in the cell types that do.
 #' @param obs_unspliced,obs_spliced genes x cells layers; if both given with
 #'   empty layers, correction is splice-aware (Gap 1).
 #' @param empties_unspliced,empties_spliced layer-resolved empties (matrix or
@@ -37,7 +41,7 @@
 #'   $ambient (genes x samples), $clusters, $lysis (if basis), $modules.
 #' @export
 decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
-                   rho = NULL, correction = c("subtract", "redistribute", "bayes"),
+                   rho = NULL, correction = c("bayes", "subtract", "redistribute"),
                    obs_unspliced = NULL, obs_spliced = NULL,
                    empties_unspliced = NULL, empties_spliced = NULL,
                    allelic = NULL, basis = NULL, verbose = FALSE) {
@@ -94,12 +98,20 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
     rho <- estimate_rho_cluster(obs_total, soup_mean, clusters)
     rho_diag <- attr(rho, "clusters")
     mismatch <- isTRUE(attr(rho, "soup_mismatch"))
+    so <- attr(rho, "soup_only"); so_frac <- attr(rho, "soup_only_frac")
     rho <- as.numeric(rho)
     modules <- c(modules, "cluster_rho")
+    if (any(so)) {
+      ## correct with the same soup rho was estimated against
+      soup_by_sample[so, ] <- 0
+      soup_by_sample <- sweep(soup_by_sample, 2, colSums(soup_by_sample), "/")
+      modules <- c(modules, "soup_only_genes_dropped")
+    }
     if (mismatch)
-      warning("the soup profile looks inconsistent with the cells (empties may ",
-              "contain debris or cell types absent from the cell set). rho is ",
-              "probably UNDERestimated. ",
+      warning(sprintf("%.0f%% of the soup is in %d gene(s) the cells do not contain ", 100 * so_frac, sum(so)),
+              "(empties may hold debris or cell types absent from the cell set). ",
+              "Those genes were dropped from the soup, but other genes may be ",
+              "affected too, in which case rho is UNDERestimated. ",
               "See $rho_diagnostics; consider supplying `rho`.", call. = FALSE)
     if (any(rho_diag$low_power))
       warning(sum(rho_diag$low_power), " cluster(s) have almost no genes that are ",
@@ -176,7 +188,7 @@ print.decant <- function(x, ...) {
   q <- stats::quantile(x$rho, c(0.1, 0.5, 0.9))
   cat(sprintf("  rho     : median %.3f (10%%-90%%: %.3f-%.3f)\n", q[2], q[1], q[3]))
   if (isTRUE(x$soup_mismatch))
-    cat("  WARNING : soup/cell mismatch (rho likely UNDERestimated)\n")
+    cat("  WARNING : soup/cell mismatch (soup-only genes dropped; rho may be UNDERestimated)\n")
   if (!is.null(x$rho_diagnostics) && any(x$rho_diagnostics$low_power))
     cat("  WARNING : ", sum(x$rho_diagnostics$low_power),
         " cluster(s) low-power for rho (likely overestimated)\n", sep = "")
