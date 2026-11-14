@@ -129,10 +129,9 @@
 </tr>
 <tr>
 <td><strong>Correction rule</strong></td>
+<td>On simulated data <code>subtract</code> (v0) has the lowest mean L1 error (0.071), vs <code>redistribute</code> (SoupX-style, 0.073) and <code>bayes</code> (0.076); none dominates. On real PBMC data <code>bayes</code> removed 83 to 94% of foreign marker counts against 19 to 57% for <code>subtract</code>, at the same cost to native expression.</td>
 <td>
-<code>subtract</code> (v0) has the lowest mean L1 error (0.071), vs <code>redistribute</code> (SoupX-style, 0.073) and <code>bayes</code> (0.076). The alternatives remove more contamination but destroy more signal; none dominates.</td>
-<td>
-<code>subtract</code>; others via <code>correction=</code>
+<code>bayes</code> (decided by the real data, against the simulated gate); others via <code>correction=</code>
 </td>
 </tr>
 </tbody>
@@ -305,25 +304,25 @@
 </tr>
 <tr>
 <td></td>
-<td><strong><code>ambient_de</code></strong></td>
-<td><strong>0 / 80</strong></td>
-<td>0.051</td>
-<td>0.91</td>
+<td><code>ambient_de</code></td>
+<td>0 / 80</td>
+<td>0.048</td>
+<td>0.92</td>
 <td>0.13</td>
 </tr>
 <tr>
 <td></td>
-<td>Decant <code>subtract</code> + edgeR</td>
-<td>41.5 / 80</td>
-<td>0.132</td>
-<td>0.91</td>
-<td>0.70</td>
+<td>Decant <code>bayes</code> (default) + edgeR</td>
+<td>0 / 80</td>
+<td>0.045</td>
+<td>0.89</td>
+<td>0.11</td>
 </tr>
 <tr>
 <td></td>
 <td>Decant <code>redistribute</code> + edgeR</td>
-<td>4.0 / 80</td>
-<td>0.083</td>
+<td>6.0 / 80</td>
+<td>0.081</td>
 <td>0.90</td>
 <td>0.31</td>
 </tr>
@@ -345,27 +344,27 @@
 </tr>
 <tr>
 <td></td>
-<td><strong><code>ambient_de</code></strong></td>
-<td><strong>0 / 80</strong></td>
-<td>0.055</td>
+<td><code>ambient_de</code></td>
+<td>0 / 80</td>
+<td>0.051</td>
+<td>0.94</td>
+<td>0.11</td>
+</tr>
+<tr>
+<td></td>
+<td>Decant <code>bayes</code> (default) + edgeR</td>
+<td>0 / 80</td>
+<td>0.051</td>
 <td>0.94</td>
 <td>0.10</td>
 </tr>
 <tr>
 <td></td>
-<td>Decant <code>subtract</code> + edgeR</td>
-<td>1.5 / 80</td>
-<td>0.055</td>
-<td>0.93</td>
-<td>0.13</td>
-</tr>
-<tr>
-<td></td>
 <td>Decant <code>redistribute</code> + edgeR</td>
-<td>0.25 / 80</td>
-<td>0.066</td>
-<td>0.93</td>
-<td>0.17</td>
+<td>0.5 / 80</td>
+<td>0.060</td>
+<td>0.94</td>
+<td>0.12</td>
 </tr>
 <tr>
 <td></td>
@@ -385,25 +384,25 @@
 </tr>
 <tr>
 <td></td>
-<td><strong><code>ambient_de</code></strong></td>
-<td><strong>0 / 60</strong></td>
-<td>0.054</td>
-<td>0.96</td>
+<td><code>ambient_de</code></td>
+<td>0 / 60</td>
+<td>0.057</td>
+<td>0.97</td>
 <td>0.11</td>
 </tr>
 <tr>
 <td></td>
-<td>Decant <code>subtract</code> + edgeR</td>
-<td>23.5 / 60</td>
-<td>0.146</td>
-<td>0.96</td>
-<td>0.58</td>
+<td>Decant <code>bayes</code> (default) + edgeR</td>
+<td>0 / 60</td>
+<td>0.045</td>
+<td>0.95</td>
+<td>0.09</td>
 </tr>
 <tr>
 <td></td>
 <td>Decant <code>redistribute</code> + edgeR</td>
-<td>7.0 / 60</td>
-<td>0.119</td>
+<td>9.0 / 60</td>
+<td>0.114</td>
 <td>0.94</td>
 <td>0.43</td>
 </tr>
@@ -419,10 +418,12 @@
 </table>
 <p>What this says, including the parts that do not favour Decant:</p>
 <ul>
-<li>SoupX + edgeR is close to <code>ambient_de</code> on leakage and FDP. The measured advantage of <code>ambient_de</code> over it is 5 to 6 points of power and the last 1 to 2 leaked genes. That is a modest margin on a simulator that matches <code>ambient_de</code>’s own assumptions.</li>
+<li>
+<strong>Correcting with Decant’s <code>bayes</code> rule and then running edgeR is as good as <code>ambient_de</code> here.</strong> It calls no leaked gene, is calibrated, and has a slightly lower false discovery proportion. <code>ambient_de</code> has 0 to 3 points more power. In this 6 vs 6 two-group simulation, modelling the ambient term inside the test buys almost nothing over a good correction. (With the earlier <code>subtract</code> default, correct-then-test called 41.5 of 80 leaked genes; that gap was the correction rule, not the testing strategy.)</li>
+<li>SoupX + edgeR is close on leakage and FDP, with 4 to 7 points less power and 0.25 to 2.3 leaked genes called. That is a modest margin on a simulator that matches Decant’s own assumptions.</li>
 <li>SoupX’s <code>autoEstCont</code> found no marker genes at its defaults on every sample of this simulator. It was rerun with <code>soupQuantile = 0.5</code>, the remedy its own error message gives. The rule is fixed and not tuned to the truth.</li>
-<li>Decant’s default <code>subtract</code> correction is the weak arm. It estimates rho well but clamps at zero without redistributing, so it removes less than rho of each cell’s counts (about 5% removed at a true rho of 6%).</li>
 <li>DecontX, FastCAR and CellBender were <strong>not run</strong> (not installed where this table was produced). The wrappers are in <code>validation/comparators.R</code>; the FastCAR and CellBender wrappers have never been executed. See <code>validation/README.md</code>.</li>
+<li>Where <code>ambient_de</code> is still expected to matter is outside this table: when the ambient estimate is noisy enough that its uncertainty has to enter the test (few empties, few cells), and at small sample sizes with covariates. Neither has been compared against <code>bayes</code> + edgeR yet.</li>
 </ul>
 </div>
 <div class="section level3">
@@ -535,7 +536,7 @@
 </h2>
 <ul>
 <li>
-<strong>Junk in the empty droplets makes rho collapse (detected, NOT fixed).</strong> If the empties contain material no cell contains (debris, cell types filtered out of the cell set), those genes sit far below the expected soup level and the estimator collapses toward 0. In testing, 10% junk took a true rho of 0.2 to 0.005. A robust fix is an open problem: a two-sided variant resists junk but is biased up on clean data. Decant runs both and warns (<code>soup_mismatch</code>, “rho is probably UNDERestimated”) when they disagree sharply. On the gate grid it has zero false alarms across the 12 clean settings. It caught 20 of 22 per-seed junk runs where rho was underestimated by more than 0.05. The 2 misses (rho 0.1, 30% junk) are the worst kind: heavy junk collapses the two-sided variant too, so there is no disagreement to see. Treat a silent result as “not flagged”, not “clean”.</li>
+<strong>Empties that do not match the cells make rho collapse (partly handled).</strong> Genes that are in the empties but in no cell at all are now detected and dropped from the soup, with a warning when they exceed 5% of it. Genes the cells do contain but the empties over-represent (debris of an under-sampled cell type) are <strong>not detected</strong>: the estimator settles on them and rho is underestimated. In simulation, 10% such junk took a true rho of 0.2 to 0.005. Earlier versions carried a two-sided tripwire for this case, which caught 20 of 22 simulated runs. It raised a false alarm on the real PBMC data and has been retired; the per-cluster two-sided estimate is still in <code>$rho_diagnostics</code>. Check a suspiciously low rho against marker genes.</li>
 <li>
 <strong>Weak identifiability when few genes are cleanly absent.</strong> When cell types share most of their expression program, rho is not identifiable from counts alone and the estimator biases UP (~+10% under stress). Clusters with almost no absent genes borrow the evidence-weighted rho of the others and are flagged <code>low_power</code>. Per-cell resolution is limited (r = 0.5-0.8 under stress).</li>
 <li>
@@ -550,6 +551,95 @@
 <div class="section level2">
 <h2 id="real-data-validation-in-progress">Real-data validation (in progress)<a class="anchor" aria-label="anchor" href="#real-data-validation-in-progress"></a>
 </h2>
+<div class="section level3">
+<h3 id="pbmc-4k-run">PBMC 4k (run)<a class="anchor" aria-label="anchor" href="#pbmc-4k-run"></a>
+</h3>
+<p><code>validation/pbmc_soupx.R</code> runs <code><a href="reference/decant.html">decant()</a></code> on the 10x PBMC data bundled with SoupX: 2,150 annotated cells, 33,694 genes, a soup profile from 2.7M empty-droplet UMIs. There is no ground truth, so the checks are indirect.</p>
+<p><strong>This run found a serious bug.</strong> The rho estimator as released gave a median of 0.22 (up to 0.58 in small clusters) where SoupX’s own analyses of the same data give 0.06 (automatic) and 0.077 (immunoglobulin genes). Tens of thousands of low-count genes passed the “not significantly above the soup” test for lack of power and dragged rho up; the simulators, with 300 to 2,000 well-covered genes, never showed it. The absent set now requires an expected ambient count of at least 5 (<code>min_expected</code>).</p>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr>
+<th>check</th>
+<th>result</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>rho, median / mean over cells</td>
+<td>0.063 / 0.076 (SoupX: 0.06 automatic, 0.077 from IG genes)</td>
+</tr>
+<tr>
+<td>immunoglobulin counts in non-B cells explained by rho x soup</td>
+<td>94%</td>
+</tr>
+<tr>
+<td>monocyte marker counts (LYZ, S100A8, S100A9) in non-monocytes explained</td>
+<td>106%</td>
+</tr>
+<tr>
+<td>NK markers (GNLY, NKG7) outside NK and CD8 T explained</td>
+<td>92%</td>
+</tr>
+</tbody>
+</table>
+<p>Share of those foreign marker counts removed, and of the same genes’ counts in the cell type that expresses them:</p>
+<table style="width:100%;" class="table">
+<colgroup>
+<col width="14%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
+</colgroup>
+<thead><tr>
+<th>correction</th>
+<th>IG foreign</th>
+<th>IG native</th>
+<th>monocyte foreign</th>
+<th>monocyte native</th>
+<th>NK foreign</th>
+<th>NK native</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><code>bayes</code></td>
+<td>0.86</td>
+<td>0.01</td>
+<td>0.94</td>
+<td>0.04</td>
+<td>0.83</td>
+<td>0.02</td>
+</tr>
+<tr>
+<td><code>redistribute</code></td>
+<td>0.27</td>
+<td>0.01</td>
+<td>0.73</td>
+<td>0.05</td>
+<td>0.35</td>
+<td>0.02</td>
+</tr>
+<tr>
+<td><code>subtract</code></td>
+<td>0.19</td>
+<td>0.01</td>
+<td>0.57</td>
+<td>0.04</td>
+<td>0.24</td>
+<td>0.01</td>
+</tr>
+</tbody>
+</table>
+<p><code><a href="reference/decant.html">decant()</a></code> now defaults to <code>correction = "bayes"</code>. The simulated <code><a href="reference/gate_correction.html">gate_correction()</a></code> still puts the three rules within a few percent of each other with <code>subtract</code> marginally ahead; the real data does not.</p>
+<p>Limits: one dataset, one tissue, no ground truth, and agreement with SoupX is agreement with another estimator, not with the truth. Three of eleven clusters (the monocyte clusters, which dominate the soup) could not identify their own rho and borrowed it. The two-sided soup/cell mismatch tripwire raised a false alarm on this data and was retired (see Known limitations).</p>
+</div>
+<div class="section level3">
+<h3 id="species-mixtures-not-yet-run">Species mixtures (not yet run)<a class="anchor" aria-label="anchor" href="#species-mixtures-not-yet-run"></a>
+</h3>
 <p><code>validation/species_mix.R</code> scores Decant on public 10x human/mouse mixtures (<code>hgmm_1k_v3</code>, <code>hgmm_5k_v3</code>, <code>hgmm_10k_v3</code>), where every cross-species read is known contamination, so rho is measured experimentally instead of simulated. It runs the OFFICIAL SoupX and DecontX when they are installed (never the in-repo reimplementations), and reports each missing comparator as “not run”.</p>
 <div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="ex">Rscript</span> validation/species_mix.R              <span class="co"># all datasets</span></span>
 <span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="ex">Rscript</span> validation/species_mix.R hgmm_1k_v3   <span class="co"># one dataset</span></span></code></pre></div>
@@ -561,6 +651,7 @@
 <strong>hidden</strong>: majority-species cells with that species’ genes only. The estimator has to work as it would on ordinary single-species data, while the truth still comes from the cross-species reads it cannot see. This is the test that matters.</li>
 </ul>
 <p>The truth derivation is unit-tested on a synthetic mixture with known rho (it recovers the mean within 0.01). <strong>No real-data numbers are reported yet:</strong> the datasets have not been run. Downloads need network access to <code>cf.10xgenomics.com</code>. Alternatively, place the extracted <code>raw_feature_bc_matrix/</code> and <code>filtered_feature_bc_matrix/</code> folders under <code>validation/data/&lt;dataset&gt;/raw/</code> and <code>validation/data/&lt;dataset&gt;/filtered/</code>.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="the-non-negotiable-next-step">The non-negotiable next step<a class="anchor" aria-label="anchor" href="#the-non-negotiable-next-step"></a>

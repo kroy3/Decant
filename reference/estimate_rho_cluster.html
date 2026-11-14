@@ -49,7 +49,9 @@
 <span>  <span class="va">clusters</span>,</span>
 <span>  alpha <span class="op">=</span> <span class="fl">0.01</span>,</span>
 <span>  min_absent_soup <span class="op">=</span> <span class="fl">0.02</span>,</span>
-<span>  max_iter <span class="op">=</span> <span class="fl">100</span></span>
+<span>  max_iter <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>  min_expected <span class="op">=</span> <span class="fl">5</span>,</span>
+<span>  floor_rho <span class="op">=</span> <span class="fl">0.005</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -84,17 +86,31 @@ fraction of soup mass is flagged <code>low_power</code>.</p></dd>
 <dt id="arg-max-iter">max_iter<a class="anchor" aria-label="anchor" href="#arg-max-iter"></a></dt>
 <dd><p>iteration cap for the absent-set fixed point.</p></dd>
 
+
+<dt id="arg-min-expected">min_expected<a class="anchor" aria-label="anchor" href="#arg-min-expected"></a></dt>
+<dd><p>a gene can join the absent set only if its expected
+ambient count in the cluster, at the current rho, is at least this. Below
+it the Poisson test cannot tell a weakly expressed gene from an absent
+one, and on real data (tens of thousands of low-count genes) letting
+those genes in drove rho to several times its true value.</p></dd>
+
+
+<dt id="arg-floor-rho">floor_rho<a class="anchor" aria-label="anchor" href="#arg-floor-rho"></a></dt>
+<dd><p>the smallest contamination considered possible. Genes
+whose total count in the cells is significantly below this fraction of
+their soup expectation are treated as soup-only and dropped from the soup.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>numeric vector of per-cell rho, with attribute <code>"clusters"</code>: a
 data.frame of per-cluster diagnostics (n_cells, rho, n_absent_genes,
 absent_soup_frac, absent_counts, low_power, borrowed, rho_two_sided), and
-attribute <code>"soup_mismatch"</code> (logical). Low-power clusters take the
+attributes <code>"soup_mismatch"</code> (logical), <code>"soup_only"</code> (logical per gene)
+and <code>"soup_only_frac"</code> (their share of the soup). Low-power clusters take the
 evidence-weighted rho of the other clusters (<code>borrowed = TRUE</code>).
-<code>soup_mismatch = TRUE</code> means the soup profile looks inconsistent with the
-cells and rho is probably UNDERestimated – inspect the empties or supply
-rho yourself.</p>
+<code>soup_mismatch = TRUE</code> means more than 5% of the soup was in genes no
+cell contains; those genes are dropped, but the empties deserve a look.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

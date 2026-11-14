@@ -12,7 +12,7 @@ decant(
   clusters = NULL,
   k = 8,
   rho = NULL,
-  correction = c("subtract", "redistribute", "bayes"),
+  correction = c("bayes", "subtract", "redistribute"),
   obs_unspliced = NULL,
   obs_spliced = NULL,
   empties_unspliced = NULL,
@@ -59,8 +59,12 @@ decant(
 
   correction rule, see
   [`correct_counts()`](https://kroy3.github.io/Decant/reference/correct_counts.md).
-  The default is the winner of
-  [`gate_correction()`](https://kroy3.github.io/Decant/reference/gate_correction.md).
+  The default is "bayes". On simulated data the three rules are within a
+  few percent of each other
+  ([`gate_correction()`](https://kroy3.github.io/Decant/reference/gate_correction.md));
+  on real PBMC data (`validation/pbmc_soupx.R`) "bayes" removed 83 to
+  94% of marker counts in cell types that do not express them, against
+  19 to 57% for "subtract", at the same loss in the cell types that do.
 
 - obs_unspliced, obs_spliced:
 

@@ -117,12 +117,12 @@ sample, in the same order as the columns of <code>Y</code>.</p>
 <span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ambient_de.html">ambient_de</a></span><span class="op">(</span><span class="va">Y</span>, <span class="va">st</span><span class="op">$</span><span class="va">empties</span>, <span class="va">design</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">res</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"gene"</span>, <span class="st">"logFC"</span>, <span class="st">"PValue"</span>, <span class="st">"FDR"</span>, <span class="st">"ambient_frac"</span>, <span class="st">"naive_FDR"</span>, <span class="st">"ambient_driven"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="co">#&gt;     gene     logFC       PValue          FDR ambient_frac    naive_FDR</span></span>
-<span><span class="co">#&gt; 117 g218  1.462029 2.746077e-10 8.952210e-08   0.02752370 2.085851e-07</span></span>
-<span><span class="co">#&gt; 173 g309  1.222120 6.475971e-09 1.055583e-06   0.01134446 7.910796e-06</span></span>
-<span><span class="co">#&gt; 189 g338  1.183664 3.708674e-08 4.030093e-06   0.01707288 7.910796e-06</span></span>
-<span><span class="co">#&gt; 84  g158 -1.092676 1.740945e-07 1.418870e-05   0.01294913 1.077668e-05</span></span>
-<span><span class="co">#&gt; 99  g184 -1.182222 4.557539e-07 2.971515e-05   0.01613194 7.910796e-06</span></span>
-<span><span class="co">#&gt; 47  g121 -1.033911 6.203022e-07 3.069116e-05   0.01149664 1.295151e-05</span></span>
+<span><span class="co">#&gt; 117 g218  1.461993 2.750889e-10 8.967899e-08   0.02752255 2.085851e-07</span></span>
+<span><span class="co">#&gt; 173 g309  1.222051 6.485153e-09 1.057080e-06   0.01134339 7.910796e-06</span></span>
+<span><span class="co">#&gt; 189 g338  1.183632 3.711238e-08 4.032879e-06   0.01707194 7.910796e-06</span></span>
+<span><span class="co">#&gt; 84  g158 -1.092686 1.740767e-07 1.418725e-05   0.01294813 1.077668e-05</span></span>
+<span><span class="co">#&gt; 99  g184 -1.182256 4.556683e-07 2.970957e-05   0.01612888 7.910796e-06</span></span>
+<span><span class="co">#&gt; 47  g121 -1.033959 6.197609e-07 3.066830e-05   0.01149551 1.295151e-05</span></span>
 <span><span class="co">#&gt;     ambient_driven</span></span>
 <span><span class="co">#&gt; 117          FALSE</span></span>
 <span><span class="co">#&gt; 173          FALSE</span></span>
@@ -153,18 +153,18 @@ contamination-aware test does not.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">res</span>, <span class="st">"samples"</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    sample ambient_frac soup_umis norm_factor</span></span>
-<span><span class="co">#&gt; 1       1   0.05691182     49848   0.9663453</span></span>
-<span><span class="co">#&gt; 2       2   0.05807062     49966   1.0214628</span></span>
-<span><span class="co">#&gt; 3       3   0.04450713     50234   0.9746262</span></span>
-<span><span class="co">#&gt; 4       4   0.03639673     49819   1.0010121</span></span>
-<span><span class="co">#&gt; 5       5   0.07353880     50063   1.0171349</span></span>
-<span><span class="co">#&gt; 6       6   0.03910505     50089   0.9802863</span></span>
-<span><span class="co">#&gt; 7       7   0.08618538     49997   1.0165516</span></span>
-<span><span class="co">#&gt; 8       8   0.09673501     50090   0.9952828</span></span>
-<span><span class="co">#&gt; 9       9   0.14177055     49851   0.9904143</span></span>
-<span><span class="co">#&gt; 10     10   0.09325414     49814   0.9953381</span></span>
-<span><span class="co">#&gt; 11     11   0.13165005     49671   1.0026047</span></span>
-<span><span class="co">#&gt; 12     12   0.11165293     50086   1.0414611</span></span></code></pre></div>
+<span><span class="co">#&gt; 1       1   0.05692409     49848   0.9663427</span></span>
+<span><span class="co">#&gt; 2       2   0.05808700     49966   1.0214589</span></span>
+<span><span class="co">#&gt; 3       3   0.04450122     50234   0.9746253</span></span>
+<span><span class="co">#&gt; 4       4   0.03638540     49819   1.0010098</span></span>
+<span><span class="co">#&gt; 5       5   0.07354397     50063   1.0171324</span></span>
+<span><span class="co">#&gt; 6       6   0.03911962     50089   0.9802820</span></span>
+<span><span class="co">#&gt; 7       7   0.08613663     49997   1.0165556</span></span>
+<span><span class="co">#&gt; 8       8   0.09671726     50090   0.9952812</span></span>
+<span><span class="co">#&gt; 9       9   0.14179092     49851   0.9904109</span></span>
+<span><span class="co">#&gt; 10     10   0.09326746     49814   0.9953352</span></span>
+<span><span class="co">#&gt; 11     11   0.13162895     49671   1.0026041</span></span>
+<span><span class="co">#&gt; 12     12   0.11157845     50086   1.0414831</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="on-a-seurat-object">On a Seurat object<a class="anchor" aria-label="anchor" href="#on-a-seurat-object"></a>

@@ -89,7 +89,7 @@ Rscript run_all_gates.R
 |----|----|----|
 | **Contamination fraction (rho)**: cluster-pooled absent-gene estimator with empirical-Bayes per-cell shrinkage (`estimate_rho_cluster`) | **PASS** on 12 settings (easy + stress simulator, rho 0 to 0.3, k-means clusters, not oracle). Mean bias within 25% everywhere; negative control holds (rho=0 gives \<0.01). Easy: RMSE 0.006-0.030, per-cell r = 0.94-0.98. Stress: RMSE 0.03-0.08, r = 0.50-0.81. | ON |
 | Legacy marker-ratio rho (v0.1 `estimate_rho`) | **FAIL.** Overestimated rho 1.5-4x on easy data (worst at the low rho typical of scRNA-seq) and reported 0.57-0.71 when the truth was 0.0-0.3 under stress. | kept only for reproducibility |
-| **Correction rule** | `subtract` (v0) has the lowest mean L1 error (0.071), vs `redistribute` (SoupX-style, 0.073) and `bayes` (0.076). The alternatives remove more contamination but destroy more signal; none dominates. | `subtract`; others via `correction=` |
+| **Correction rule** | On simulated data `subtract` (v0) has the lowest mean L1 error (0.071), vs `redistribute` (SoupX-style, 0.073) and `bayes` (0.076); none dominates. On real PBMC data `bayes` removed 83 to 94% of foreign marker counts against 19 to 57% for `subtract`, at the same cost to native expression. | `bayes` (decided by the real data, against the simulated gate); others via `correction=` |
 
 What the rho fix buys end to end (`compare_methods.R`, mean of 4 seeds,
 L1 error to the clean truth, lower is better):
@@ -164,38 +164,47 @@ cell-type labels.
 | case | method | leaked genes called | null FP | power | FDP |
 |----|----|----|----|----|----|
 | more soup in disease | naive edgeR | 52.8 / 80 | 0.223 | 0.91 | 0.82 |
-|  | **`ambient_de`** | **0 / 80** | 0.051 | 0.91 | 0.13 |
-|  | Decant `subtract` + edgeR | 41.5 / 80 | 0.132 | 0.91 | 0.70 |
-|  | Decant `redistribute` + edgeR | 4.0 / 80 | 0.083 | 0.90 | 0.31 |
+|  | `ambient_de` | 0 / 80 | 0.048 | 0.92 | 0.13 |
+|  | Decant `bayes` (default) + edgeR | 0 / 80 | 0.045 | 0.89 | 0.11 |
+|  | Decant `redistribute` + edgeR | 6.0 / 80 | 0.081 | 0.90 | 0.31 |
 |  | SoupX + edgeR | 1.5 / 80 | 0.043 | 0.85 | 0.13 |
 | equal soup, shifted composition | naive edgeR | 12.5 / 80 | 0.060 | 0.92 | 0.35 |
-|  | **`ambient_de`** | **0 / 80** | 0.055 | 0.94 | 0.10 |
-|  | Decant `subtract` + edgeR | 1.5 / 80 | 0.055 | 0.93 | 0.13 |
-|  | Decant `redistribute` + edgeR | 0.25 / 80 | 0.066 | 0.93 | 0.17 |
+|  | `ambient_de` | 0 / 80 | 0.051 | 0.94 | 0.11 |
+|  | Decant `bayes` (default) + edgeR | 0 / 80 | 0.051 | 0.94 | 0.10 |
+|  | Decant `redistribute` + edgeR | 0.5 / 80 | 0.060 | 0.94 | 0.12 |
 |  | SoupX + edgeR | 0.25 / 80 | 0.042 | 0.89 | 0.09 |
 | genes truly DE in both types | naive edgeR | 30.8 / 60 | 0.227 | 0.92 | 0.71 |
-|  | **`ambient_de`** | **0 / 60** | 0.054 | 0.96 | 0.11 |
-|  | Decant `subtract` + edgeR | 23.5 / 60 | 0.146 | 0.96 | 0.58 |
-|  | Decant `redistribute` + edgeR | 7.0 / 60 | 0.119 | 0.94 | 0.43 |
+|  | `ambient_de` | 0 / 60 | 0.057 | 0.97 | 0.11 |
+|  | Decant `bayes` (default) + edgeR | 0 / 60 | 0.045 | 0.95 | 0.09 |
+|  | Decant `redistribute` + edgeR | 9.0 / 60 | 0.114 | 0.94 | 0.43 |
 |  | SoupX + edgeR | 2.3 / 60 | 0.051 | 0.90 | 0.14 |
 
 What this says, including the parts that do not favour Decant:
 
-- SoupX + edgeR is close to `ambient_de` on leakage and FDP. The
-  measured advantage of `ambient_de` over it is 5 to 6 points of power
-  and the last 1 to 2 leaked genes. That is a modest margin on a
-  simulator that matches `ambient_de`’s own assumptions.
+- **Correcting with Decant’s `bayes` rule and then running edgeR is as
+  good as `ambient_de` here.** It calls no leaked gene, is calibrated,
+  and has a slightly lower false discovery proportion. `ambient_de` has
+  0 to 3 points more power. In this 6 vs 6 two-group simulation,
+  modelling the ambient term inside the test buys almost nothing over a
+  good correction. (With the earlier `subtract` default,
+  correct-then-test called 41.5 of 80 leaked genes; that gap was the
+  correction rule, not the testing strategy.)
+- SoupX + edgeR is close on leakage and FDP, with 4 to 7 points less
+  power and 0.25 to 2.3 leaked genes called. That is a modest margin on
+  a simulator that matches Decant’s own assumptions.
 - SoupX’s `autoEstCont` found no marker genes at its defaults on every
   sample of this simulator. It was rerun with `soupQuantile = 0.5`, the
   remedy its own error message gives. The rule is fixed and not tuned to
   the truth.
-- Decant’s default `subtract` correction is the weak arm. It estimates
-  rho well but clamps at zero without redistributing, so it removes less
-  than rho of each cell’s counts (about 5% removed at a true rho of 6%).
 - DecontX, FastCAR and CellBender were **not run** (not installed where
   this table was produced). The wrappers are in
   `validation/comparators.R`; the FastCAR and CellBender wrappers have
   never been executed. See `validation/README.md`.
+- Where `ambient_de` is still expected to matter is outside this table:
+  when the ambient estimate is noisy enough that its uncertainty has to
+  enter the test (few empties, few cells), and at small sample sizes
+  with covariates. Neither has been compared against `bayes` + edgeR
+  yet.
 
 ### Large cohorts, outlier samples and covariates
 
@@ -271,19 +280,17 @@ edited:
 
 ## Known limitations (stated, not hidden)
 
-- **Junk in the empty droplets makes rho collapse (detected, NOT
-  fixed).** If the empties contain material no cell contains (debris,
-  cell types filtered out of the cell set), those genes sit far below
-  the expected soup level and the estimator collapses toward 0. In
-  testing, 10% junk took a true rho of 0.2 to 0.005. A robust fix is an
-  open problem: a two-sided variant resists junk but is biased up on
-  clean data. Decant runs both and warns (`soup_mismatch`, “rho is
-  probably UNDERestimated”) when they disagree sharply. On the gate grid
-  it has zero false alarms across the 12 clean settings. It caught 20 of
-  22 per-seed junk runs where rho was underestimated by more than 0.05.
-  The 2 misses (rho 0.1, 30% junk) are the worst kind: heavy junk
-  collapses the two-sided variant too, so there is no disagreement to
-  see. Treat a silent result as “not flagged”, not “clean”.
+- **Empties that do not match the cells make rho collapse (partly
+  handled).** Genes that are in the empties but in no cell at all are
+  now detected and dropped from the soup, with a warning when they
+  exceed 5% of it. Genes the cells do contain but the empties
+  over-represent (debris of an under-sampled cell type) are **not
+  detected**: the estimator settles on them and rho is underestimated.
+  In simulation, 10% such junk took a true rho of 0.2 to 0.005. Earlier
+  versions carried a two-sided tripwire for this case, which caught 20
+  of 22 simulated runs. It raised a false alarm on the real PBMC data
+  and has been retired; the per-cluster two-sided estimate is still in
+  `$rho_diagnostics`. Check a suspiciously low rho against marker genes.
 - **Weak identifiability when few genes are cleanly absent.** When cell
   types share most of their expression program, rho is not identifiable
   from counts alone and the estimator biases UP (~+10% under stress).
@@ -305,6 +312,53 @@ edited:
   one made rho estimation too easy.
 
 ## Real-data validation (in progress)
+
+### PBMC 4k (run)
+
+`validation/pbmc_soupx.R` runs
+[`decant()`](https://kroy3.github.io/Decant/reference/decant.md) on the
+10x PBMC data bundled with SoupX: 2,150 annotated cells, 33,694 genes, a
+soup profile from 2.7M empty-droplet UMIs. There is no ground truth, so
+the checks are indirect.
+
+**This run found a serious bug.** The rho estimator as released gave a
+median of 0.22 (up to 0.58 in small clusters) where SoupX’s own analyses
+of the same data give 0.06 (automatic) and 0.077 (immunoglobulin genes).
+Tens of thousands of low-count genes passed the “not significantly above
+the soup” test for lack of power and dragged rho up; the simulators,
+with 300 to 2,000 well-covered genes, never showed it. The absent set
+now requires an expected ambient count of at least 5 (`min_expected`).
+
+| check | result |
+|----|----|
+| rho, median / mean over cells | 0.063 / 0.076 (SoupX: 0.06 automatic, 0.077 from IG genes) |
+| immunoglobulin counts in non-B cells explained by rho x soup | 94% |
+| monocyte marker counts (LYZ, S100A8, S100A9) in non-monocytes explained | 106% |
+| NK markers (GNLY, NKG7) outside NK and CD8 T explained | 92% |
+
+Share of those foreign marker counts removed, and of the same genes’
+counts in the cell type that expresses them:
+
+| correction | IG foreign | IG native | monocyte foreign | monocyte native | NK foreign | NK native |
+|----|----|----|----|----|----|----|
+| `bayes` | 0.86 | 0.01 | 0.94 | 0.04 | 0.83 | 0.02 |
+| `redistribute` | 0.27 | 0.01 | 0.73 | 0.05 | 0.35 | 0.02 |
+| `subtract` | 0.19 | 0.01 | 0.57 | 0.04 | 0.24 | 0.01 |
+
+[`decant()`](https://kroy3.github.io/Decant/reference/decant.md) now
+defaults to `correction = "bayes"`. The simulated
+[`gate_correction()`](https://kroy3.github.io/Decant/reference/gate_correction.md)
+still puts the three rules within a few percent of each other with
+`subtract` marginally ahead; the real data does not.
+
+Limits: one dataset, one tissue, no ground truth, and agreement with
+SoupX is agreement with another estimator, not with the truth. Three of
+eleven clusters (the monocyte clusters, which dominate the soup) could
+not identify their own rho and borrowed it. The two-sided soup/cell
+mismatch tripwire raised a false alarm on this data and was retired (see
+Known limitations).
+
+### Species mixtures (not yet run)
 
 `validation/species_mix.R` scores Decant on public 10x human/mouse
 mixtures (`hgmm_1k_v3`, `hgmm_5k_v3`, `hgmm_10k_v3`), where every

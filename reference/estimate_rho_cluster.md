@@ -11,7 +11,9 @@ estimate_rho_cluster(
   clusters,
   alpha = 0.01,
   min_absent_soup = 0.02,
-  max_iter = 100
+  max_iter = 100,
+  min_expected = 5,
+  floor_rho = 0.005
 )
 ```
 
@@ -46,13 +48,28 @@ estimate_rho_cluster(
 
   iteration cap for the absent-set fixed point.
 
+- min_expected:
+
+  a gene can join the absent set only if its expected ambient count in
+  the cluster, at the current rho, is at least this. Below it the
+  Poisson test cannot tell a weakly expressed gene from an absent one,
+  and on real data (tens of thousands of low-count genes) letting those
+  genes in drove rho to several times its true value.
+
+- floor_rho:
+
+  the smallest contamination considered possible. Genes whose total
+  count in the cells is significantly below this fraction of their soup
+  expectation are treated as soup-only and dropped from the soup.
+
 ## Value
 
 numeric vector of per-cell rho, with attribute `"clusters"`: a
 data.frame of per-cluster diagnostics (n_cells, rho, n_absent_genes,
 absent_soup_frac, absent_counts, low_power, borrowed, rho_two_sided),
-and attribute `"soup_mismatch"` (logical). Low-power clusters take the
-evidence-weighted rho of the other clusters (`borrowed = TRUE`).
-`soup_mismatch = TRUE` means the soup profile looks inconsistent with
-the cells and rho is probably UNDERestimated – inspect the empties or
-supply rho yourself.
+and attributes `"soup_mismatch"` (logical), `"soup_only"` (logical per
+gene) and `"soup_only_frac"` (their share of the soup). Low-power
+clusters take the evidence-weighted rho of the other clusters
+(`borrowed = TRUE`). `soup_mismatch = TRUE` means more than 5% of the
+soup was in genes no cell contains; those genes are dropped, but the
+empties deserve a look.

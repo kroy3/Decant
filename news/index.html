@@ -39,6 +39,15 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="decant-development-version">Decant (development version)<a class="anchor" aria-label="anchor" href="#decant-development-version"></a></h2>
 <ul><li>
+<strong>Bug fix, found on real data.</strong> <code><a href="../reference/estimate_rho_cluster.html">estimate_rho_cluster()</a></code> overestimated rho several-fold on real 10x data (median 0.22 on PBMC 4k, where SoupX gives 0.06 to 0.077). Low-count genes passed the absent-gene test for lack of power. The absent set now requires an expected ambient count of at least <code>min_expected = 5</code>; the PBMC estimate is 0.063 (median).</li>
+<li>
+<code><a href="../reference/decant.html">decant()</a></code> now defaults to <code>correction = "bayes"</code>: on the PBMC data it removed 83 to 94% of marker counts from cell types that do not express them, against 19 to 57% for <code>subtract</code>.</li>
+<li>Genes present in the empties but absent from every cell are dropped from the soup (<code>floor_rho</code>), and reported in the mismatch warning.</li>
+<li>The two-sided soup/cell mismatch tripwire is retired: it raised a false alarm on the PBMC data. <code>soup_mismatch</code> now means more than 5% of the soup was in soup-only genes. Empties that over-represent genes the cells do contain are no longer flagged; this is a known limitation.</li>
+<li>A cluster that cannot identify its own rho borrows the weighted median of the others, not a count-weighted mean.</li>
+<li>New <code>validation/pbmc_soupx.R</code>, the first validation run on real data.</li>
+<li>New <code>validation/benchmark_soupx.R</code> and <code>validation/BENCHMARK.md</code>: Decant against the official SoupX on real PBMC and simulated data, with the literature and what is and is not new. With the <code>bayes</code> default, correcting with Decant and then running edgeR matches <code>ambient_de</code> on the simulated 6 vs 6 study.</li>
+<li>
 <code><a href="../reference/ambient_de.html">ambient_de()</a></code> gains <code>robust = TRUE</code> (default): outlier samples are down-weighted per gene by Huber weights, the dispersion is re-estimated under them, and the residual degrees of freedom are reduced to match. Without it, cohorts of 50 or more samples per group with a few extreme counts gave 16 to 41% false positives on null genes (the failure Li et al. 2022 report for NB tests). <code><a href="../reference/DecantDE.html">DecantDE()</a></code> inherits the default.</li>
 <li>
 <code><a href="../reference/ambient_de.html">ambient_de()</a></code> estimates the ambient term more accurately:
