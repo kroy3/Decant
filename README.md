@@ -186,8 +186,9 @@ What this says, including the parts that do not favour Decant:
 NB tests lose false-positive control in population-scale cohorts when a few
 samples carry extreme counts (Li et al. 2022, Genome Biology 23:79), and
 `ambient_de()` did too. It now down-weights outlier samples per gene
-(`robust = TRUE`, the default). `gate_ambient_de_cohort()`, 50 samples per
-group, null false-positive rate at a nominal 0.05:
+(`robust = TRUE`, the default), and `gate_ambient_de_cohort()` checks it in
+CI. Null false-positive rate at a nominal 0.05, 50 samples per group, mean of
+3 seeds:
 
 | case | `ambient_de` | without down-weighting | naive edgeR | naive Wilcoxon | subtract + Wilcoxon |
 |---|---|---|---|---|---|
