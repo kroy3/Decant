@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np, pandas as pd, scipy.sparse as sp, scipy.io as sio
 import scanpy as sc
 
-d = Path(sys.argv[1]); tools = sys.argv[2:] or ["ambidose", "scar", "cellbender"]
+d = Path(sys.argv[1]).resolve(); tools = sys.argv[2:] or ["ambidose", "scar", "cellbender"]
 out = d / "out"; out.mkdir(exist_ok=True)
 cells = [l.strip() for l in open(d / "cells.txt")]
 clusters = pd.read_csv(d / "clusters.csv", index_col=0)["cluster"].astype(str)
