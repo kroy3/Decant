@@ -223,13 +223,14 @@ ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
 ## expressed genes that a single sample's test lets through. A sample with
 ## too few counts on the joint set keeps its per-sample estimate. Returns the
 ## refined rho and its sampling variance.
-.joint_rho <- function(Y, soup, rho, alpha = 0.01, max_iter = 20, min_counts = 50) {
+.joint_rho <- function(Y, soup, rho, alpha = 0.01, max_iter = 20, min_counts = 50,
+                       min_expected = 5) {
   e1 <- sweep(soup, 2, colSums(Y), "*")
   start <- unname(rho); rho <- start; A <- rep(FALSE, nrow(Y))
   none <- list(rho = start, var = rep(0, length(start)))
   for (it in seq_len(max_iter)) {
     m <- as.numeric(e1 %*% rho)
-    A <- m > 0 & stats::ppois(rowSums(Y) - 1, m, lower.tail = FALSE) > alpha
+    A <- m >= min_expected & stats::ppois(rowSums(Y) - 1, m, lower.tail = FALSE) > alpha
     if (!any(A)) return(none)
     new <- unname(colSums(Y[A, , drop = FALSE]) / pmax(colSums(e1[A, , drop = FALSE]), 1e-12))
     done <- max(abs(new - rho)) < 1e-6
