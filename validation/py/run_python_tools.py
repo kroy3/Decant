@@ -11,7 +11,7 @@ Each tool writes out/<tool>.mtx (genes x cells, the order of raw/features and
 cells.txt) and out/<tool>.json (version, seconds, note). A tool that fails
 writes only the json, with the error.
 """
-import json, sys, time, subprocess, traceback
+import json, os, sys, time, subprocess, traceback
 from pathlib import Path
 import numpy as np, pandas as pd, scipy.sparse as sp, scipy.io as sio
 import scanpy as sc
@@ -78,9 +78,13 @@ def cellbender_fn():
     exe = str(Path(sys.executable).parent / "cellbender")
     h5 = out / "cellbender_out.h5"
     n_total = sum(1 for _ in open(d / "n_droplets.txt")) if False else int(open(d / "n_droplets.txt").read())
+    # CellBender's defaults (150 epochs) with cells + 10,000 droplets did not
+    # finish on 4 CPU cores in two hours. CB_EXTRA_DROPLETS and CB_EPOCHS let a
+    # CPU-budget run be made; the note records what was used.
+    extra = int(os.environ.get("CB_EXTRA_DROPLETS", "10000")); epochs = os.environ.get("CB_EPOCHS", "150")
     cmd = [exe, "remove-background", "--input", str(d / "raw"), "--output", str(h5),
-           "--expected-cells", str(len(cells)), "--total-droplets-included", str(min(n_total, len(cells) + 10000)),
-           "--epochs", "150", "--cpu-threads", "4"]
+           "--expected-cells", str(len(cells)), "--total-droplets-included", str(min(n_total, len(cells) + extra)),
+           "--epochs", epochs, "--cpu-threads", "4"]
     r = subprocess.run(cmd, cwd=out, capture_output=True, text=True)
     if r.returncode != 0 or not h5.exists():
         raise RuntimeError("cellbender exit %d: %s" % (r.returncode, (r.stderr or r.stdout)[-800:]))
@@ -95,7 +99,7 @@ def cellbender_fn():
     Xc = sp.csr_matrix(X)[gi[gi >= 0]][:, ci]
     full = sp.lil_matrix((len(raw_ids), len(cells))); full[np.where(gi >= 0)[0]] = Xc
     return full.T.tocsr(), {"version": m.version("cellbender"), "rho": None,
-                            "note": "remove-background, 150 epochs, CPU, defaults otherwise"}
+                            "note": "remove-background, CPU, %s epochs, cells + %d droplets, defaults otherwise" % (epochs, extra)}
 
 fns = {"ambidose": ambidose_fn, "scar": scar_fn, "cellbender": cellbender_fn}
 for t in tools: run(t, fns[t])
