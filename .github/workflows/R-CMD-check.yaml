@@ -56,3 +56,4 @@ jobs:
           Rscript run_all_gates.R | tee gates.txt
           Rscript -e 'pkgload::load_all(".", quiet = TRUE); stopifnot(attr(gate_rho(verbose = FALSE), "pass"))'
           Rscript -e 'pkgload::load_all(".", quiet = TRUE); stopifnot(attr(gate_ambient_de(verbose = FALSE), "pass"))'
+          Rscript -e 'pkgload::load_all(".", quiet = TRUE); stopifnot(attr(gate_ambient_de_cohort(verbose = FALSE), "pass"))'

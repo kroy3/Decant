@@ -20,6 +20,8 @@
 ## beta is fitted by vectorised Fisher scoring and tested with a
 ## quasi-likelihood F-test whose residual variances are moderated by empirical
 ## Bayes (as edgeR's glmQLFTest does), which keeps small-sample tests calibrated.
+## Outlier samples are down-weighted per gene (Huber weights), which keeps
+## large-cohort tests calibrated when a few samples carry extreme counts.
 
 #' Empirical-Bayes soup profiles per sample.
 #'
@@ -64,6 +66,15 @@ soup_eb <- function(empties) {
 #'   passes edgeR's `filterByExpr` at this `min.count`.
 #' @param naive also run standard edgeR QL on the raw pseudobulk and report
 #'   which of its hits the contamination-aware test does not support.
+#' @param robust down-weight outlier samples per gene (Huber weights on
+#'   Pearson residuals, with the dispersion re-estimated under those weights).
+#'   Guards against the false positives NB tests produce in large cohorts
+#'   when a few samples carry extreme counts.
+#' @param huber_k Huber tuning constant, in Pearson-residual units. The
+#'   default 2 kept null genes calibrated with and without outliers in
+#'   [gate_ambient_de_cohort()]; smaller values over-trim clean data and
+#'   inflate false positives, larger ones let outliers through.
+#' @param robust_iter number of re-weighting rounds.
 #' @param maxit,tol Fisher-scoring controls.
 #' @return data.frame per tested gene: logFC (native-expression log2 fold
 #'   change), F, PValue, FDR, ambient_frac (mean fraction of the gene's counts
@@ -73,8 +84,8 @@ soup_eb <- function(empties) {
 #'   factors.
 #' @export
 ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
-                       soup = NULL, min_count = 10, naive = TRUE,
-                       maxit = 50, tol = 1e-8) {
+                       soup = NULL, min_count = 10, naive = TRUE, robust = TRUE,
+                       huber_k = 2, robust_iter = 2, maxit = 50, tol = 1e-8) {
   for (p in c("edgeR", "limma"))
     if (!requireNamespace(p, quietly = TRUE)) stop("ambient_de() needs the ", p, " package", call. = FALSE)
   Y <- as.matrix(counts); storage.mode(Y) <- "double"
@@ -110,7 +121,23 @@ ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
 
   y <- Y[keep, , drop = FALSE]; e <- E[keep, , drop = FALSE]; ve <- VE[keep, , drop = FALSE]
   full <- .fit_ambient_nb(y, e, ve, N, design, phi, maxit, tol)
-  red <- .fit_ambient_nb(y, e, ve, N, design[, -coef, drop = FALSE], phi, maxit, tol)
+  w <- NULL
+  if (robust) {
+    ## Outlier samples: a few extreme counts shift a group mean while the NB
+    ## dispersion (a likelihood, not a moment, estimate) understates their
+    ## variance, so NB tests call the gene (Li et al. 2022). Down-weight
+    ## observations by Huber weights on the full model's Pearson residuals,
+    ## re-estimate the dispersion with those weights, and iterate (the scheme
+    ## of edgeR::estimateGLMRobustDisp). Weights come from the FULL model, so
+    ## a real condition effect is fitted, not down-weighted.
+    for (i in seq_len(robust_iter)) {
+      w <- pmin(huber_k / pmax(abs(full$pearson), 1e-8), 1)
+      dge$weights <- w
+      phi <- edgeR::estimateDisp(dge, design)$tagwise.dispersion
+      full <- .fit_ambient_nb(y, e, ve, N, design, phi, maxit, tol, w)
+    }
+  }
+  red <- .fit_ambient_nb(y, e, ve, N, design[, -coef, drop = FALSE], phi, maxit, tol, w)
 
   ## ---- quasi-likelihood F-test with EB-moderated residual variance ----
   df_res <- S - ncol(design)
@@ -151,9 +178,11 @@ ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
 
 ## Vectorised Fisher scoring for y ~ NB(mu = N * exp(X beta) + e), all genes at
 ## once. Variance V = mu + phi * m^2 + ve (moment-matched NB, with the soup's
-## sampling variance ve). Returns beta (genes x p) and the NB deviance.
-.fit_ambient_nb <- function(y, e, ve, N, X, phi, maxit, tol) {
+## sampling variance ve). `w` are optional genes x samples observation weights.
+## Returns beta (genes x p), the (weighted) NB deviance and Pearson residuals.
+.fit_ambient_nb <- function(y, e, ve, N, X, phi, maxit, tol, w = NULL) {
   G <- nrow(y); S <- ncol(y); p <- ncol(X)
+  if (is.null(w)) w <- matrix(1, G, S)
   logN <- log(N)
   eta_off <- matrix(logN, G, S, byrow = TRUE)
   ## start: log-linear fit to the soup-removed counts
@@ -167,7 +196,8 @@ ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
   ## with V = mu + phi m^2 + ve.
   ll_fixed <- function(beta, size, idx = seq_len(G)) {
     mu <- native(beta, idx) + e[idx, , drop = FALSE]
-    rowSums(stats::dnbinom(y[idx, , drop = FALSE], size = size[idx, , drop = FALSE], mu = mu, log = TRUE))
+    rowSums(w[idx, , drop = FALSE] *
+              stats::dnbinom(y[idx, , drop = FALSE], size = size[idx, , drop = FALSE], mu = mu, log = TRUE))
   }
   size_at <- function(beta) {
     m <- native(beta); mu <- m + e
@@ -178,11 +208,11 @@ ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
     ll <- ll_fixed(beta, size)
     m <- native(beta); mu <- m + e
     V <- mu + mu^2 / size                       # = mu + phi m^2 + ve
-    score <- ((y - mu) / V * m) %*% X           # G x p
-    w <- m^2 / V
+    score <- (w * (y - mu) / V * m) %*% X       # G x p
+    iw <- w * m^2 / V
     info <- array(0, c(G, p, p))
     for (j in seq_len(p)) for (k in j:p) {
-      info[, j, k] <- info[, k, j] <- w %*% (X[, j] * X[, k])
+      info[, j, k] <- info[, k, j] <- iw %*% (X[, j] * X[, k])
     }
     step <- .batched_solve(info, score)
     lam <- rep(1, G); new <- beta + step; ll_new <- ll_fixed(new, size)
@@ -203,8 +233,8 @@ ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
   mu <- native(beta) + e
   sat <- stats::dnbinom(y, size = size, mu = pmax(y, 1e-10), log = TRUE)
   fit <- stats::dnbinom(y, size = size, mu = mu, log = TRUE)
-  list(beta = beta, deviance = pmax(2 * rowSums(sat - fit), 0), loglik = rowSums(fit),
-       iterations = it)
+  list(beta = beta, deviance = pmax(2 * rowSums(w * (sat - fit)), 0), loglik = rowSums(w * fit),
+       pearson = (y - mu) / sqrt(mu + mu^2 / size), iterations = it)
 }
 
 ## Solve A[g,,] x = b[g,] for every g at once (A symmetric positive definite,

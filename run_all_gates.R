@@ -17,6 +17,7 @@ cat("[GAP 5] Allelic / genotype-aware rho estimation\n"); gate_allelic();  cat("
 cat("[GAP 4] Structured-soup lysis diagnostic\n");        gate_diagnose(); cat("\n")
 cat("[GAP 2] v1 covariate DE (superseded, kept for the record)\n"); gate_de(); cat("\n")
 cat("[GAP 2] Contamination-aware DE (ambient_de / DecantDE)\n"); gate_ambient_de(); cat("\n")
+cat("[GAP 2] Contamination-aware DE, large cohorts with outliers / heavy tails\n"); gate_ambient_de_cohort(); cat("\n")
 
 cat("=========================================================\n")
 cat(" Modules that fail their gate ship OFF by default.\n")
