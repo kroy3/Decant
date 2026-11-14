@@ -13,6 +13,10 @@ ambient_de(
   min_count = 10,
   naive = TRUE,
   robust = TRUE,
+  joint_rho = TRUE,
+  soup_design = TRUE,
+  lfc = 0,
+  max_ambient_frac = 0.75,
   huber_k = 2,
   robust_iter = 2,
   maxit = 50,
@@ -43,6 +47,24 @@ Pearson residuals, with the dispersion re-estimated under those weights).
 Guards against the false positives NB tests produce in large cohorts
 when a few samples carry extreme counts.}
 
+\item{joint_rho}{refine each sample's ambient fraction on genes that look
+absent from the cell type across ALL samples pooled. A single sample
+cannot tell a weakly expressed gene from an absent one, which biases its
+ambient fraction upward; the pooled test can.}
+
+\item{soup_design}{shrink each sample's soup toward the design-fitted soup
+(see \code{\link[=soup_eb]{soup_eb()}}) instead of the overall mean.}
+
+\item{lfc}{test against \verb{|log2 fold change| <= lfc} instead of zero (as
+limma's TREAT). In cohorts of a hundred or more samples per group,
+residual biases well under 1\% become statistically detectable; a small
+threshold such as \code{log2(1.1)} asks for effects that matter.}
+
+\item{max_ambient_frac}{genes whose counts in this cell type are, on
+average, more than this fraction ambient are not tested (they are listed
+in attribute \code{"ambient_dominated"}). Their native signal is too small
+for the ambient estimate's error.}
+
 \item{huber_k}{Huber tuning constant, in Pearson-residual units. The
 default 2 kept null genes calibrated with and without outliers in
 \code{\link[=gate_ambient_de_cohort]{gate_ambient_de_cohort()}}; smaller values over-trim clean data and
@@ -58,7 +80,7 @@ change), F, PValue, FDR, ambient_frac (mean fraction of the gene's counts
 attributed to ambient), and when \code{naive = TRUE} naive_PValue, naive_FDR
 and \code{ambient_driven} (naive FDR < 0.05 but contamination-aware FDR >=
 0.05). Attribute \code{"samples"}: per-sample ambient fraction and library
-factors.
+factors. Attribute \code{"ambient_dominated"}: genes skipped as mostly soup.
 }
 \description{
 Contamination-aware differential expression on pseudobulk counts.

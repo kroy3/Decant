@@ -89,22 +89,26 @@ gate_ambient_de <- function(seeds = 1:2, verbose = TRUE) {
 }
 
 .cohort_scores <- function(st, alpha = 0.05, fdr = 0.1) {
-  Y <- st$Y; design <- stats::model.matrix(~st$cond)
+  Y <- st$Y
+  design <- if (length(st$batch_genes)) stats::model.matrix(~st$batch + st$cond)
+            else stats::model.matrix(~st$cond)
+  cf <- ncol(design)
   pv <- list()
   for (rb in c(TRUE, FALSE)) {
-    r <- ambient_de(Y, st$empties, design, naive = FALSE, robust = rb)
+    r <- ambient_de(Y, st$empties, design, coef = cf, naive = FALSE, robust = rb)
     pv[[if (rb) "ambient_de" else "ambient_de_nonrobust"]] <- stats::setNames(r$PValue, r$gene)
   }
   kn <- edgeR::filterByExpr(edgeR::DGEList(Y), design)
   d0 <- edgeR::estimateDisp(.norm_lib_sizes(edgeR::DGEList(Y[kn, ])), design)
   pv$naive_edgeR <- stats::setNames(
-    edgeR::glmQLFTest(edgeR::glmQLFit(d0, design, robust = TRUE), coef = 2)$table$PValue,
+    edgeR::glmQLFTest(edgeR::glmQLFit(d0, design, robust = TRUE), coef = cf)$table$PValue,
     rownames(Y)[kn])
   pv$naive_wilcoxon <- .wilcox_rows(edgeR::cpm(.norm_lib_sizes(edgeR::DGEList(Y[kn, ]))), st$cond)
   ## subtract the same ambient estimate ambient_de uses, then rank-test
-  sp <- soup_eb(st$empties)
+  sp <- soup_eb(st$empties, design)
   rho <- vapply(seq_len(ncol(Y)), function(s)
     as.numeric(estimate_rho_cluster(Y[, s, drop = FALSE], sp$soup[, s], clusters = 1L)), 1)
+  rho <- .joint_rho(Y, sp$soup, rho)$rho
   nat <- pmax(Y - sweep(sp$soup, 2, rho * colSums(Y), "*"), 0)
   ks <- edgeR::filterByExpr(nat, design = design)
   pv$subtract_wilcoxon <- .wilcox_rows(edgeR::cpm(.norm_lib_sizes(edgeR::DGEList(nat[ks, ]))), st$cond)
@@ -126,8 +130,10 @@ gate_ambient_de <- function(seeds = 1:2, verbose = TRUE) {
 #' counts are not negative binomial?
 #'
 #' Simulated case/control cohorts ([simulate_ambient_cohort()]) with
-#' `n_per` samples per group, in three cases: clean NB-like counts, per-gene
-#' outlier samples, and heavy-tailed biological noise. Compared against
+#' `n_per` samples per group, in four cases: clean NB-like counts, per-gene
+#' outlier samples, heavy-tailed biological noise, and a batch that confounds
+#' condition and shifts 200 genes (the model-based methods adjust for it; a
+#' rank test cannot). Compared against
 #' ambient_de without outlier down-weighting, naive edgeR (robust QL), a naive
 #' Wilcoxon rank-sum test, and a Wilcoxon test on ambient-subtracted counts.
 #' Pass requires of ambient_de, averaged over seeds, in every case: at most 1
@@ -140,10 +146,11 @@ gate_ambient_de <- function(seeds = 1:2, verbose = TRUE) {
 #' @param verbose print the table.
 #' @return invisibly, a data.frame with attribute `"pass"`.
 #' @export
-gate_ambient_de_cohort <- function(seeds = 1:2, n_per = 50, verbose = TRUE) {
+gate_ambient_de_cohort <- function(seeds = 1:4, n_per = 50, verbose = TRUE) {
   for (p in c("edgeR", "limma"))
     if (!requireNamespace(p, quietly = TRUE)) stop("gate_ambient_de_cohort() needs ", p, call. = FALSE)
-  cases <- list(clean = list(), outliers = list(out_p = 0.01), heavy_tail = list(heavy_df = 3))
+  cases <- list(clean = list(), outliers = list(out_p = 0.01), heavy_tail = list(heavy_df = 3),
+                batch = list(n_batch = 200))
   rows <- list()
   for (nm in names(cases)) for (s in seeds) {
     st <- do.call(simulate_ambient_cohort, c(cases[[nm]], list(n_per = n_per, seed = s)))

@@ -53,7 +53,5 @@ jobs:
           extra-packages: any::pkgload, bioc::edgeR, bioc::limma
       - name: Run falsification gates
         run: |
+          set -o pipefail
           Rscript run_all_gates.R | tee gates.txt
-          Rscript -e 'pkgload::load_all(".", quiet = TRUE); stopifnot(attr(gate_rho(verbose = FALSE), "pass"))'
-          Rscript -e 'pkgload::load_all(".", quiet = TRUE); stopifnot(attr(gate_ambient_de(verbose = FALSE), "pass"))'
-          Rscript -e 'pkgload::load_all(".", quiet = TRUE); stopifnot(attr(gate_ambient_de_cohort(verbose = FALSE), "pass"))'

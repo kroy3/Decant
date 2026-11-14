@@ -100,3 +100,63 @@ test_that("simulate_ambient_cohort returns a consistent study", {
   expect_true(mean(st$rho_true[st$cond == "dis"]) > mean(st$rho_true[st$cond == "ctrl"]))
   expect_error(simulate_ambient_cohort(frac = c(A = 1)), "must name types")
 })
+
+test_that("joint refinement removes the upward bias of per-sample rho", {
+  st <- simulate_ambient_cohort(n_per = 10, G = 800, seed = 3)
+  sp <- soup_eb(st$empties)
+  r0 <- vapply(seq_len(ncol(st$Y)), function(s)
+    as.numeric(estimate_rho_cluster(st$Y[, s, drop = FALSE], sp$soup[, s], clusters = 1L)), 1)
+  r1 <- .joint_rho(st$Y, sp$soup, r0)$rho
+  expect_lt(abs(mean(r1 - st$rho_true)), abs(mean(r0 - st$rho_true)) / 2)
+  expect_lt(abs(mean(r1 - st$rho_true)), 0.005)
+  ## with no usable joint set, the per-sample estimate is returned unchanged
+  expect_equal(.joint_rho(st$Y, sp$soup, r0, min_counts = Inf)$rho, r0)
+})
+
+test_that("soup_eb with a design does not shrink away a condition difference", {
+  set.seed(5)
+  a <- rgamma(300, 0.5); a <- a / sum(a); b <- a; b[1:30] <- b[1:30] * 3; b <- b / sum(b)
+  emp <- c(lapply(1:6, function(i) rmultinom(1, 3000, a)), lapply(1:6, function(i) rmultinom(1, 3000, b)))
+  X <- cbind(1, rep(0:1, each = 6))
+  gap <- function(sb) sum(sb$soup[1:30, 7:12]) / sum(sb$soup[1:30, 1:6])
+  truth <- sum(b[1:30]) / sum(a[1:30])
+  expect_lt(abs(gap(soup_eb(emp, X)) - truth), abs(gap(soup_eb(emp)) - truth))
+  expect_error(soup_eb(emp, X[-1, ]), "number of samples")
+})
+
+test_that("lfc threshold tests an interval null", {
+  st <- simulate_ambient_cohort(n_per = 12, G = 600, fc_rare = 3, seed = 4)
+  d <- model.matrix(~st$cond)
+  r0 <- suppressWarnings(ambient_de(st$Y, st$empties, d, naive = FALSE))
+  r1 <- suppressWarnings(ambient_de(st$Y, st$empties, d, naive = FALSE, lfc = log2(1.2)))
+  r1 <- r1[match(r0$gene, r1$gene), ]
+  sig <- r0$PValue < 0.05
+  expect_true(all(r1$PValue[sig] >= r0$PValue[sig] - 1e-12))
+  de <- as.integer(sub("g", "", r1$gene)) %in% st$de_rare
+  expect_gt(mean(r1$FDR[de] < 0.1), 0.6)                         # 3-fold genes survive
+  small <- abs(r1$logFC) < log2(1.2)
+  expect_equal(sum(r1$FDR[small] < 0.1), 0)                      # sub-threshold effects do not
+})
+
+test_that("a confounding batch is adjusted for through the design", {
+  st <- simulate_ambient_cohort(n_per = 20, G = 800, n_batch = 200, seed = 6)
+  fp <- function(d) {
+    r <- suppressWarnings(ambient_de(st$Y, st$empties, d, naive = FALSE))
+    mean(r$PValue[as.integer(sub("g", "", r$gene)) %in% st$batch_genes] < 0.05)
+  }
+  adjusted <- fp(model.matrix(~st$batch + st$cond))
+  unadjusted <- fp(model.matrix(~st$cond))
+  expect_lt(adjusted, 0.15)
+  expect_gt(unadjusted, 2 * adjusted)                            # the confounding is real
+  expect_equal(length(st$batch), ncol(st$Y))
+})
+
+test_that("ambient-dominated genes are skipped and reported", {
+  st <- simulate_ambient_cohort(n_per = 8, G = 600, seed = 7)
+  d <- model.matrix(~st$cond)
+  r <- suppressWarnings(ambient_de(st$Y, st$empties, d, naive = FALSE))
+  expect_true(all(r$ambient_frac <= 0.75))
+  all_in <- suppressWarnings(ambient_de(st$Y, st$empties, d, naive = FALSE, max_ambient_frac = 1))
+  expect_length(attr(all_in, "ambient_dominated"), 0)
+  expect_setequal(setdiff(all_in$gene, r$gene), attr(r, "ambient_dominated"))
+})
