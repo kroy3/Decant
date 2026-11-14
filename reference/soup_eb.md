@@ -11,7 +11,7 @@ inflated false positives.)
 ## Usage
 
 ``` r
-soup_eb(empties)
+soup_eb(empties, design = NULL)
 ```
 
 ## Arguments
@@ -20,6 +20,12 @@ soup_eb(empties)
 
   list of genes x droplets empty-droplet matrices, one per sample (same
   genes, same order).
+
+- design:
+
+  optional sample-level design matrix. Each sample's soup is then shrunk
+  toward the design-fitted soup instead of the overall mean, so real
+  soup differences between conditions are not shrunk away.
 
 ## Value
 

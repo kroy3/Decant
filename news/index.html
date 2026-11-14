@@ -38,7 +38,25 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="decant-development-version">Decant (development version)<a class="anchor" aria-label="anchor" href="#decant-development-version"></a></h2>
-<ul><li>New <code>validation/de_comparators.R</code>: contamination-aware DE against correct-then-test with the official SoupX, DecontX, FastCAR and CellBender (each run only if installed). Wrappers live in <code>validation/comparators.R</code>.</li>
+<ul><li>
+<code><a href="../reference/ambient_de.html">ambient_de()</a></code> gains <code>robust = TRUE</code> (default): outlier samples are down-weighted per gene by Huber weights, the dispersion is re-estimated under them, and the residual degrees of freedom are reduced to match. Without it, cohorts of 50 or more samples per group with a few extreme counts gave 16 to 41% false positives on null genes (the failure Li et al. 2022 report for NB tests). <code><a href="../reference/DecantDE.html">DecantDE()</a></code> inherits the default.</li>
+<li>
+<code><a href="../reference/ambient_de.html">ambient_de()</a></code> estimates the ambient term more accurately:
+<ul><li>
+<code>joint_rho = TRUE</code>: each sample’s ambient fraction is refined on genes that look absent across all samples pooled, which removes an upward bias of about one point; its sampling variance now enters the model.</li>
+<li>
+<code>soup_design = TRUE</code>, and <code>soup_eb(design = )</code>: soups are shrunk toward the design-fitted soup, not a condition-blind mean.</li>
+</ul></li>
+<li>
+<code>ambient_de(max_ambient_frac = 0.75)</code>: genes whose counts are mostly soup are not tested and are listed in attribute <code>"ambient_dominated"</code>. Previously most such genes were dropped only as a side effect of the over-estimated ambient fraction.</li>
+<li>
+<code>ambient_de(lfc = )</code>: test against a minimum fold change (as limma’s TREAT), for cohorts large enough that sub-1% biases become significant.</li>
+<li>New <code><a href="../reference/simulate_ambient_cohort.html">simulate_ambient_cohort()</a></code> and <code><a href="../reference/gate_ambient_de_cohort.html">gate_ambient_de_cohort()</a></code>: large cohorts with outlier samples, heavy-tailed noise, or a confounding batch.</li>
+<li>
+<code>run_all_gates.R</code> exits non-zero when a required gate fails; CI runs each gate once.</li>
+<li>
+<code>experiments/large_cohort_calibration/</code>: sweep over 6 to 200 samples per group, with its limits.</li>
+<li>New <code>validation/de_comparators.R</code>: contamination-aware DE against correct-then-test with the official SoupX, DecontX, FastCAR and CellBender (each run only if installed). Wrappers live in <code>validation/comparators.R</code>.</li>
 <li>README: the claim that correcting counts first does not stop DE leakage is narrowed. It holds for Decant’s default <code>subtract</code> rule; official SoupX followed by edgeR removes almost all leakage on the simulator.</li>
 <li>New vignette, “Contamination-aware differential expression”.</li>
 <li>pkgdown site configuration and deployment workflow.</li>

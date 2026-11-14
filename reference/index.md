@@ -78,6 +78,10 @@
   : GATE: does contamination-aware DE stop ambient leakage while staying
   calibrated and powerful?
 
+- [`gate_ambient_de_cohort()`](https://kroy3.github.io/Decant/reference/gate_ambient_de_cohort.md)
+  : GATE: does contamination-aware DE stay calibrated in large cohorts
+  whose counts are not negative binomial?
+
 - [`gate_correction()`](https://kroy3.github.io/Decant/reference/gate_correction.md)
   : GATE: which mass-conserving correction rule is closest to truth?
 
@@ -134,6 +138,9 @@
 - [`simulate_allelic()`](https://kroy3.github.io/Decant/reference/simulate_allelic.md)
   : Simulate a pooled multi-genotype experiment with allele-resolved SNP
   genes.
+
+- [`simulate_ambient_cohort()`](https://kroy3.github.io/Decant/reference/simulate_ambient_cohort.md)
+  : Simulate a large case/control cohort at the pseudobulk level.
 
 - [`simulate_ambient_study()`](https://kroy3.github.io/Decant/reference/simulate_ambient_study.md)
   : Simulate a case/control single-cell study with sample-specific soup.

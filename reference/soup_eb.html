@@ -58,7 +58,7 @@ sample-specific soup differences and inflated false positives.)</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">soup_eb</span><span class="op">(</span><span class="va">empties</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">soup_eb</span><span class="op">(</span><span class="va">empties</span>, design <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -68,6 +68,12 @@ sample-specific soup differences and inflated false positives.)</p>
 <dl><dt id="arg-empties">empties<a class="anchor" aria-label="anchor" href="#arg-empties"></a></dt>
 <dd><p>list of genes x droplets empty-droplet matrices, one per
 sample (same genes, same order).</p></dd>
+
+
+<dt id="arg-design">design<a class="anchor" aria-label="anchor" href="#arg-design"></a></dt>
+<dd><p>optional sample-level design matrix. Each sample's soup is
+then shrunk toward the design-fitted soup instead of the overall mean, so
+real soup differences between conditions are not shrunk away.</p></dd>
 
 </dl></div>
     <div class="section level2">

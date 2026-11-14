@@ -26,6 +26,7 @@
 <url><loc>https://kroy3.github.io/Decant/reference/estimate_rho_cluster.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/gate_allelic.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/gate_ambient_de.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/reference/gate_ambient_de_cohort.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/gate_correction.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/gate_de.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/gate_diagnose.html</loc></url>
@@ -42,6 +43,7 @@
 <url><loc>https://kroy3.github.io/Decant/reference/score_correction.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/score_species_mix.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/simulate_allelic.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/reference/simulate_ambient_cohort.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/simulate_ambient_study.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/simulate_de.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/simulate_experiment.html</loc></url>

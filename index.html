@@ -424,6 +424,96 @@
 <li>Decant’s default <code>subtract</code> correction is the weak arm. It estimates rho well but clamps at zero without redistributing, so it removes less than rho of each cell’s counts (about 5% removed at a true rho of 6%).</li>
 <li>DecontX, FastCAR and CellBender were <strong>not run</strong> (not installed where this table was produced). The wrappers are in <code>validation/comparators.R</code>; the FastCAR and CellBender wrappers have never been executed. See <code>validation/README.md</code>.</li>
 </ul>
+</div>
+<div class="section level3">
+<h3 id="large-cohorts-outlier-samples-and-covariates">Large cohorts, outlier samples and covariates<a class="anchor" aria-label="anchor" href="#large-cohorts-outlier-samples-and-covariates"></a>
+</h3>
+<p>NB tests lose false-positive control in population-scale cohorts when a few samples carry extreme counts (Li et al. 2022, Genome Biology 23:79), and <code><a href="reference/ambient_de.html">ambient_de()</a></code> did too. It now down-weights outlier samples per gene (<code>robust = TRUE</code>, the default), and <code><a href="reference/gate_ambient_de_cohort.html">gate_ambient_de_cohort()</a></code> checks it in CI. Null false-positive rate at a nominal 0.05, mean of 3 seeds:</p>
+<table style="width:100%;" class="table">
+<colgroup>
+<col width="14%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
+</colgroup>
+<thead><tr>
+<th>per group</th>
+<th>case</th>
+<th><code>ambient_de</code></th>
+<th>without down-weighting</th>
+<th>naive edgeR</th>
+<th>naive Wilcoxon</th>
+<th>subtract + Wilcoxon</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>50</td>
+<td>clean</td>
+<td>0.056</td>
+<td>0.052</td>
+<td>0.382</td>
+<td>0.369</td>
+<td>0.054</td>
+</tr>
+<tr>
+<td>50</td>
+<td>1% outlier entries</td>
+<td>0.053</td>
+<td>0.335</td>
+<td>0.444</td>
+<td>0.366</td>
+<td>0.053</td>
+</tr>
+<tr>
+<td>50</td>
+<td>heavy-tailed noise</td>
+<td>0.044</td>
+<td>0.146</td>
+<td>0.303</td>
+<td>0.267</td>
+<td>0.047</td>
+</tr>
+<tr>
+<td>50</td>
+<td>confounding batch</td>
+<td>0.050</td>
+<td>0.044</td>
+<td>0.451</td>
+<td>0.462</td>
+<td>0.141</td>
+</tr>
+<tr>
+<td>200</td>
+<td>clean</td>
+<td>0.064</td>
+<td>0.057</td>
+<td>0.759</td>
+<td>0.738</td>
+<td>0.053</td>
+</tr>
+<tr>
+<td>200</td>
+<td>confounding batch</td>
+<td>0.056</td>
+<td>0.050</td>
+<td>0.764</td>
+<td>0.741</td>
+<td>0.213</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>A rank test does not fix contamination: naive Wilcoxon is as inflated as naive edgeR when contamination differs between groups.</li>
+<li>In a two-group design with 50 or more per group, subtracting the ambient estimate and then running Wilcoxon is as good as <code>ambient_de</code>.</li>
+<li>
+<code>ambient_de</code> is the better choice below about 50 per group (power 0.86 vs 0.61 at 15) and when a covariate must be adjusted for: with a confounding batch the rank test’s false discovery proportion is 0.64 to 0.85.</li>
+<li>From 50 per group up, <code>ambient_de</code>’s false discovery proportion at a nominal 0.10 is 0.10 to 0.17, from genes with very small residual shifts. <code>lfc = log2(1.1)</code> tests against a 10% minimum fold change and removed them with no loss of power for 1.5-fold effects.</li>
+<li>Genes whose counts are more than 75% ambient are not tested; they are listed in <code>attr(res, "ambient_dominated")</code>.</li>
+</ul>
+<p>The sweep over 6 to 200 per group is in <code>experiments/large_cohort_calibration/</code>.</p>
 <p>Limits: - With very few empty droplets (150) some leakage returns. - With 3 samples per group, power drops (0.58 vs 0.68 for naive). - The base case’s false discovery proportion (0.15) sits exactly at the gate’s threshold. - All results are simulated, from a simulator built around the mechanism the model assumes. The full development history, including the variants that were rejected, is in <code>experiments/contamination_aware_de/</code>.</p>
 </div>
 </div>

@@ -51,6 +51,13 @@
 <span>  soup <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  min_count <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  naive <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  robust <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  joint_rho <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  soup_design <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  lfc <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  max_ambient_frac <span class="op">=</span> <span class="fl">0.75</span>,</span>
+<span>  huber_k <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>  robust_iter <span class="op">=</span> <span class="fl">2</span>,</span>
 <span>  maxit <span class="op">=</span> <span class="fl">50</span>,</span>
 <span>  tol <span class="op">=</span> <span class="fl">1e-08</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -92,6 +99,50 @@ passes edgeR's <code>filterByExpr</code> at this <code>min.count</code>.</p></dd
 which of its hits the contamination-aware test does not support.</p></dd>
 
 
+<dt id="arg-robust">robust<a class="anchor" aria-label="anchor" href="#arg-robust"></a></dt>
+<dd><p>down-weight outlier samples per gene (Huber weights on
+Pearson residuals, with the dispersion re-estimated under those weights).
+Guards against the false positives NB tests produce in large cohorts
+when a few samples carry extreme counts.</p></dd>
+
+
+<dt id="arg-joint-rho">joint_rho<a class="anchor" aria-label="anchor" href="#arg-joint-rho"></a></dt>
+<dd><p>refine each sample's ambient fraction on genes that look
+absent from the cell type across ALL samples pooled. A single sample
+cannot tell a weakly expressed gene from an absent one, which biases its
+ambient fraction upward; the pooled test can.</p></dd>
+
+
+<dt id="arg-soup-design">soup_design<a class="anchor" aria-label="anchor" href="#arg-soup-design"></a></dt>
+<dd><p>shrink each sample's soup toward the design-fitted soup
+(see <code><a href="soup_eb.html">soup_eb()</a></code>) instead of the overall mean.</p></dd>
+
+
+<dt id="arg-lfc">lfc<a class="anchor" aria-label="anchor" href="#arg-lfc"></a></dt>
+<dd><p>test against <code>|log2 fold change| &lt;= lfc</code> instead of zero (as
+limma's TREAT). In cohorts of a hundred or more samples per group,
+residual biases well under 1% become statistically detectable; a small
+threshold such as <code>log2(1.1)</code> asks for effects that matter.</p></dd>
+
+
+<dt id="arg-max-ambient-frac">max_ambient_frac<a class="anchor" aria-label="anchor" href="#arg-max-ambient-frac"></a></dt>
+<dd><p>genes whose counts in this cell type are, on
+average, more than this fraction ambient are not tested (they are listed
+in attribute <code>"ambient_dominated"</code>). Their native signal is too small
+for the ambient estimate's error.</p></dd>
+
+
+<dt id="arg-huber-k">huber_k<a class="anchor" aria-label="anchor" href="#arg-huber-k"></a></dt>
+<dd><p>Huber tuning constant, in Pearson-residual units. The
+default 2 kept null genes calibrated with and without outliers in
+<code><a href="gate_ambient_de_cohort.html">gate_ambient_de_cohort()</a></code>; smaller values over-trim clean data and
+inflate false positives, larger ones let outliers through.</p></dd>
+
+
+<dt id="arg-robust-iter">robust_iter<a class="anchor" aria-label="anchor" href="#arg-robust-iter"></a></dt>
+<dd><p>number of re-weighting rounds.</p></dd>
+
+
 <dt id="arg-maxit-tol">maxit, tol<a class="anchor" aria-label="anchor" href="#arg-maxit-tol"></a></dt>
 <dd><p>Fisher-scoring controls.</p></dd>
 
@@ -103,7 +154,7 @@ change), F, PValue, FDR, ambient_frac (mean fraction of the gene's counts
 attributed to ambient), and when <code>naive = TRUE</code> naive_PValue, naive_FDR
 and <code>ambient_driven</code> (naive FDR &lt; 0.05 but contamination-aware FDR &gt;=
 0.05). Attribute <code>"samples"</code>: per-sample ambient fraction and library
-factors.</p>
+factors. Attribute <code>"ambient_dominated"</code>: genes skipped as mostly soup.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -9,6 +9,14 @@ correction,
 to get real data in, and the `gate_*()` functions to re-derive every
 default from ground truth.
 
+## See also
+
+Useful links:
+
+- <https://github.com/kroy3/Decant>
+
+- Report bugs at <https://github.com/kroy3/Decant/issues>
+
 ## Author
 
 **Maintainer**: Kushal Raj Roy <kushalrajroy1@gmail.com>
