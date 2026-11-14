@@ -9,15 +9,25 @@ cat("=========================================================\n")
 cat(" DECANT MODULE GATES (each must earn its place)\n")
 cat("=========================================================\n\n")
 
-cat("[CORE] Contamination-fraction (rho) estimator\n");  gate_rho();        cat("\n")
+must <- list()
+cat("[CORE] Contamination-fraction (rho) estimator\n");  must$rho <- gate_rho(); cat("\n")
 cat("[CORE] Correction rule\n");                          gate_correction(); cat("\n")
 cat("[GAP 1] Splice-aware layer decontamination\n");      gate_splice();   cat("\n")
 cat("[GAP 3] Hierarchical multi-sample soup pooling\n");  gate_hier();     cat("\n")
 cat("[GAP 5] Allelic / genotype-aware rho estimation\n"); gate_allelic();  cat("\n")
 cat("[GAP 4] Structured-soup lysis diagnostic\n");        gate_diagnose(); cat("\n")
 cat("[GAP 2] v1 covariate DE (superseded, kept for the record)\n"); gate_de(); cat("\n")
-cat("[GAP 2] Contamination-aware DE (ambient_de / DecantDE)\n"); gate_ambient_de(); cat("\n")
+cat("[GAP 2] Contamination-aware DE (ambient_de / DecantDE)\n"); must$ambient_de <- gate_ambient_de(); cat("\n")
+cat("[GAP 2] Contamination-aware DE, large cohorts: outliers, heavy tails, batch\n")
+must$ambient_de_cohort <- gate_ambient_de_cohort(); cat("\n")
 
 cat("=========================================================\n")
 cat(" Modules that fail their gate ship OFF by default.\n")
 cat("=========================================================\n")
+
+## The defaults these gates justify must keep passing; CI fails otherwise.
+failed <- names(must)[!vapply(must, function(g) isTRUE(attr(g, "pass")), NA)]
+if (length(failed)) {
+  cat("REQUIRED GATES FAILED: ", paste(failed, collapse = ", "), "\n", sep = "")
+  quit(status = 1)
+}
