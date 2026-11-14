@@ -5,6 +5,7 @@ Run from the repo root. Results go to `validation/results/`.
 | script | ground truth | status |
 |---|---|---|
 | `de_comparators.R` | simulated case/control study | run; results in `results/de_comparators.csv` |
+| `pbmc_soupx.R` | none (10x PBMC 4k bundled with SoupX; compared with SoupX's published estimates and marker specificity) | run; results in `results/pbmc_soupx_*.csv` |
 | `species_mix.R` | 10x human/mouse mixtures | **not yet run** (needs `cf.10xgenomics.com`) |
 | `kidney_mixture.R` | Janssen et al. 2023 genotype mixture | **not yet run** (needs `zenodo.org`) |
 
