@@ -37,7 +37,7 @@
   list(cells = cells, empties = empties)
 }
 
-run_decant <- function(cells, empties, clusters, correction = "subtract") {
+run_decant <- function(cells, empties, clusters, correction = "bayes") {
   tryCatch({
     res <- suppressWarnings(decant(cells, empties, clusters = clusters, correction = correction))
     list(corrected = res$corrected, rho = res$rho,
