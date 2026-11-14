@@ -6,6 +6,7 @@ Run from the repo root. Results go to `validation/results/`.
 |---|---|---|
 | `de_comparators.R` | simulated case/control study | run; results in `results/de_comparators.csv` |
 | `pbmc_soupx.R` | none (10x PBMC 4k bundled with SoupX; compared with SoupX's published estimates and marker specificity) | run; results in `results/pbmc_soupx_*.csv` |
+| `benchmark_all.R` + `py/run_python_tools.py` | none (PBMC 4k); six tools | run; results in `results/benchmark_all_pbmc.csv` |
 | `species_mix.R` | 10x human/mouse mixtures | **not yet run** (needs `cf.10xgenomics.com`) |
 | `kidney_mixture.R` | Janssen et al. 2023 genotype mixture | **not yet run** (needs `zenodo.org`) |
 
@@ -17,7 +18,7 @@ Official packages only. A tool that is not installed is reported as
 | tool | install | wrapper status |
 |---|---|---|
 | SoupX | `install.packages("SoupX")` | run (SoupX 1.6.2, R 4.3.3) |
-| DecontX | `BiocManager::install("decontX")` | written, **not yet run** |
+| DecontX | `BiocManager::install("decontX")` | run (decontX 1.10.0) |
 | FastCAR | `remotes::install_github("LungCellAtlas/FastCAR")` | written against the FastCAR source, **not yet run** |
 | CellBender | `pip install cellbender`, plus R package `hdf5r` | written against the v0.3 docs, **not yet run** |
 
