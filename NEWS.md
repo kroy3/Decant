@@ -17,6 +17,11 @@
 * A cluster that cannot identify its own rho borrows the weighted median of
   the others, not a count-weighted mean.
 * New `validation/pbmc_soupx.R`, the first validation run on real data.
+* New `validation/benchmark_soupx.R` and `validation/BENCHMARK.md`: Decant
+  against the official SoupX on real PBMC and simulated data, with the
+  literature and what is and is not new. With the `bayes` default,
+  correcting with Decant and then running edgeR matches `ambient_de` on the
+  simulated 6 vs 6 study.
 * `ambient_de()` gains `robust = TRUE` (default): outlier samples are
   down-weighted per gene by Huber weights, the dispersion is re-estimated
   under them, and the residual degrees of freedom are reduced to match.
