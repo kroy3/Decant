@@ -181,30 +181,38 @@ What this says, including the parts that do not favour Decant:
   FastCAR and CellBender wrappers have never been executed. See
   `validation/README.md`.
 
-### Large cohorts and outlier samples
+### Large cohorts, outlier samples and covariates
 
 NB tests lose false-positive control in population-scale cohorts when a few
 samples carry extreme counts (Li et al. 2022, Genome Biology 23:79), and
 `ambient_de()` did too. It now down-weights outlier samples per gene
 (`robust = TRUE`, the default), and `gate_ambient_de_cohort()` checks it in
-CI. Null false-positive rate at a nominal 0.05, 50 samples per group, mean of
-3 seeds:
+CI. Null false-positive rate at a nominal 0.05, mean of 3 seeds:
 
-| case | `ambient_de` | without down-weighting | naive edgeR | naive Wilcoxon | subtract + Wilcoxon |
-|---|---|---|---|---|---|
-| clean | 0.056 | 0.050 | 0.402 | 0.393 | 0.048 |
-| 1% outlier entries | 0.050 | 0.338 | 0.430 | 0.333 | 0.054 |
-| heavy-tailed noise | 0.049 | 0.155 | 0.303 | 0.261 | 0.050 |
+| per group | case | `ambient_de` | without down-weighting | naive edgeR | naive Wilcoxon | subtract + Wilcoxon |
+|---|---|---|---|---|---|---|
+| 50 | clean | 0.056 | 0.052 | 0.382 | 0.369 | 0.054 |
+| 50 | 1% outlier entries | 0.053 | 0.335 | 0.444 | 0.366 | 0.053 |
+| 50 | heavy-tailed noise | 0.044 | 0.146 | 0.303 | 0.267 | 0.047 |
+| 50 | confounding batch | 0.050 | 0.044 | 0.451 | 0.462 | 0.141 |
+| 200 | clean | 0.064 | 0.057 | 0.759 | 0.738 | 0.053 |
+| 200 | confounding batch | 0.056 | 0.050 | 0.764 | 0.741 | 0.213 |
 
 - A rank test does not fix contamination: naive Wilcoxon is as inflated as
   naive edgeR when contamination differs between groups.
-- Subtracting the ambient estimate and then running Wilcoxon matches
-  `ambient_de` from 50 per group up. `ambient_de` has more power below that
-  (0.75 vs 0.50 at 15 per group) and supports covariates.
-- With 100 per group both drift to about 0.06, because the bias in the
-  per-sample contamination estimate does not shrink with sample size.
+- In a two-group design with 50 or more per group, subtracting the ambient
+  estimate and then running Wilcoxon is as good as `ambient_de`.
+- `ambient_de` is the better choice below about 50 per group (power 0.86 vs
+  0.61 at 15) and when a covariate must be adjusted for: with a confounding
+  batch the rank test's false discovery proportion is 0.64 to 0.85.
+- From 50 per group up, `ambient_de`'s false discovery proportion at a
+  nominal 0.10 is 0.10 to 0.17, from genes with very small residual shifts.
+  `lfc = log2(1.1)` tests against a 10% minimum fold change and removed them
+  with no loss of power for 1.5-fold effects.
+- Genes whose counts are more than 75% ambient are not tested; they are
+  listed in `attr(res, "ambient_dominated")`.
 
-The sweep over 6 to 100 per group is in
+The sweep over 6 to 200 per group is in
 `experiments/large_cohort_calibration/`.
 
 Limits:
