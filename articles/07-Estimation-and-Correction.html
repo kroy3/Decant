@@ -128,7 +128,7 @@ or replace one of them.</p>
 <span></span>
 <span><span class="va">rho</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/estimate_rho_cluster.html">estimate_rho_cluster</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">observed</span>, <span class="va">soup</span>, clusters <span class="op">=</span> <span class="va">sim</span><span class="op">$</span><span class="va">labels</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/median.html" class="external-link">median</a></span><span class="op">(</span><span class="va">rho</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 0.192</span></span>
+<span><span class="co">#&gt; [1] 0.199</span></span>
 <span></span>
 <span><span class="va">corrected</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/correct_counts.html">correct_counts</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">observed</span>, <span class="va">soup</span>, <span class="va">rho</span>,</span>
 <span>                            method <span class="op">=</span> <span class="st">"bayes_cell"</span>, clusters <span class="op">=</span> <span class="va">sim</span><span class="op">$</span><span class="va">labels</span><span class="op">)</span></span></code></pre></div>
@@ -217,8 +217,8 @@ proportion (SoupX’s approach)</td>
 <span>  <span class="va">e</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/score_correction.html">score_correction</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">observed</span>, <span class="va">r</span><span class="op">$</span><span class="va">corrected</span>, <span class="va">sim</span><span class="op">$</span><span class="va">truth</span><span class="op">)</span><span class="op">$</span><span class="va">l1_error</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"%-13s %.3f\n"</span>, <span class="va">m</span>, <span class="va">e</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">}</span></span>
-<span><span class="co">#&gt; subtract      0.070</span></span>
-<span><span class="co">#&gt; redistribute  0.062</span></span>
+<span><span class="co">#&gt; subtract      0.067</span></span>
+<span><span class="co">#&gt; redistribute  0.063</span></span>
 <span><span class="co">#&gt; bayes         0.047</span></span>
 <span><span class="co">#&gt; bayes_cell    0.049</span></span></code></pre></div>
 <ul>

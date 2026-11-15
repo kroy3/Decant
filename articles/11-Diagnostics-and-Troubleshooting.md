@@ -12,8 +12,8 @@ sim <- simulate_experiment(seed = 1)
 res <- decant(sim$observed, sim$empty, clusters = sim$labels)
 
 quantile(res$rho, c(0.1, 0.5, 0.9))
-#>       10%       50%       90%
-#> 0.1083049 0.1922303 0.2939032
+#>       10%       50%       90% 
+#> 0.1167786 0.1993348 0.3052685 
 res$soup_mismatch
 #> [1] FALSE
 any(res$rho_diagnostics$low_power)

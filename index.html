@@ -113,7 +113,7 @@
 <tbody>
 <tr>
 <td>human/mouse mixture: retain</td>
-<td>0.991</td>
+<td>0.989</td>
 <td>0.992</td>
 <td>0.983</td>
 <td>0.996</td>
@@ -121,7 +121,7 @@
 <tr>
 <td>human/mouse mixture: <strong>removal</strong>
 </td>
-<td><strong>0.415</strong></td>
+<td><strong>0.616</strong></td>
 <td>0.345</td>
 <td><strong>0.722</strong></td>
 <td>0.729</td>
@@ -135,7 +135,7 @@
 </tr>
 </tbody>
 </table>
-<p>Decant is conservative. Its contamination estimate is about half the true level on the species mixture, so it leaves roughly 30 points more ambient RNA than DecontX or CellBender. It also removes almost nothing where there is nothing to remove. If ambient removal matters more to you than keeping every endogenous count, DecontX did better here. Details: <a href="validation/BENCHMARK.html"><code>validation/BENCHMARK.md</code></a>, section 1c.</p>
+<p>Decant still removes about 10 points less ambient RNA than DecontX or CellBender on the mixture, and keeps slightly more of the cells’ own counts than DecontX. It removes almost nothing where there is nothing to remove. Its contamination estimate now matches the cross-species truth (median 0.027 against 0.029; before this release 0.013). That mixture was used to find the estimator’s flaw; results on held-out mixtures are in <a href="validation/BENCHMARK.html"><code>validation/BENCHMARK.md</code></a>, sections 1c and 1d.</p>
 </div>
 <div class="section level3">
 <h3 id="correction-six-tools-on-real-10x-pbmc-4k-data">Correction: six tools on real 10x PBMC 4k data<a class="anchor" aria-label="anchor" href="#correction-six-tools-on-real-10x-pbmc-4k-data"></a>
@@ -293,7 +293,9 @@
 <h2 id="limits">Limits<a class="anchor" aria-label="anchor" href="#limits"></a>
 </h2>
 <ul>
-<li>Ground truth so far is one species mixture and one negative control. On the mixture, Decant’s contamination estimate is about half the true level, so it under-removes. The genotype mixture and the paper’s medium- and high-complexity datasets are not yet run.</li>
+<li>Ground truth so far is four human/mouse mixtures and one negative control, all from cell lines. On the 10k mixture Decant underestimates contamination (0.021 against 0.062) and ranks cells poorly; DecontX does better there. The genotype mixture and the paper’s medium- and high-complexity datasets are not yet run.</li>
+<li>When the soup resembles the cells (a single cell type), contamination cannot be estimated from expression. Decant then warns and asks for <code>rho</code>; the number it reports in that case is not reliable.</li>
+<li>Memory: about 9.5 GB for 11,000 cells and 1.9 million empty droplets.</li>
 <li>The DE results are simulated, from a simulator that follows the model’s own ambient mechanism.</li>
 <li>Empty droplets that over-represent genes the cells also express are not detected and make the contamination estimate too low.</li>
 </ul>

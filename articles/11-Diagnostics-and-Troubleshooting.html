@@ -94,8 +94,8 @@ each message and what to do about it.</p>
 <span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/decant.html">decant</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">observed</span>, <span class="va">sim</span><span class="op">$</span><span class="va">empty</span>, clusters <span class="op">=</span> <span class="va">sim</span><span class="op">$</span><span class="va">labels</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">rho</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.5</span>, <span class="fl">0.9</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;       10%       50%       90%</span></span>
-<span><span class="co">#&gt; 0.1083049 0.1922303 0.2939032</span></span>
+<span><span class="co">#&gt;       10%       50%       90% </span></span>
+<span><span class="co">#&gt; 0.1167786 0.1993348 0.3052685 </span></span>
 <span><span class="va">res</span><span class="op">$</span><span class="va">soup_mismatch</span></span>
 <span><span class="co">#&gt; [1] FALSE</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">rho_diagnostics</span><span class="op">$</span><span class="va">low_power</span><span class="op">)</span></span>

@@ -113,7 +113,7 @@ and a sample with few is pulled towards the average of all samples.</p>
 <span><span class="va">res</span></span>
 <span><span class="co">#&gt; &lt;decant&gt; 600 genes x 1500 cells</span></span>
 <span><span class="co">#&gt;   modules : hierarchical_ambient, cluster_rho, correction_bayes_cell</span></span>
-<span><span class="co">#&gt;   rho     : median 0.196 (10%-90%: 0.108-0.305)</span></span></code></pre></div>
+<span><span class="co">#&gt;   rho     : median 0.203 (10%-90%: 0.115-0.315)</span></span></code></pre></div>
 <ul>
 <li>
 <code><a href="../reference/simulate_multimodal.html">simulate_multimodal()</a></code> simulates six samples. Half have
@@ -139,14 +139,14 @@ matching the position in the list, or as a name matching
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span>estimated <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tapply.html" class="external-link">tapply</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">rho</span>, <span class="va">mm</span><span class="op">$</span><span class="va">sample_of</span>, <span class="va">median</span><span class="op">)</span>,</span>
 <span>            true      <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tapply.html" class="external-link">tapply</a></span><span class="op">(</span><span class="va">mm</span><span class="op">$</span><span class="va">rho_true</span>, <span class="va">mm</span><span class="op">$</span><span class="va">sample_of</span>, <span class="va">median</span><span class="op">)</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;               1     2     3     4     5     6</span></span>
-<span><span class="co">#&gt; estimated 0.201 0.203 0.189 0.188 0.198 0.192</span></span>
+<span><span class="co">#&gt; estimated 0.208 0.214 0.200 0.194 0.204 0.204</span></span>
 <span><span class="co">#&gt; true      0.197 0.195 0.186 0.183 0.191 0.195</span></span></code></pre></div>
 <ul>
 <li>
 <code>res$ambient</code> now has one soup column per sample.</li>
 <li>The table compares the median estimated and true contamination in
-each sample. The estimates are within about one percentage point of the
-truth, including the samples with only 300 empty droplets.</li>
+each sample. The estimates are one to two percentage points above the
+truth, and no worse for the samples with only 300 empty droplets.</li>
 </ul>
 </div>
 <div class="section level2">

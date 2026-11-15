@@ -95,7 +95,7 @@ estimates each cell’s contamination, and removes it.</p>
 <span><span class="va">res</span></span>
 <span><span class="co">#&gt; &lt;decant&gt; 600 genes x 1200 cells</span></span>
 <span><span class="co">#&gt;   modules : cluster_rho, correction_bayes_cell</span></span>
-<span><span class="co">#&gt;   rho     : median 0.192 (10%-90%: 0.108-0.294)</span></span></code></pre></div>
+<span><span class="co">#&gt;   rho     : median 0.199 (10%-90%: 0.117-0.305)</span></span></code></pre></div>
 <ul>
 <li>First argument: the cell counts, genes × cells.</li>
 <li>Second argument: the empty droplets, genes × droplets.</li>
@@ -185,8 +185,9 @@ estimation</td>
 </h2>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "rho"             "rho_diagnostics" "soup_mismatch"   "ambient"</span></span>
-<span><span class="co">#&gt; [5] "clusters"        "corrected"       "modules"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "rho"                "rho_diagnostics"    "soup_mismatch"     </span></span>
+<span><span class="co">#&gt; [4] "rho_unidentifiable" "ambient"            "clusters"          </span></span>
+<span><span class="co">#&gt; [7] "corrected"          "modules"           </span></span></code></pre></div>
 <table class="table">
 <colgroup>
 <col width="50%">
@@ -236,11 +237,11 @@ estimation</td>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res</span><span class="op">$</span><span class="va">rho_diagnostics</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"cluster"</span>, <span class="st">"n_cells"</span>, <span class="st">"rho"</span>, <span class="st">"n_absent_genes"</span>, <span class="st">"absent_soup_frac"</span>, <span class="st">"low_power"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;   cluster n_cells       rho n_absent_genes absent_soup_frac low_power</span></span>
-<span><span class="co">#&gt; 1       1     222 0.1967116            165       0.61420102     FALSE</span></span>
-<span><span class="co">#&gt; 2       2     202 0.1922618            171       0.52167045     FALSE</span></span>
-<span><span class="co">#&gt; 3       3     201 0.2022715            180       0.47049120     FALSE</span></span>
-<span><span class="co">#&gt; 4       4     179 0.2081191            194       0.58404735     FALSE</span></span>
-<span><span class="co">#&gt; 5       5     196 0.2002628            145       0.53881685     FALSE</span></span>
+<span><span class="co">#&gt; 1       1     222 0.2008547            188       0.82722628     FALSE</span></span>
+<span><span class="co">#&gt; 2       2     202 0.2032755            214       0.84945162     FALSE</span></span>
+<span><span class="co">#&gt; 3       3     201 0.2130331            226       0.86184901     FALSE</span></span>
+<span><span class="co">#&gt; 4       4     179 0.2195561            239       0.85055138     FALSE</span></span>
+<span><span class="co">#&gt; 5       5     196 0.2099970            185       0.73371592     FALSE</span></span>
 <span><span class="co">#&gt; 6       6     200 0.1895710             97       0.05638816     FALSE</span></span></code></pre></div>
 <ul>
 <li>

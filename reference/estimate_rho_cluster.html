@@ -68,7 +68,9 @@
 <span>  min_absent_soup <span class="op">=</span> <span class="fl">0.02</span>,</span>
 <span>  max_iter <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>  min_expected <span class="op">=</span> <span class="fl">5</span>,</span>
-<span>  floor_rho <span class="op">=</span> <span class="fl">0.005</span></span>
+<span>  floor_rho <span class="op">=</span> <span class="fl">0.005</span>,</span>
+<span>  overdispersed <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  max_rho <span class="op">=</span> <span class="fl">0.5</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -117,12 +119,39 @@ those genes in drove rho to several times its true value.</p></dd>
 whose total count in the cells is significantly below this fraction of
 their soup expectation are treated as soup-only and dropped from the soup.</p></dd>
 
+
+<dt id="arg-overdispersed">overdispersed<a class="anchor" aria-label="anchor" href="#arg-overdispersed"></a></dt>
+<dd><p>test genes against a negative binomial whose extra
+gene-to-gene variance is estimated from the data, instead of a Poisson.
+On real data, genes a cluster does not express scatter around rho by
+about 25-30% (soup and capture differ slightly gene by gene), far more
+than Poisson noise. A Poisson test then rejects the absent genes that
+fall above the current rho and keeps those below, and the fixed point
+settles near the bottom of their spread: on a human/mouse mixture this
+halved rho. The variance is estimated from the lower tail of the absent
+genes, which cannot contain expressed genes. With no extra variance the
+test reduces to the Poisson one.</p></dd>
+
+
+<dt id="arg-max-rho">max_rho<a class="anchor" aria-label="anchor" href="#arg-max-rho"></a></dt>
+<dd><p>the largest contamination treated as identifiable. A
+cluster whose estimate exceeds it is flagged (<code>implausible</code>) and borrows
+rho from the other clusters, like a low-power cluster. Estimates above
+about 0.5 mean the cells would be mostly soup, which points to a soup
+that resembles the cells (a single cell type, or a cluster that dominates
+the soup) rather than to real contamination: on a mouse-only cell line
+with 0.4% true contamination the estimator returned 0.5 to 0.94.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>numeric vector of per-cell rho, with attribute <code>"clusters"</code>: a
 data.frame of per-cluster diagnostics (n_cells, rho, n_absent_genes,
-absent_soup_frac, absent_counts, low_power, borrowed, rho_two_sided), and
+absent_soup_frac, absent_counts, low_power, borrowed, rho_two_sided,
+dispersion: the extra squared coefficient of variation used,
+implausible: rho above <code>max_rho</code>), attribute <code>"unidentifiable"</code> (no
+cluster had usable evidence, or more than half the cells are in
+implausible clusters; rho should then be supplied), and
 attributes <code>"soup_mismatch"</code> (logical), <code>"soup_only"</code> (logical per gene)
 and <code>"soup_only_frac"</code> (their share of the soup). Low-power clusters take the
 evidence-weighted rho of the other clusters (<code>borrowed = TRUE</code>).
