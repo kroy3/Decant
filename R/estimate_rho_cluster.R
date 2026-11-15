@@ -54,6 +54,13 @@
 #' @param floor_rho the smallest contamination considered possible. Genes
 #'   whose total count in the cells is significantly below this fraction of
 #'   their soup expectation are treated as soup-only and dropped from the soup.
+#' @param max_rho the largest contamination treated as identifiable. A
+#'   cluster whose estimate exceeds it is flagged (`implausible`) and borrows
+#'   rho from the other clusters, like a low-power cluster. Estimates above
+#'   about 0.5 mean the cells would be mostly soup, which points to a soup
+#'   that resembles the cells (a single cell type, or a cluster that dominates
+#'   the soup) rather than to real contamination: on a mouse-only cell line
+#'   with 0.4% true contamination the estimator returned 0.5 to 0.94.
 #' @param overdispersed test genes against a negative binomial whose extra
 #'   gene-to-gene variance is estimated from the data, instead of a Poisson.
 #'   On real data, genes a cluster does not express scatter around rho by
@@ -67,7 +74,10 @@
 #' @return numeric vector of per-cell rho, with attribute `"clusters"`: a
 #'   data.frame of per-cluster diagnostics (n_cells, rho, n_absent_genes,
 #'   absent_soup_frac, absent_counts, low_power, borrowed, rho_two_sided,
-#'   dispersion: the extra squared coefficient of variation used), and
+#'   dispersion: the extra squared coefficient of variation used,
+#'   implausible: rho above `max_rho`), attribute `"unidentifiable"` (no
+#'   cluster had usable evidence, or more than half the cells are in
+#'   implausible clusters; rho should then be supplied), and
 #'   attributes `"soup_mismatch"` (logical), `"soup_only"` (logical per gene)
 #'   and `"soup_only_frac"` (their share of the soup). Low-power clusters take the
 #'   evidence-weighted rho of the other clusters (`borrowed = TRUE`).
@@ -76,7 +86,7 @@
 #' @export
 estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
                                  min_absent_soup = 0.02, max_iter = 100, min_expected = 5,
-                                 floor_rho = 0.005, overdispersed = TRUE) {
+                                 floor_rho = 0.005, overdispersed = TRUE, max_rho = 0.5) {
   observed <- .as_counts(observed, "observed")
   N <- ncol(observed)
   if (length(clusters) != N) stop("length(clusters) must equal ncol(observed)", call. = FALSE)
@@ -117,6 +127,10 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
       if (sum(pw) < 50) pw <- ok & e >= stats::quantile(e[ok], 0.5)
       lo <- pw & r <= stats::quantile(r[pw], 0.1)
       rho0 <- sum(X[lo]) / sum(e[lo])
+      ## with sparse counts the lowest decile is all zeros; rho = 0 is an
+      ## absorbing state of the fixed point (any gene with a count is then
+      ## "significantly above" soup), so start no lower than floor_rho
+      rho0 <- max(rho0, floor_rho)
       fit <- .absent_fixed_point(X, e, ok, rho0, alpha, max_iter, two_sided = FALSE, min_expected,
                                  overdispersed = overdispersed)
       rho <- fit$rho; A <- fit$A; phi <- fit$phi
@@ -132,6 +146,7 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
                             borrowed = FALSE,
                             rho_two_sided = rho2,
                             dispersion = phi,
+                            implausible = rho > max_rho,
                             stringsAsFactors = FALSE)
   }
   diag <- do.call(rbind, diag)
@@ -141,6 +156,8 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
   ## an arbitrary value, it borrows the evidence-weighted median rho of the
   ## powered clusters as its prior (assumes rho does not depend strongly on cell type;
   ## flagged, not hidden). Its own per-cell evidence, if any, still counts.
+  ## an implausibly high rho is treated like a low-power cluster
+  diag$low_power <- diag$low_power | diag$implausible
   weak <- diag$low_power
   if (any(weak) && any(!weak)) {
     ## weighted MEDIAN, by how much soup each powered cluster's absent set
@@ -156,7 +173,9 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
   for (i in seq_along(ks)) {
     idx <- which(clusters == ks[i])
     gA <- absent[[i]]; rho <- diag$rho[i]
-    if (length(gA) > 0 && rho > 0) {
+    ## an implausible cluster's "absent" genes are not absent: they cannot
+    ## serve as per-cell evidence, so its cells keep the borrowed rho
+    if (length(gA) > 0 && rho > 0 && !diag$implausible[i]) {
       y <- .col_sums(observed[gA, idx, drop = FALSE])
       n <- T_c[idx] * diag$absent_soup_frac[i]
       raw <- y / pmax(n, 1e-12)
@@ -174,6 +193,12 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
   attr(out, "soup_mismatch") <- soup_only_frac > 0.05
   attr(out, "soup_only") <- soup_only
   attr(out, "soup_only_frac") <- soup_only_frac
+  ## rho is not estimable from these counts when no cluster has usable
+  ## evidence, or when most cells sit in clusters whose estimate was
+  ## implausible (the soup resembles the cells, so the remaining clusters'
+  ## estimates are not trustworthy either)
+  imp_share <- sum(diag$n_cells[diag$implausible]) / sum(diag$n_cells)
+  attr(out, "unidentifiable") <- all(diag$low_power) || imp_share > 0.5
   out
 }
 
