@@ -154,18 +154,4 @@ Rscript scripts/build_user_guide.R            # copy wiki/ into the website arti
 
 ## License
 
-Copyright (c) 2026 Kushal Raj Roy. Decant is released under the
-[PolyForm Noncommercial License 1.0.0](LICENSE).
-
-- **Free for noncommercial use:** academic and personal research, teaching,
-  and use by universities, public research institutes, hospitals, charities
-  and government bodies.
-- **Commercial use requires a separate license** from the copyright holder.
-  This includes use by or for a company, in a paid service or product, and
-  in commercially funded work outside the organisations listed above.
-  Contact the maintainer listed in `DESCRIPTION`.
-- Anyone who shares Decant, changed or not, must include the license and the
-  `Required Notice` line at the top of it.
-
-Versions 0.4.0 and earlier were released under the MIT License; copies of
-those versions remain under MIT.
+MIT.

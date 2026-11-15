@@ -398,4 +398,4 @@ and fails if the rho gate stops passing.
 
 ## License
 
-PolyForm Noncommercial 1.0.0 (versions up to 0.4.0: MIT). See LICENSE.
+MIT. See LICENSE.

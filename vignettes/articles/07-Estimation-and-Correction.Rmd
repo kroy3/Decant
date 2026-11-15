@@ -50,30 +50,15 @@ For each cluster, Decant repeats two steps until they agree:
 2. Re-estimate rho from the absent genes only: the ratio of their observed
    counts to their expected soup counts.
 
-Five safeguards make the estimate reliable on real data:
+Three safeguards make the estimate reliable on real data:
 
-- **Gene-to-gene spread is allowed for.** In real data, absent genes do not
-  sit exactly on the line `rho × soup`: they scatter around it by about
-  25-30%, because soup and capture differ slightly from gene to gene. Step 1
-  therefore uses a negative binomial test whose extra spread is measured from
-  the lowest absent genes, which expressed genes can never reach. A plain
-  Poisson test would reject the absent genes that fall above the line and
-  keep those below, and the estimate would settle at about half the true
-  value. With no extra spread the test is the Poisson test.
-- **Enough expected counts.** A gene enters the absent set only if enough
-  ambient counts are expected for it (`min_expected = 5`). Without this,
-  thousands of rarely detected genes look absent simply for lack of counts,
-  and rho is overestimated.
-- **Per-cell shrinkage.** Each cell's rho is pulled towards its cluster's
-  rho, more strongly for cells with few counts. Small cells therefore do not
-  get extreme values.
-- **Weak clusters borrow.** A cluster without enough absent genes
-  (`low_power`) borrows rho from the other clusters instead of guessing.
-- **Implausible values are not trusted.** A cluster whose estimate exceeds
-  0.5 (`implausible`) would be mostly soup, which happens when the soup looks
-  like the cluster's own expression. It borrows rho too. If most cells are in
-  such clusters, rho cannot be estimated from the data at all, and `decant()`
-  warns ([Chapter 11.4](11-Diagnostics-and-Troubleshooting.html)).
+- A gene enters the absent set only if enough ambient counts are expected
+  for it (`min_expected = 5`). Without this, thousands of rarely detected
+  genes look absent simply for lack of counts, and rho is overestimated.
+- Each cell's rho is pulled towards its cluster's rho, more strongly for
+  cells with few counts. Small cells therefore do not get extreme values.
+- A cluster without enough absent genes (`low_power`) borrows rho from the
+  other clusters instead of guessing.
 
 ## 7.3 The four correction rules
 
@@ -118,9 +103,7 @@ The defaults were chosen on test data and rarely need changing.
 |---|---|---|---|
 | `estimate_rho_cluster()` | `alpha` | `0.01` | Stringency for calling a gene expressed; smaller calls fewer genes expressed |
 | `estimate_rho_cluster()` | `min_expected` | `5` | Minimum expected ambient count for an absent gene |
-| `estimate_rho_cluster()` | `floor_rho` | `0.005` | Smallest contamination considered possible; also the lowest starting value |
-| `estimate_rho_cluster()` | `max_rho` | `0.5` | Largest contamination treated as identifiable |
-| `estimate_rho_cluster()` | `overdispersed` | `TRUE` | Allow for gene-to-gene spread of absent genes; `FALSE` gives the earlier Poisson test |
+| `estimate_rho_cluster()` | `floor_rho` | `0.005` | Smallest contamination considered possible |
 | `correct_counts()` | `cap_q` | `0.001` | For `bayes_cell`: how unusual a count must be before it is treated as not ambient |
 
 ---

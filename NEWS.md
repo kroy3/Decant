@@ -1,9 +1,5 @@
 # Decant (development version)
 
-* **License changed to PolyForm Noncommercial 1.0.0.** Noncommercial use
-  (research, teaching, public and non-profit institutions) stays free;
-  commercial use needs a separate license. Versions 0.4.0 and earlier remain
-  under the MIT License.
 * **Contamination estimate no longer halved on real data.** Genes a cluster
   does not express scatter around rho by about 25-30% from gene to gene, far
   more than Poisson noise. `estimate_rho_cluster()` tested them against a
