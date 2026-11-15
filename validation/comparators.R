@@ -45,7 +45,10 @@ run_decant <- function(cells, empties, clusters, correction = "bayes_cell") {
   }, error = function(e) list(error = conditionMessage(e)))
 }
 
-run_soupx <- function(cells, empties, clusters) {
+## `soup_range` and `force_accept` exist only to reproduce a published setup
+## (validation/segerstolpe_control.R, which follows Cargnelli et al. 2026);
+## the defaults are SoupX's own.
+run_soupx <- function(cells, empties, clusters, soup_range = NULL, force_accept = FALSE) {
   if (!requireNamespace("SoupX", quietly = TRUE)) return(NULL)
   tryCatch({
     d <- .name_droplets(.as_dgc(cells), .as_dgc(empties))
@@ -55,12 +58,13 @@ run_soupx <- function(cells, empties, clusters) {
     ## if the supplied empties are larger than that, so that the droplets the
     ## caller has already declared empty are the ones used.
     hi <- max(100, max(Matrix::colSums(d$empties)) + 1)
-    sc <- SoupX::estimateSoup(sc, soupRange = c(0, hi))
+    sc <- SoupX::estimateSoup(sc, soupRange = soup_range %||% c(0, hi))
     sc <- SoupX::setClusters(sc, stats::setNames(as.character(clusters), colnames(d$cells)))
     ## Defaults first. If autoEstCont finds no marker genes it says to "reduce
     ## tfidfMin or soupQuantile"; follow that once, with one fixed setting
     ## (never tuned to the truth), and record that it happened.
-    est <- function(...) suppressWarnings(SoupX::autoEstCont(sc, doPlot = FALSE, verbose = FALSE, ...))
+    est <- function(...) suppressWarnings(SoupX::autoEstCont(sc, doPlot = FALSE, verbose = FALSE,
+                                                             forceAccept = force_accept, ...))
     note <- ""
     sc <- tryCatch(est(), error = function(e) {
       if (!grepl("No plausible marker genes", conditionMessage(e))) stop(e)
