@@ -124,5 +124,8 @@ for (ds in todo) {
   all[[ds]] <- res
 }
 res <- do.call(rbind, all)
-utils::write.csv(res, file.path(OUT, "species_mix.csv"), row.names = FALSE)
-cat("\nwrote", file.path(OUT, "species_mix.csv"), "\n")
+for (ds in names(all)) {
+  f <- file.path(OUT, sprintf("species_mixture_%s.csv", ds))
+  utils::write.csv(all[[ds]], f, row.names = FALSE)
+  cat("wrote", f, "\n")
+}

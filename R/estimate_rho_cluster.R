@@ -61,9 +61,9 @@
 #'   than Poisson noise. A Poisson test then rejects the absent genes that
 #'   fall above the current rho and keeps those below, and the fixed point
 #'   settles near the bottom of their spread: on a human/mouse mixture this
-#'   halved rho. The variance is estimated from the lower half of the absent
-#'   genes, which cannot contain expressed genes. With no extra variance (as
-#'   in the package simulators) the test reduces to the Poisson one.
+#'   halved rho. The variance is estimated from the lower tail of the absent
+#'   genes, which cannot contain expressed genes. With no extra variance the
+#'   test reduces to the Poisson one.
 #' @return numeric vector of per-cell rho, with attribute `"clusters"`: a
 #'   data.frame of per-cluster diagnostics (n_cells, rho, n_absent_genes,
 #'   absent_soup_frac, absent_counts, low_power, borrowed, rho_two_sided,
@@ -213,21 +213,25 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
 }
 
 ## Extra (beyond Poisson) squared coefficient of variation of absent genes'
-## counts around rho * e. Estimated from the current absent set's own log
-## ratios (counts / soup expectation), from the spread between their median
-## and lower quartile: the lower half of the absent genes cannot contain
-## expressed genes, which lie above. Measuring the spread against the absent
-## genes' own median, not against the current rho, matters: when rho is too
-## low, only the far lower tail lies below it and the spread looks tiny,
-## which would keep rho low. Only genes with at least `min_n` expected counts
-## are used, and their mean Poisson variance (1 / mu on the log scale) is
-## subtracted.
+## counts around rho * e, estimated from the LOWER tail of the current absent
+## set's log ratios (counts / soup expectation): the spread between its 10th
+## and 25th percentiles, scaled to a normal SD. Expressed genes can only lie
+## above the absent genes, so the lower tail is free of them. Two worse
+## choices were tried and rejected:
+##  * spread measured against the current rho: when rho is too low only the
+##    far tail lies below it, the spread looks tiny and rho stays low;
+##  * median minus lower quartile: weakly expressed genes that enter the
+##    absent set lift the median, inflate the spread, let in more of them,
+##    and rho runs high (gate_rho failed in its stress setting).
+## Only genes with at least `min_n` expected counts are used, and their mean
+## Poisson variance (1 / mu on the log scale) is subtracted.
 .lower_half_dispersion <- function(X, e, A, rho, min_n = 50) {
   mu <- rho * e
   use <- A & mu >= min_n & X > 0
   if (sum(use) < 20) return(0)
   lr <- log(X[use] / e[use])
-  s <- (stats::median(lr) - stats::quantile(lr, 0.25, names = FALSE)) / 0.6745
+  q <- stats::quantile(lr, c(0.10, 0.25), names = FALSE)
+  s <- (q[2] - q[1]) / (stats::qnorm(0.25) - stats::qnorm(0.10))
   max(s^2 - mean(1 / mu[use]), 0)
 }
 
