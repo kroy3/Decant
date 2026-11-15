@@ -89,7 +89,7 @@ gate_rho <- function(rho_grid = c(0, 0.02, 0.05, 0.1, 0.2, 0.3), seeds = 1:3,
 #' @return invisibly, a data.frame with attribute `"winner"`.
 #' @export
 gate_correction <- function(rho_grid = c(0.05, 0.2), seeds = 1:3, verbose = TRUE) {
-  methods <- c("subtract", "redistribute", "bayes")
+  methods <- c("subtract", "redistribute", "bayes", "bayes_cell")
   rows <- list()
   for (setting in names(.gate_settings())) for (rm in rho_grid) for (s in seeds) {
     sim <- .gate_sim(setting, rm, s)
