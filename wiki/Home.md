@@ -85,6 +85,13 @@ If you use Decant in published work, please cite the package:
 citation("Decant")
 ```
 
+### License
+
+Decant is free for noncommercial use (academic research, teaching, and
+non-profit and public institutions) under the PolyForm Noncommercial
+License 1.0.0. Commercial use requires a separate license from the copyright
+holder; see the repository's README.
+
 ### Acknowledgements
 
 Decant builds on ideas from earlier ambient RNA methods, in particular SoupX

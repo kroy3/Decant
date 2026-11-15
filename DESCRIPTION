@@ -13,7 +13,8 @@ Description: A research toolkit for developing and honestly evaluating ambient
     genotype-aware contamination estimation, and a metric suite mirroring the
     published benchmarks. Every component is enabled by default only after it
     passes a falsification gate against ground truth.
-License: MIT + file LICENSE
+License: file LICENSE
+License_restricts_use: yes
 URL: https://github.com/kroy3/Decant
 BugReports: https://github.com/kroy3/Decant/issues
 biocViews: SingleCell, RNASeq, Transcriptomics, GeneExpression,
