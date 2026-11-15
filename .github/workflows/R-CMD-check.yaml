@@ -54,4 +54,4 @@ jobs:
       - name: Run falsification gates
         run: |
           set -o pipefail
-          Rscript run_all_gates.R | tee gates.txt
+          Rscript scripts/run_falsification_gates.R | tee gates.txt

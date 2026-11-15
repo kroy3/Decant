@@ -1,12 +1,11 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^\.github$
-^run_all_gates\.R$
-^run_demo\.R$
-^compare_methods\.R$
-^steelman_empty_mismatch\.R$
 ^LICENSE\.md$
 ^validation$
+^scripts$
+^wiki$
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
+^vignettes/articles$

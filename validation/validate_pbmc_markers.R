@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-## validation/pbmc_soupx.R
+## validation/validate_pbmc_markers.R
 ## Real-data check on the 10x PBMC 4k data bundled with SoupX (Young & Behjati
 ## 2020): 2,170 cells, 33,694 genes, a soup profile from 2.7M empty-droplet
 ## UMIs, and the authors' cluster annotation. Fetched from the SoupX GitHub
@@ -15,7 +15,7 @@
 ##   3. How much of those counts each correction rule removes, and how much
 ##      it removes from the cell type that does express them.
 ##
-## Run from the repo root:  Rscript validation/pbmc_soupx.R
+## Run from the repo root:  Rscript validation/validate_pbmc_markers.R
 
 if (requireNamespace("pkgload", quietly = TRUE)) pkgload::load_all(".", quiet = TRUE) else library(Decant)
 suppressPackageStartupMessages(library(Matrix))
@@ -77,6 +77,6 @@ for (m in c("bayes", "redistribute", "subtract")) {
 tab <- do.call(rbind, rows)
 print(tab, row.names = FALSE, digits = 3)
 dir.create(OUT, showWarnings = FALSE, recursive = TRUE)
-utils::write.csv(tab, file.path(OUT, "pbmc_soupx_markers.csv"), row.names = FALSE)
+utils::write.csv(tab, file.path(OUT, "pbmc_markers.csv"), row.names = FALSE)
 utils::write.csv(cbind(res$rho_diagnostics, rho_cell_median = stats::median(res$rho)),
-                 file.path(OUT, "pbmc_soupx_rho.csv"), row.names = FALSE)
+                 file.path(OUT, "pbmc_rho.csv"), row.names = FALSE)

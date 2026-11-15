@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-## run_all_gates.R -- the honest scorecard. Each module must pass its own
+## scripts/run_falsification_gates.R -- the honest scorecard. Each module must pass its own
 ## falsification gate to be enabled by default in Decant. Failures are reported,
 ## not hidden.
 ## Run from the repo root. Uses the installed package, or the source tree via pkgload.

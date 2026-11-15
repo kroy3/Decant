@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-## compare_methods.R
+## scripts/compare_correction_methods.R
 ## Honest 4-way comparison on ground-truth simulations. No method is tuned to
 ## win. Whatever the table says is the result.
 ##

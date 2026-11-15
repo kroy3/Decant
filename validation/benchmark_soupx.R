@@ -57,7 +57,7 @@ real <- function(name, corr, rho, secs) {
 tabA <- rbind(real("Decant", dec$corrected, dec$rho, t_dec),
               real("SoupX 1.6.2", sx_corr, sx$metaData$rho, t_sx))
 cat("\n(A) real PBMC 4k, no ground truth\n"); print(t(tabA), digits = 3)
-utils::write.csv(tabA, file.path(OUT, "benchmark_soupx_pbmc.csv"), row.names = FALSE)
+utils::write.csv(tabA, file.path(OUT, "soupx_pbmc.csv"), row.names = FALSE)
 
 ## ---------------- (B) simulated, with ground truth ----------------
 rows <- list()
@@ -75,10 +75,10 @@ for (setting in c("easy", "stress")) for (rm in c(0, 0.05, 0.1, 0.2)) for (seed 
   }
 }
 dfB <- do.call(rbind, rows)
-utils::write.csv(dfB, file.path(OUT, "benchmark_soupx_sim_per_seed.csv"), row.names = FALSE)
+utils::write.csv(dfB, file.path(OUT, "soupx_simulation_per_seed.csv"), row.names = FALSE)
 tabB <- stats::aggregate(cbind(rho_est, rho_rmse, l1_error, sensitivity, signal_destroyed) ~ method + rho + setting,
                          dfB, mean, na.action = stats::na.pass)
 tabB$failed_runs <- stats::aggregate(is.na(l1_error) ~ method + rho + setting, dfB, sum)[[4]]
 tabB$fallback_runs <- stats::aggregate(grepl("soupQuantile", note) ~ method + rho + setting, dfB, sum)[[4]]
 cat("\n(B) simulated, mean of 3 seeds\n"); print(tabB, digits = 3, row.names = FALSE)
-utils::write.csv(tabB, file.path(OUT, "benchmark_soupx_sim.csv"), row.names = FALSE)
+utils::write.csv(tabB, file.path(OUT, "soupx_simulation.csv"), row.names = FALSE)

@@ -75,10 +75,10 @@ information to break the ambient-vs-native identifiability problem, and each is
 gated. Run the scorecard yourself (~1 min):
 
 ```bash
-Rscript run_all_gates.R
+Rscript scripts/run_falsification_gates.R
 ```
 
-## Scorecard (from `run_all_gates.R`, v0.2)
+## Scorecard (from `scripts/run_falsification_gates.R`, v0.2)
 
 ### Core components (every run depends on these)
 
@@ -88,7 +88,7 @@ Rscript run_all_gates.R
 | Legacy marker-ratio rho (v0.1 `estimate_rho`) | **FAIL.** Overestimated rho 1.5-4x on easy data (worst at the low rho typical of scRNA-seq) and reported 0.57-0.71 when the truth was 0.0-0.3 under stress. | kept only for reproducibility |
 | **Correction rule** | `bayes_cell` has the lowest mean L1 error on simulated data (0.065), ahead of `subtract` (0.071), `redistribute` (SoupX-style, 0.072) and `bayes` (0.075); it is best in three of four settings and second in the fourth. On real PBMC data it removes 88 to 95% of ambient-compatible foreign marker counts and leaves most counts that cannot be ambient. | `bayes_cell`; others via `correction=` |
 
-What the rho fix buys end to end (`compare_methods.R`, mean of 4 seeds,
+What the rho fix buys end to end (`scripts/compare_correction_methods.R`, mean of 4 seeds,
 L1 error to the clean truth, lower is better):
 
 | true rho | no correction | v0.1 pipeline | v0.2 `decant()` |
@@ -146,7 +146,7 @@ Results of `gate_ambient_de()` (6 vs 6 samples, contamination ~5% vs 12%):
 
 ### Against correct-then-test with the official tools
 
-`validation/de_comparators.R` corrects each sample with a tool, pseudobulks
+`validation/benchmark_differential_expression.R` corrects each sample with a tool, pseudobulks
 the rare type, and runs edgeR QL. Mean of 4 seeds, 6 vs 6 samples, same
 scoring as the gate. Every corrector gets the true cell-type labels.
 
@@ -293,7 +293,7 @@ did not survive, and they are corrected here rather than quietly edited:
 
 ### PBMC 4k (run)
 
-`validation/pbmc_soupx.R` runs `decant()` on the 10x PBMC data bundled with
+`validation/validate_pbmc_markers.R` runs `decant()` on the 10x PBMC data bundled with
 SoupX: 2,150 annotated cells, 33,694 genes, a soup profile from 2.7M
 empty-droplet UMIs. There is no ground truth, so the checks are indirect.
 
@@ -340,20 +340,20 @@ alarm on this data and was retired (see Known limitations).
 ### Species mixtures
 
 One species mixture (10x 20k HGMM) has been run, with the metrics of
-Cargnelli, Nielsen & Madsen (2026). Results are in `validation/BENCHMARK.md`,
+Cargnelli et al. (2026). Results are in `validation/BENCHMARK.md`,
 section 1c: Decant retain 0.991, removal 0.415. Its contamination estimate is
 about half the cross-species truth, so it under-removes compared with
 DecontX (0.722). The script below has not yet been run.
 
-`validation/species_mix.R` scores Decant on public 10x human/mouse mixtures
+`validation/validate_species_mixture.R` scores Decant on public 10x human/mouse mixtures
 (`hgmm_1k_v3`, `hgmm_5k_v3`, `hgmm_10k_v3`), where every cross-species read is
 known contamination, so rho is measured experimentally instead of simulated.
 It runs the OFFICIAL SoupX and DecontX when they are installed (never the
 in-repo reimplementations), and reports each missing comparator as "not run".
 
 ```bash
-Rscript validation/species_mix.R              # all datasets
-Rscript validation/species_mix.R hgmm_1k_v3   # one dataset
+Rscript validation/validate_species_mixture.R              # all datasets
+Rscript validation/validate_species_mixture.R hgmm_1k_v3   # one dataset
 ```
 
 Two tests per dataset:
@@ -389,7 +389,7 @@ Wrappers for the official SoupX, DecontX, FastCAR and CellBender are in
 ```r
 devtools::test()            # unit tests: guarantees, sparse==dense, calibration, I/O
 devtools::check()           # R CMD check (clean as of v0.2)
-Rscript run_all_gates.R     # the scientific scorecard
+Rscript scripts/run_falsification_gates.R     # the scientific scorecard
 ```
 
 CI runs `R CMD check` on Linux/macOS/Windows and the gate scorecard on every PR,
