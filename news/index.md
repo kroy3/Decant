@@ -2,6 +2,21 @@
 
 ## Decant (development version)
 
+- New correction rule `"bayes_cell"`, now the default in
+  [`decant()`](https://kroy3.github.io/Decant/reference/decant.md).
+  `"bayes"` scaled every cell of a cluster by one ratio, so a cell whose
+  count of a gene was far too high to be ambient (a doublet) lost most
+  of it and inflated the cluster’s native profile. `"bayes_cell"`
+  removes only the expected ambient from such entries and builds the
+  profile from the rest. It has the lowest error in
+  [`gate_correction()`](https://kroy3.github.io/Decant/reference/gate_correction.md)
+  (0.065, against 0.071 to 0.075). On real PBMC data it removes 88 to
+  95% of ambient-compatible foreign marker counts (previously 84 to 94%)
+  and 14 to 37% of the incompatible ones (previously 82 to 98%), at the
+  same native loss.
+- `validation/benchmark_all.R` splits foreign marker counts into those
+  ambient RNA could and could not have produced. DecontX removes both
+  (96 to 100% of the incompatible ones).
 - New `validation/benchmark_all.R` and
   `validation/py/run_python_tools.py`: Decant against SoupX, DecontX,
   CellBender, scAR and AmbiDose on real PBMC data. DecontX removes more

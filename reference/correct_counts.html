@@ -47,10 +47,11 @@
 <span>  <span class="va">observed</span>,</span>
 <span>  <span class="va">soup</span>,</span>
 <span>  <span class="va">rho</span>,</span>
-<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"subtract"</span>, <span class="st">"redistribute"</span>, <span class="st">"bayes"</span><span class="op">)</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"subtract"</span>, <span class="st">"redistribute"</span>, <span class="st">"bayes"</span>, <span class="st">"bayes_cell"</span><span class="op">)</span>,</span>
 <span>  clusters <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_iter <span class="op">=</span> <span class="fl">50</span>,</span>
-<span>  drop_zeros <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  drop_zeros <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  cap_q <span class="op">=</span> <span class="fl">0.001</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -72,11 +73,12 @@ for per-sample soups use <code><a href="decant.html">decant()</a></code>).</p></
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
-<dd><p>one of "subtract", "redistribute", "bayes" (see Details).</p></dd>
+<dd><p>one of "subtract", "redistribute", "bayes", "bayes_cell"
+(see Details).</p></dd>
 
 
 <dt id="arg-clusters">clusters<a class="anchor" aria-label="anchor" href="#arg-clusters"></a></dt>
-<dd><p>cluster labels, required for method = "bayes".</p></dd>
+<dd><p>cluster labels, required for the two bayes methods.</p></dd>
 
 
 <dt id="arg-max-iter">max_iter<a class="anchor" aria-label="anchor" href="#arg-max-iter"></a></dt>
@@ -87,6 +89,12 @@ for per-sample soups use <code><a href="decant.html">decant()</a></code>).</p></
 <dd><p>for sparse input, drop entries corrected to exactly 0.
 FALSE keeps the input's sparsity pattern (explicit zeros).</p></dd>
 
+
+<dt id="arg-cap-q">cap_q<a class="anchor" aria-label="anchor" href="#arg-cap-q"></a></dt>
+<dd><p>for "bayes_cell": an entry is treated as not explainable by
+ambient RNA when its count exceeds the <code>1 - cap_q</code> Poisson quantile of
+its ambient expectation.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -95,7 +103,7 @@ Guaranteed 0 &lt;= corrected &lt;= observed element-wise.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>See the header of <code>R/correct.R</code> for the three rules and
+    <p>See the header of <code>R/correct.R</code> for the rules and
 <code><a href="gate_correction.html">gate_correction()</a></code> for how they compare against ground truth.</p>
     </div>
 

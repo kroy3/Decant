@@ -54,622 +54,196 @@
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header"><h1 id="decant">Decant<a class="anchor" aria-label="anchor" href="#decant"></a>
 </h1></div>
-<p>A benchmark-first toolkit for ambient RNA decontamination research in single-cell and single-nucleus RNA-seq. Decant is assembled from components, and a component becomes a default ONLY after it passes a falsification gate against ground truth. This is not a finished CellBender replacement and does not claim to be one. Its value is that every capability in it has been shown to earn its place, and the things that did not are documented as failures.</p>
-<blockquote>
-<p>“Decant” is a working placeholder name. Check CRAN, Bioconductor, and GitHub for collisions before any release.</p>
-</blockquote>
+<p>Ambient RNA decontamination for single-cell and single-nucleus RNA-seq, with a differential expression test that models ambient RNA instead of subtracting it. No other ambient RNA tool we found offers one.</p>
 <div class="section level2">
-<h2 id="install-and-run">Install and run<a class="anchor" aria-label="anchor" href="#install-and-run"></a>
+<h2 id="what-is-new">What is new<a class="anchor" aria-label="anchor" href="#what-is-new"></a>
 </h2>
-<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
-<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"kroy3/Decant"</span><span class="op">)</span></span></code></pre></div>
-<p>On real 10x data (the RAW matrix is required: the empty droplets are the soup measurement):</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/kroy3/Decant" class="external-link">Decant</a></span><span class="op">)</span></span>
-<span><span class="va">raw</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/read_10x_counts.html">read_10x_counts</a></span><span class="op">(</span><span class="st">"sample/outs/raw_feature_bc_matrix"</span><span class="op">)</span></span>
-<span><span class="va">cell_bcs</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="fu"><a href="reference/read_10x_counts.html">read_10x_counts</a></span><span class="op">(</span><span class="st">"sample/outs/filtered_feature_bc_matrix"</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">d</span>    <span class="op">&lt;-</span> <span class="fu"><a href="reference/split_droplets.html">split_droplets</a></span><span class="op">(</span><span class="va">raw</span>, cells <span class="op">=</span> <span class="va">cell_bcs</span><span class="op">)</span>       <span class="co"># cells vs empty droplets</span></span>
-<span><span class="va">res</span>  <span class="op">&lt;-</span> <span class="fu"><a href="reference/decant.html">decant</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">cells</span>, <span class="va">d</span><span class="op">$</span><span class="va">empties</span>, clusters <span class="op">=</span> <span class="va">my_seurat_clusters</span><span class="op">)</span></span>
-<span><span class="va">res</span>                       <span class="co"># summary, including any warnings about rho reliability</span></span>
-<span><span class="va">res</span><span class="op">$</span><span class="va">corrected</span>             <span class="co"># corrected counts, still a sparse dgCMatrix</span></span>
-<span><span class="va">res</span><span class="op">$</span><span class="va">rho_diagnostics</span>       <span class="co"># per-cluster rho, absent-gene power, borrowing</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="from-a-seurat-object">From a Seurat object<a class="anchor" aria-label="anchor" href="#from-a-seurat-object"></a>
-</h3>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">obj</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/RunDecant.html">RunDecant</a></span><span class="op">(</span><span class="va">obj</span>, raw <span class="op">=</span> <span class="st">"sample/outs/raw_feature_bc_matrix"</span><span class="op">)</span></span>
-<span><span class="va">obj</span> <span class="op">&lt;-</span> <span class="fu">NormalizeData</span><span class="op">(</span><span class="va">obj</span>, assay <span class="op">=</span> <span class="st">"Decant"</span><span class="op">)</span>   <span class="co"># then your usual workflow</span></span>
-<span><span class="va">obj</span><span class="op">$</span><span class="va">decant_rho</span>                                <span class="co"># per-cell contamination</span></span>
-<span><span class="fu">Misc</span><span class="op">(</span><span class="va">obj</span>, <span class="st">"decant"</span><span class="op">)</span><span class="op">$</span><span class="va">rho_diagnostics</span>           <span class="co"># per-cluster reliability</span></span></code></pre></div>
-<p><code><a href="reference/RunDecant.html">RunDecant()</a></code> uses your <code>Idents()</code> as clusters and writes the corrected counts to a new <code>Decant</code> assay, leaving <code>RNA</code> untouched. It handles the bookkeeping that usually breaks this step. Seurat renames <code>_</code> to <code>-</code> in gene names, so the raw matrix is renamed the same way. Barcodes prefixed by <code>merge(add.cell.ids=)</code> or suffixed by integration are matched back to the raw matrix, and every cell must match or it stops with examples. Split v5 layers are joined. Normalised or SCTransformed data is refused, because Decant needs raw UMI counts. For a merged multi-sample object, pass one raw matrix per sample:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">obj</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/RunDecant.html">RunDecant</a></span><span class="op">(</span><span class="va">obj</span>, raw <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>A <span class="op">=</span> <span class="st">"A/raw_feature_bc_matrix"</span>,</span>
-<span>                                 B <span class="op">=</span> <span class="st">"B/raw_feature_bc_matrix"</span><span class="op">)</span>,</span>
-<span>                 sample_col <span class="op">=</span> <span class="st">"sample"</span><span class="op">)</span></span></code></pre></div>
-<p>Pass your own clusters (Seurat / SCE) when you have them; otherwise k-means is run. Inputs may be dense matrices or <code>Matrix::dgCMatrix</code>. Sparse inputs stay sparse end to end: a 20k-gene x 20k-cell sparse matrix (229 MB) runs in ~10-20 s at ~1.1 GB peak, where v0.1 needed a 3 GB dense intermediate.</p>
-</div>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Contamination-aware differential expression</strong> (<code><a href="reference/ambient_de.html">ambient_de()</a></code>, <code><a href="reference/DecantDE.html">DecantDE()</a></code>). When disease tissue releases more ambient RNA than controls, an abundant cell type’s disease genes leak into every other cell type and are reported as differentially expressed. Existing tools correct counts and then test. Decant puts each sample’s measured ambient RNA, and its uncertainty, inside the negative binomial model: <code>mu = native expression + ambient</code>. It supports covariates and is robust to outlier samples in large cohorts.</li>
+<li>
+<strong>Correction that keeps what cannot be ambient</strong> (<code>bayes_cell</code>). Counts far above what ambient RNA could produce in a cell (doublets, rare expressers) keep their molecules; only the expected ambient share is removed.</li>
+<li>
+<strong>Never adds counts.</strong> Corrected counts are bounded by the observed counts, checked on every run.</li>
+<li>
+<strong>Every default is gated.</strong> Each component must pass a falsification test against ground truth in CI. Components that failed are kept off and documented.</li>
+</ol>
 </div>
 <div class="section level2">
-<h2 id="the-design-rule">The design rule<a class="anchor" aria-label="anchor" href="#the-design-rule"></a>
-</h2>
-<p>Earlier work in this repo established, against ground truth, that putting a smarter model on the same count matrix (a fancier soup profile) does not move the sensitivity/specificity frontier. So every module here brings in ORTHOGONAL information to break the ambient-vs-native identifiability problem, and each is gated. Run the scorecard yourself (~1 min):</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="ex">Rscript</span> run_all_gates.R</span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="scorecard-from-run_all_gatesr-v02">Scorecard (from <code>run_all_gates.R</code>, v0.2)<a class="anchor" aria-label="anchor" href="#scorecard-from-run_all_gatesr-v02"></a>
+<h2 id="how-it-compares">How it compares<a class="anchor" aria-label="anchor" href="#how-it-compares"></a>
 </h2>
 <div class="section level3">
-<h3 id="core-components-every-run-depends-on-these">Core components (every run depends on these)<a class="anchor" aria-label="anchor" href="#core-components-every-run-depends-on-these"></a>
+<h3 id="correction-six-tools-on-real-10x-pbmc-4k-data">Correction: six tools on real 10x PBMC 4k data<a class="anchor" aria-label="anchor" href="#correction-six-tools-on-real-10x-pbmc-4k-data"></a>
 </h3>
-<table class="table">
-<colgroup>
-<col width="33%">
-<col width="39%">
-<col width="27%">
-</colgroup>
-<thead><tr>
-<th>Component</th>
-<th>Gate result</th>
-<th>Default</th>
-</tr></thead>
-<tbody>
-<tr>
-<td>
-<strong>Contamination fraction (rho)</strong>: cluster-pooled absent-gene estimator with empirical-Bayes per-cell shrinkage (<code>estimate_rho_cluster</code>)</td>
-<td>
-<strong>PASS</strong> on 12 settings (easy + stress simulator, rho 0 to 0.3, k-means clusters, not oracle). Mean bias within 25% everywhere; negative control holds (rho=0 gives &lt;0.01). Easy: RMSE 0.006-0.030, per-cell r = 0.94-0.98. Stress: RMSE 0.03-0.08, r = 0.50-0.81.</td>
-<td>ON</td>
-</tr>
-<tr>
-<td>Legacy marker-ratio rho (v0.1 <code>estimate_rho</code>)</td>
-<td>
-<strong>FAIL.</strong> Overestimated rho 1.5-4x on easy data (worst at the low rho typical of scRNA-seq) and reported 0.57-0.71 when the truth was 0.0-0.3 under stress.</td>
-<td>kept only for reproducibility</td>
-</tr>
-<tr>
-<td><strong>Correction rule</strong></td>
-<td>On simulated data <code>subtract</code> (v0) has the lowest mean L1 error (0.071), vs <code>redistribute</code> (SoupX-style, 0.073) and <code>bayes</code> (0.076); none dominates. On real PBMC data <code>bayes</code> removed 83 to 94% of foreign marker counts against 19 to 57% for <code>subtract</code>, at the same cost to native expression.</td>
-<td>
-<code>bayes</code> (decided by the real data, against the simulated gate); others via <code>correction=</code>
-</td>
-</tr>
-</tbody>
-</table>
-<p>What the rho fix buys end to end (<code>compare_methods.R</code>, mean of 4 seeds, L1 error to the clean truth, lower is better):</p>
-<table class="table">
-<thead><tr>
-<th align="right">true rho</th>
-<th align="right">no correction</th>
-<th align="right">v0.1 pipeline</th>
-<th align="right">v0.2 <code><a href="reference/decant.html">decant()</a></code>
-</th>
-</tr></thead>
-<tbody>
-<tr>
-<td align="right">0.1</td>
-<td align="right">0.109</td>
-<td align="right"><strong>0.147 (worse than doing nothing)</strong></td>
-<td align="right">0.042</td>
-</tr>
-<tr>
-<td align="right">0.3</td>
-<td align="right">0.426</td>
-<td align="right">0.176</td>
-<td align="right">0.101</td>
-</tr>
-</tbody>
-</table>
-<p>At rho=0.1 the v0.1 pipeline destroyed 12.5% of real signal through over-correction.</p>
-</div>
-<div class="section level3">
-<h3 id="modules">Modules<a class="anchor" aria-label="anchor" href="#modules"></a>
-</h3>
-<table class="table">
-<colgroup>
-<col width="14%">
-<col width="22%">
-<col width="37%">
-<col width="25%">
-</colgroup>
-<thead><tr>
-<th>Gap</th>
-<th>Module</th>
-<th>Gate result</th>
-<th>Default</th>
-</tr></thead>
-<tbody>
-<tr>
-<td>1</td>
-<td>Splice-aware layer decontamination</td>
-<td>PASS. Cuts unspliced-layer error by 25% (0.044 vs 0.059) when ambient is splice-distinct. Ties exactly when it is not (negative control holds). Outputs corrected spliced/unspliced layers for RNA velocity.</td>
-<td>ON</td>
-</tr>
-<tr>
-<td>3</td>
-<td>Hierarchical multi-sample soup pooling</td>
-<td>PASS. Reduces soup error for empty-poor samples; neutral for empty-rich.</td>
-<td>ON</td>
-</tr>
-<tr>
-<td>5</td>
-<td>Allelic / genotype-aware rho</td>
-<td>PASS. Near-ground-truth rho in pooled designs. (Gate contrast is soft, 0.015 vs 0.017 RMSE; the absolute accuracy is the real point.)</td>
-<td>ON when allelic data present</td>
-</tr>
-<tr>
-<td>4</td>
-<td>Structured-soup lysis diagnostic</td>
-<td>PASS as QC only, with an oracle basis. It is a diagnostic readout, never a corrector (that use was falsified).</td>
-<td>ON as diagnostic</td>
-</tr>
-<tr>
-<td>2</td>
-<td>Decontamination-aware DE, v1 (ambient load as a log-scale covariate)</td>
-<td>FAIL. 90% false positives on ambient-trap genes, 16% on null genes.</td>
-<td>OFF, superseded</td>
-</tr>
-<tr>
-<td>2</td>
-<td>
-<strong>Contamination-aware DE, v2</strong> (<code><a href="reference/ambient_de.html">ambient_de()</a></code>, <code><a href="reference/DecantDE.html">DecantDE()</a></code>)</td>
-<td>
-<strong>PASS</strong> (<code>gate_ambient_de</code>). 0 leaked genes called in every case, against 17-57 for standard edgeR pseudobulk; null false-positive rate 0.048-0.056; power kept, including on genes truly DE in both cell types.</td>
-<td>ON</td>
-</tr>
-</tbody>
-</table>
-</div>
-</div>
-<div class="section level2">
-<h2 id="contamination-aware-differential-expression">Contamination-aware differential expression<a class="anchor" aria-label="anchor" href="#contamination-aware-differential-expression"></a>
-</h2>
-<p>When ambient RNA differs between samples (fragile disease tissue lyses more), standard pseudobulk DE reports an abundant cell type’s disease genes as DE in rare cell types. Correcting counts with Decant’s default <code>subtract</code> rule and then testing does not stop this (about half of the leaked genes are still called, see the comparator table below). Official SoupX followed by edgeR does remove almost all of it on the simulator, so “correct first” is not a lost cause in general. <code><a href="reference/DecantDE.html">DecantDE()</a></code> takes the other route and models each sample’s measured soup inside the test:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/DecantDE.html">DecantDE</a></span><span class="op">(</span><span class="va">obj</span>, cell_type <span class="op">=</span> <span class="st">"Microglia"</span>, sample_col <span class="op">=</span> <span class="st">"donor"</span>,</span>
-<span>                formula <span class="op">=</span> <span class="op">~</span> <span class="va">diagnosis</span>, raw <span class="op">=</span> <span class="va">raw_paths_by_donor</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">res</span>, <span class="va">FDR</span> <span class="op">&lt;</span> <span class="fl">0.05</span><span class="op">)</span>        <span class="co"># contamination-aware hits</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">res</span>, <span class="va">ambient_driven</span><span class="op">)</span>    <span class="co"># standard-pipeline hits explained by soup</span></span></code></pre></div>
-<p>The model: negative binomial with mean <code>native + ambient</code>, where the ambient term is each sample’s own soup (from its empty droplets, shrunk by empirical Bayes only as far as its noise warrants), scaled by an ambient fraction re-estimated from the target cell type’s own pseudobulk. The soup’s sampling variance enters the variance, TMM handles composition, and a quasi-likelihood F-test keeps small-sample tests calibrated. <code><a href="reference/ambient_de.html">ambient_de()</a></code> takes plain pseudobulk matrices.</p>
-<p>Results of <code><a href="reference/gate_ambient_de.html">gate_ambient_de()</a></code> (6 vs 6 samples, contamination ~5% vs 12%):</p>
-<table class="table">
-<colgroup>
-<col width="25%">
-<col width="25%">
-<col width="25%">
-<col width="25%">
-</colgroup>
-<thead><tr>
-<th>case</th>
-<th>leaked genes called (naive / Decant)</th>
-<th>null FP (naive / Decant)</th>
-<th>FDP (naive / Decant)</th>
-</tr></thead>
-<tbody>
-<tr>
-<td>more soup in disease</td>
-<td>56.5 / <strong>0</strong>
-</td>
-<td>0.246 / <strong>0.048</strong>
-</td>
-<td>0.84 / 0.15</td>
-</tr>
-<tr>
-<td>equal soup, disease-shifted composition</td>
-<td>17.0 / <strong>0</strong>
-</td>
-<td>0.061 / <strong>0.056</strong>
-</td>
-<td>0.40 / 0.07</td>
-</tr>
-<tr>
-<td>genes truly DE in both types</td>
-<td>31.5 / <strong>0</strong>
-</td>
-<td>0.235 / <strong>0.049</strong>
-</td>
-<td>0.72 / 0.10</td>
-</tr>
-</tbody>
-</table>
-<div class="section level3">
-<h3 id="against-correct-then-test-with-the-official-tools">Against correct-then-test with the official tools<a class="anchor" aria-label="anchor" href="#against-correct-then-test-with-the-official-tools"></a>
-</h3>
-<p><code>validation/de_comparators.R</code> corrects each sample with a tool, pseudobulks the rare type, and runs edgeR QL. Mean of 4 seeds, 6 vs 6 samples, same scoring as the gate. Every corrector gets the true cell-type labels.</p>
+<p>Same cells, soup and clusters for every tool. “Ambient-compatible” foreign counts are marker counts in cell types that do not express the marker, at a level ambient RNA could explain; “not ambient” are those too high to be ambient, mostly B-cell doublets. A good tool removes the first and keeps the second.</p>
 <table style="width:100%;" class="table">
 <colgroup>
-<col width="16%">
-<col width="16%">
-<col width="16%">
-<col width="16%">
-<col width="16%">
-<col width="16%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
+<col width="14%">
 </colgroup>
 <thead><tr>
-<th>case</th>
-<th>method</th>
-<th>leaked genes called</th>
-<th>null FP</th>
-<th>power</th>
-<th>FDP</th>
+<th></th>
+<th>Decant</th>
+<th>SoupX</th>
+<th>DecontX</th>
+<th>CellBender¹</th>
+<th>AmbiDose</th>
+<th>scAR</th>
 </tr></thead>
 <tbody>
 <tr>
-<td>more soup in disease</td>
+<td>ambient-compatible foreign counts removed</td>
+<td>88–95%</td>
+<td>76–94%</td>
+<td>97–100%</td>
+<td>54–98%</td>
+<td>67–79%</td>
+<td>99–100%</td>
+</tr>
+<tr>
+<td>counts that are not ambient removed (lower is better)</td>
+<td>14–37%</td>
+<td>12–31%</td>
+<td>96–100%</td>
+<td>4–68%</td>
+<td>82–100%</td>
+<td>58–82%</td>
+</tr>
+<tr>
+<td>native marker signal lost</td>
+<td>1–4%</td>
+<td>1–2%</td>
+<td>2–6%</td>
+<td>0–1%</td>
+<td>0–6%</td>
+<td>18–26%</td>
+</tr>
+<tr>
+<td>counts added</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>727,390</td>
+</tr>
+<tr>
+<td>run time (4 CPU cores)</td>
+<td>11 s</td>
+<td>12 s</td>
+<td>34 s</td>
+<td>55 min</td>
+<td>73 s</td>
+<td>15 min</td>
+</tr>
+</tbody>
+</table>
+<p>¹ Reduced CPU configuration; CellBender is designed for a GPU.</p>
+<p>Decant removes more ambient-compatible counts than SoupX and AmbiDose on all three marker sets and than CellBender (as run here) on two of three. It keeps the counts that are not ambient, which DecontX, AmbiDose and scAR remove, and it is as fast as the fastest tool. DecontX removes 5 to 9 points more of the ambient-compatible counts. Details and caveats: <a href="validation/BENCHMARK.html"><code>validation/BENCHMARK.md</code></a>.</p>
+</div>
+<div class="section level3">
+<h3 id="differential-expression-simulated-casecontrol-studies">Differential expression (simulated case/control studies)<a class="anchor" aria-label="anchor" href="#differential-expression-simulated-casecontrol-studies"></a>
+</h3>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr>
+<th></th>
+<th>leaked genes called (of 80), 6 vs 6</th>
+<th>null false-positive rate, 6 vs 6</th>
+<th>null false-positive rate, 50 vs 50, confounding batch</th>
+</tr></thead>
+<tbody>
+<tr>
+<td><strong><code>ambient_de</code></strong></td>
+<td><strong>0</strong></td>
+<td><strong>0.05</strong></td>
+<td><strong>0.05</strong></td>
+</tr>
+<tr>
+<td>SoupX, then edgeR</td>
+<td>1.5</td>
+<td>0.04</td>
+<td>not run</td>
+</tr>
+<tr>
 <td>naive edgeR</td>
-<td>52.8 / 80</td>
-<td>0.223</td>
-<td>0.91</td>
-<td>0.82</td>
+<td>53</td>
+<td>0.22</td>
+<td>0.45</td>
 </tr>
 <tr>
-<td></td>
-<td><code>ambient_de</code></td>
-<td>0 / 80</td>
-<td>0.048</td>
-<td>0.92</td>
-<td>0.13</td>
+<td>naive Wilcoxon</td>
+<td>not run</td>
+<td>not run</td>
+<td>0.46</td>
 </tr>
 <tr>
-<td></td>
-<td>Decant <code>bayes</code> (default) + edgeR</td>
-<td>0 / 80</td>
-<td>0.045</td>
-<td>0.89</td>
-<td>0.11</td>
-</tr>
-<tr>
-<td></td>
-<td>Decant <code>redistribute</code> + edgeR</td>
-<td>6.0 / 80</td>
-<td>0.081</td>
-<td>0.90</td>
-<td>0.31</td>
-</tr>
-<tr>
-<td></td>
-<td>SoupX + edgeR</td>
-<td>1.5 / 80</td>
-<td>0.043</td>
-<td>0.85</td>
-<td>0.13</td>
-</tr>
-<tr>
-<td>equal soup, shifted composition</td>
-<td>naive edgeR</td>
-<td>12.5 / 80</td>
-<td>0.060</td>
-<td>0.92</td>
-<td>0.35</td>
-</tr>
-<tr>
-<td></td>
-<td><code>ambient_de</code></td>
-<td>0 / 80</td>
-<td>0.051</td>
-<td>0.94</td>
-<td>0.11</td>
-</tr>
-<tr>
-<td></td>
-<td>Decant <code>bayes</code> (default) + edgeR</td>
-<td>0 / 80</td>
-<td>0.051</td>
-<td>0.94</td>
-<td>0.10</td>
-</tr>
-<tr>
-<td></td>
-<td>Decant <code>redistribute</code> + edgeR</td>
-<td>0.5 / 80</td>
-<td>0.060</td>
-<td>0.94</td>
-<td>0.12</td>
-</tr>
-<tr>
-<td></td>
-<td>SoupX + edgeR</td>
-<td>0.25 / 80</td>
-<td>0.042</td>
-<td>0.89</td>
-<td>0.09</td>
-</tr>
-<tr>
-<td>genes truly DE in both types</td>
-<td>naive edgeR</td>
-<td>30.8 / 60</td>
-<td>0.227</td>
-<td>0.92</td>
-<td>0.71</td>
-</tr>
-<tr>
-<td></td>
-<td><code>ambient_de</code></td>
-<td>0 / 60</td>
-<td>0.057</td>
-<td>0.97</td>
-<td>0.11</td>
-</tr>
-<tr>
-<td></td>
-<td>Decant <code>bayes</code> (default) + edgeR</td>
-<td>0 / 60</td>
-<td>0.045</td>
-<td>0.95</td>
-<td>0.09</td>
-</tr>
-<tr>
-<td></td>
-<td>Decant <code>redistribute</code> + edgeR</td>
-<td>9.0 / 60</td>
-<td>0.114</td>
-<td>0.94</td>
-<td>0.43</td>
-</tr>
-<tr>
-<td></td>
-<td>SoupX + edgeR</td>
-<td>2.3 / 60</td>
-<td>0.051</td>
-<td>0.90</td>
+<td>subtract ambient, then Wilcoxon</td>
+<td>not run</td>
+<td>not run</td>
 <td>0.14</td>
 </tr>
 </tbody>
 </table>
-<p>What this says, including the parts that do not favour Decant:</p>
-<ul>
-<li>
-<strong>Correcting with Decant’s <code>bayes</code> rule and then running edgeR is as good as <code>ambient_de</code> here.</strong> It calls no leaked gene, is calibrated, and has a slightly lower false discovery proportion. <code>ambient_de</code> has 0 to 3 points more power. In this 6 vs 6 two-group simulation, modelling the ambient term inside the test buys almost nothing over a good correction. (With the earlier <code>subtract</code> default, correct-then-test called 41.5 of 80 leaked genes; that gap was the correction rule, not the testing strategy.)</li>
-<li>SoupX + edgeR is close on leakage and FDP, with 4 to 7 points less power and 0.25 to 2.3 leaked genes called. That is a modest margin on a simulator that matches Decant’s own assumptions.</li>
-<li>SoupX’s <code>autoEstCont</code> found no marker genes at its defaults on every sample of this simulator. It was rerun with <code>soupQuantile = 0.5</code>, the remedy its own error message gives. The rule is fixed and not tuned to the truth.</li>
-<li>DecontX, FastCAR and CellBender were <strong>not run</strong> (not installed where this table was produced). The wrappers are in <code>validation/comparators.R</code>; the FastCAR and CellBender wrappers have never been executed. See <code>validation/README.md</code>.</li>
-<li>Where <code>ambient_de</code> is still expected to matter is outside this table: when the ambient estimate is noisy enough that its uncertainty has to enter the test (few empties, few cells), and at small sample sizes with covariates. Neither has been compared against <code>bayes</code> + edgeR yet.</li>
-</ul>
-</div>
-<div class="section level3">
-<h3 id="large-cohorts-outlier-samples-and-covariates">Large cohorts, outlier samples and covariates<a class="anchor" aria-label="anchor" href="#large-cohorts-outlier-samples-and-covariates"></a>
-</h3>
-<p>NB tests lose false-positive control in population-scale cohorts when a few samples carry extreme counts (Li et al. 2022, Genome Biology 23:79), and <code><a href="reference/ambient_de.html">ambient_de()</a></code> did too. It now down-weights outlier samples per gene (<code>robust = TRUE</code>, the default), and <code><a href="reference/gate_ambient_de_cohort.html">gate_ambient_de_cohort()</a></code> checks it in CI. Null false-positive rate at a nominal 0.05, mean of 3 seeds:</p>
-<table style="width:100%;" class="table">
-<colgroup>
-<col width="14%">
-<col width="14%">
-<col width="14%">
-<col width="14%">
-<col width="14%">
-<col width="14%">
-<col width="14%">
-</colgroup>
-<thead><tr>
-<th>per group</th>
-<th>case</th>
-<th><code>ambient_de</code></th>
-<th>without down-weighting</th>
-<th>naive edgeR</th>
-<th>naive Wilcoxon</th>
-<th>subtract + Wilcoxon</th>
-</tr></thead>
-<tbody>
-<tr>
-<td>50</td>
-<td>clean</td>
-<td>0.056</td>
-<td>0.052</td>
-<td>0.382</td>
-<td>0.369</td>
-<td>0.054</td>
-</tr>
-<tr>
-<td>50</td>
-<td>1% outlier entries</td>
-<td>0.053</td>
-<td>0.335</td>
-<td>0.444</td>
-<td>0.366</td>
-<td>0.053</td>
-</tr>
-<tr>
-<td>50</td>
-<td>heavy-tailed noise</td>
-<td>0.044</td>
-<td>0.146</td>
-<td>0.303</td>
-<td>0.267</td>
-<td>0.047</td>
-</tr>
-<tr>
-<td>50</td>
-<td>confounding batch</td>
-<td>0.050</td>
-<td>0.044</td>
-<td>0.451</td>
-<td>0.462</td>
-<td>0.141</td>
-</tr>
-<tr>
-<td>200</td>
-<td>clean</td>
-<td>0.064</td>
-<td>0.057</td>
-<td>0.759</td>
-<td>0.738</td>
-<td>0.053</td>
-</tr>
-<tr>
-<td>200</td>
-<td>confounding batch</td>
-<td>0.056</td>
-<td>0.050</td>
-<td>0.764</td>
-<td>0.741</td>
-<td>0.213</td>
-</tr>
-</tbody>
-</table>
-<ul>
-<li>A rank test does not fix contamination: naive Wilcoxon is as inflated as naive edgeR when contamination differs between groups.</li>
-<li>In a two-group design with 50 or more per group, subtracting the ambient estimate and then running Wilcoxon is as good as <code>ambient_de</code>.</li>
-<li>
-<code>ambient_de</code> is the better choice below about 50 per group (power 0.86 vs 0.61 at 15) and when a covariate must be adjusted for: with a confounding batch the rank test’s false discovery proportion is 0.64 to 0.85.</li>
-<li>From 50 per group up, <code>ambient_de</code>’s false discovery proportion at a nominal 0.10 is 0.10 to 0.17, from genes with very small residual shifts. <code>lfc = log2(1.1)</code> tests against a 10% minimum fold change and removed them with no loss of power for 1.5-fold effects.</li>
-<li>Genes whose counts are more than 75% ambient are not tested; they are listed in <code>attr(res, "ambient_dominated")</code>.</li>
-</ul>
-<p>The sweep over 6 to 200 per group is in <code>experiments/large_cohort_calibration/</code>.</p>
-<p>Limits: - With very few empty droplets (150) some leakage returns. - With 3 samples per group, power drops (0.58 vs 0.68 for naive). - The base case’s false discovery proportion (0.15) sits exactly at the gate’s threshold. - All results are simulated, from a simulator built around the mechanism the model assumes. The full development history, including the variants that were rejected, is in <code>experiments/contamination_aware_de/</code>.</p>
+<p>Nominal false-positive rate 0.05. In the 6 vs 6 study, correcting with Decant’s <code>bayes</code> rule and then running edgeR was as good as <code>ambient_de</code>; <code>ambient_de</code> is the option that stays valid with covariates such as batch.</p>
 </div>
 </div>
 <div class="section level2">
-<h2 id="corrections-to-v01-claims">Corrections to v0.1 claims<a class="anchor" aria-label="anchor" href="#corrections-to-v01-claims"></a>
+<h2 id="install">Install<a class="anchor" aria-label="anchor" href="#install"></a>
 </h2>
-<p>This release re-ran every gate on the shipped estimator. Three earlier claims did not survive, and they are corrected here rather than quietly edited:</p>
-<ol style="list-style-type: decimal">
-<li>
-<strong>“Splice-aware halves unspliced-layer error.”</strong> The 2x came partly from the legacy rho over-correcting the baseline more heavily. With a calibrated rho the gain is 25%, and the negative control initially FAILED because each layer was clamped separately (losing removal mass twice). Fixed by clamping the total once and routing overflow between layers. The control now ties.</li>
-<li>
-<strong>“DE: the problem is real and severe.”</strong> The v0.1 DE benchmark was broken. It renormalised condition B after up-regulating the true-DE genes, and compared plain CPM, so naive DE called 58% of NULL genes significant. With median-of-ratios normalisation the benchmark is calibrated (7% null FP), and naive subtract-then-test has only 8% FP on ambient-trap genes <em>when given the true ambient load</em>. With the ambient load <em>estimated</em> and soups differing between samples (the realistic case, <code>gate_ambient_de</code>), leakage is severe, which is what the v2 contamination-aware test addresses.</li>
-<li>
-<strong>“Default rho estimator overestimates ~2x.”</strong> It was 1.5-4x, and catastrophically worse under realistic heterogeneity. Replaced (see above).</li>
-</ol>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"kroy3/Decant"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="known-limitations-stated-not-hidden">Known limitations (stated, not hidden)<a class="anchor" aria-label="anchor" href="#known-limitations-stated-not-hidden"></a>
+<h2 id="quick-start">Quick start<a class="anchor" aria-label="anchor" href="#quick-start"></a>
+</h2>
+<p>The raw (unfiltered) matrix is required: its empty droplets measure the ambient RNA.</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/kroy3/Decant" class="external-link">Decant</a></span><span class="op">)</span></span>
+<span><span class="va">raw</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/read_10x_counts.html">read_10x_counts</a></span><span class="op">(</span><span class="st">"sample/outs/raw_feature_bc_matrix"</span><span class="op">)</span></span>
+<span><span class="va">cells</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="fu"><a href="reference/read_10x_counts.html">read_10x_counts</a></span><span class="op">(</span><span class="st">"sample/outs/filtered_feature_bc_matrix"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">d</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/split_droplets.html">split_droplets</a></span><span class="op">(</span><span class="va">raw</span>, cells <span class="op">=</span> <span class="va">cells</span><span class="op">)</span></span>
+<span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/decant.html">decant</a></span><span class="op">(</span><span class="va">d</span><span class="op">$</span><span class="va">cells</span>, <span class="va">d</span><span class="op">$</span><span class="va">empties</span>, clusters <span class="op">=</span> <span class="va">my_clusters</span><span class="op">)</span></span>
+<span><span class="va">res</span><span class="op">$</span><span class="va">corrected</span>   <span class="co"># corrected counts, sparse</span></span>
+<span><span class="va">res</span><span class="op">$</span><span class="va">rho</span>         <span class="co"># per-cell contamination</span></span></code></pre></div>
+<p>From Seurat:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">obj</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/RunDecant.html">RunDecant</a></span><span class="op">(</span><span class="va">obj</span>, raw <span class="op">=</span> <span class="st">"sample/outs/raw_feature_bc_matrix"</span><span class="op">)</span>  <span class="co"># new "Decant" assay</span></span>
+<span></span>
+<span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/DecantDE.html">DecantDE</a></span><span class="op">(</span><span class="va">obj</span>, cell_type <span class="op">=</span> <span class="st">"Microglia"</span>, sample_col <span class="op">=</span> <span class="st">"donor"</span>,</span>
+<span>                formula <span class="op">=</span> <span class="op">~</span> <span class="va">diagnosis</span>, raw <span class="op">=</span> <span class="va">raw_paths_by_donor</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/subset.html" class="external-link">subset</a></span><span class="op">(</span><span class="va">res</span>, <span class="va">ambient_driven</span><span class="op">)</span>   <span class="co"># hits a standard pipeline reports that the soup explains</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="limits">Limits<a class="anchor" aria-label="anchor" href="#limits"></a>
 </h2>
 <ul>
-<li>
-<strong>Empties that do not match the cells make rho collapse (partly handled).</strong> Genes that are in the empties but in no cell at all are now detected and dropped from the soup, with a warning when they exceed 5% of it. Genes the cells do contain but the empties over-represent (debris of an under-sampled cell type) are <strong>not detected</strong>: the estimator settles on them and rho is underestimated. In simulation, 10% such junk took a true rho of 0.2 to 0.005. Earlier versions carried a two-sided tripwire for this case, which caught 20 of 22 simulated runs. It raised a false alarm on the real PBMC data and has been retired; the per-cluster two-sided estimate is still in <code>$rho_diagnostics</code>. Check a suspiciously low rho against marker genes.</li>
-<li>
-<strong>Weak identifiability when few genes are cleanly absent.</strong> When cell types share most of their expression program, rho is not identifiable from counts alone and the estimator biases UP (~+10% under stress). Clusters with almost no absent genes borrow the evidence-weighted rho of the others and are flagged <code>low_power</code>. Per-cell resolution is limited (r = 0.5-0.8 under stress).</li>
-<li>
-<strong>Over-clustering biases rho up.</strong> Very small clusters lack the power to reject weakly-expressed genes. Prefer a moderate number of reasonably large clusters.</li>
-<li>
-<strong>The DecontX-like comparator is not a fair stand-in for DecontX.</strong> It removes only ~8-10% of contamination here, which says more about the reimplementation than about DecontX. There is no SoupX reimplementation at all. Nothing here is a claim against either tool.</li>
-<li>The lysis diagnostic was validated with an oracle basis; real k-means clustering degrades it.</li>
-<li>
-<strong>All results are on simulated data.</strong> Simulations can be rigged. These are sufficiency tests and negative controls, not evidence against CellBender. The stress simulator exists because the original one made rho estimation too easy.</li>
+<li>Real-data evidence is one dataset (PBMC 4k) without ground truth. Species- and genotype-mixing benchmarks are scripted (<code>validation/</code>) but not yet run.</li>
+<li>The DE results are simulated, from a simulator that follows the model’s own ambient mechanism.</li>
+<li>Empty droplets that over-represent genes the cells also express are not detected and make the contamination estimate too low.</li>
 </ul>
-</div>
-<div class="section level2">
-<h2 id="real-data-validation-in-progress">Real-data validation (in progress)<a class="anchor" aria-label="anchor" href="#real-data-validation-in-progress"></a>
-</h2>
-<div class="section level3">
-<h3 id="pbmc-4k-run">PBMC 4k (run)<a class="anchor" aria-label="anchor" href="#pbmc-4k-run"></a>
-</h3>
-<p><code>validation/pbmc_soupx.R</code> runs <code><a href="reference/decant.html">decant()</a></code> on the 10x PBMC data bundled with SoupX: 2,150 annotated cells, 33,694 genes, a soup profile from 2.7M empty-droplet UMIs. There is no ground truth, so the checks are indirect.</p>
-<p><strong>This run found a serious bug.</strong> The rho estimator as released gave a median of 0.22 (up to 0.58 in small clusters) where SoupX’s own analyses of the same data give 0.06 (automatic) and 0.077 (immunoglobulin genes). Tens of thousands of low-count genes passed the “not significantly above the soup” test for lack of power and dragged rho up; the simulators, with 300 to 2,000 well-covered genes, never showed it. The absent set now requires an expected ambient count of at least 5 (<code>min_expected</code>).</p>
-<table class="table">
-<colgroup>
-<col width="50%">
-<col width="50%">
-</colgroup>
-<thead><tr>
-<th>check</th>
-<th>result</th>
-</tr></thead>
-<tbody>
-<tr>
-<td>rho, median / mean over cells</td>
-<td>0.063 / 0.076 (SoupX: 0.06 automatic, 0.077 from IG genes)</td>
-</tr>
-<tr>
-<td>immunoglobulin counts in non-B cells explained by rho x soup</td>
-<td>94%</td>
-</tr>
-<tr>
-<td>monocyte marker counts (LYZ, S100A8, S100A9) in non-monocytes explained</td>
-<td>106%</td>
-</tr>
-<tr>
-<td>NK markers (GNLY, NKG7) outside NK and CD8 T explained</td>
-<td>92%</td>
-</tr>
-</tbody>
-</table>
-<p>Share of those foreign marker counts removed, and of the same genes’ counts in the cell type that expresses them:</p>
-<table style="width:100%;" class="table">
-<colgroup>
-<col width="14%">
-<col width="14%">
-<col width="14%">
-<col width="14%">
-<col width="14%">
-<col width="14%">
-<col width="14%">
-</colgroup>
-<thead><tr>
-<th>correction</th>
-<th>IG foreign</th>
-<th>IG native</th>
-<th>monocyte foreign</th>
-<th>monocyte native</th>
-<th>NK foreign</th>
-<th>NK native</th>
-</tr></thead>
-<tbody>
-<tr>
-<td><code>bayes</code></td>
-<td>0.86</td>
-<td>0.01</td>
-<td>0.94</td>
-<td>0.04</td>
-<td>0.83</td>
-<td>0.02</td>
-</tr>
-<tr>
-<td><code>redistribute</code></td>
-<td>0.27</td>
-<td>0.01</td>
-<td>0.73</td>
-<td>0.05</td>
-<td>0.35</td>
-<td>0.02</td>
-</tr>
-<tr>
-<td><code>subtract</code></td>
-<td>0.19</td>
-<td>0.01</td>
-<td>0.57</td>
-<td>0.04</td>
-<td>0.24</td>
-<td>0.01</td>
-</tr>
-</tbody>
-</table>
-<p><code><a href="reference/decant.html">decant()</a></code> now defaults to <code>correction = "bayes"</code>. The simulated <code><a href="reference/gate_correction.html">gate_correction()</a></code> still puts the three rules within a few percent of each other with <code>subtract</code> marginally ahead; the real data does not.</p>
-<p>Limits: one dataset, one tissue, no ground truth, and agreement with SoupX is agreement with another estimator, not with the truth. Three of eleven clusters (the monocyte clusters, which dominate the soup) could not identify their own rho and borrowed it. The two-sided soup/cell mismatch tripwire raised a false alarm on this data and was retired (see Known limitations).</p>
-</div>
-<div class="section level3">
-<h3 id="species-mixtures-not-yet-run">Species mixtures (not yet run)<a class="anchor" aria-label="anchor" href="#species-mixtures-not-yet-run"></a>
-</h3>
-<p><code>validation/species_mix.R</code> scores Decant on public 10x human/mouse mixtures (<code>hgmm_1k_v3</code>, <code>hgmm_5k_v3</code>, <code>hgmm_10k_v3</code>), where every cross-species read is known contamination, so rho is measured experimentally instead of simulated. It runs the OFFICIAL SoupX and DecontX when they are installed (never the in-repo reimplementations), and reports each missing comparator as “not run”.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="ex">Rscript</span> validation/species_mix.R              <span class="co"># all datasets</span></span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="ex">Rscript</span> validation/species_mix.R hgmm_1k_v3   <span class="co"># one dataset</span></span></code></pre></div>
-<p>Two tests per dataset:</p>
-<ul>
-<li>
-<strong>full</strong>: all cells, both genomes. Comparable to published benchmarks, but easy for absent-gene estimators, because the other genome is a perfect set of absent genes. A good score here alone shows little.</li>
-<li>
-<strong>hidden</strong>: majority-species cells with that species’ genes only. The estimator has to work as it would on ordinary single-species data, while the truth still comes from the cross-species reads it cannot see. This is the test that matters.</li>
-</ul>
-<p>The truth derivation is unit-tested on a synthetic mixture with known rho (it recovers the mean within 0.01). <strong>No real-data numbers are reported yet:</strong> the datasets have not been run. Downloads need network access to <code>cf.10xgenomics.com</code>. Alternatively, place the extracted <code>raw_feature_bc_matrix/</code> and <code>filtered_feature_bc_matrix/</code> folders under <code>validation/data/&lt;dataset&gt;/raw/</code> and <code>validation/data/&lt;dataset&gt;/filtered/</code>.</p>
-</div>
-</div>
-<div class="section level2">
-<h2 id="the-non-negotiable-next-step">The non-negotiable next step<a class="anchor" aria-label="anchor" href="#the-non-negotiable-next-step"></a>
-</h2>
-<p>Nothing here is a real-world claim until it is re-run on experimental ground truth: species-mixing (human/mouse, e.g. 10x hgmm) and genotype-mixing (demuxlet/souporcell-style) datasets, where cross-species or wrong-genotype reads measure contamination directly. They should be scored with this same metric suite, with the official SoupX, DecontX (celda), and CellBender as comparators. <code><a href="reference/read_10x_counts.html">read_10x_counts()</a></code> and <code><a href="reference/split_droplets.html">split_droplets()</a></code> now get such data in. Wrappers for the official SoupX, DecontX, FastCAR and CellBender are in <code>validation/comparators.R</code>; so far only the SoupX one has been run.</p>
+<p>The full scorecard, design notes and history are in <a href="validation/SCORECARD.html"><code>validation/SCORECARD.md</code></a>; changes are in <a href="NEWS.html"><code>NEWS.md</code></a>.</p>
 </div>
 <div class="section level2">
 <h2 id="development">Development<a class="anchor" aria-label="anchor" href="#development"></a>
 </h2>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">test</span>()            <span class="co"># unit tests: guarantees, sparse==dense, calibration, I/O</span></span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">check</span>()           <span class="co"># R CMD check (clean as of v0.2)</span></span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>Rscript run_all_gates.R     <span class="co"># the scientific scorecard</span></span></code></pre></div>
-<p>CI runs <code>R CMD check</code> on Linux/macOS/Windows and the gate scorecard on every PR, and fails if the rho gate stops passing.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>devtools<span class="sc">::</span><span class="fu">test</span>()          <span class="co"># unit tests</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>Rscript run_all_gates.R   <span class="co"># falsification gates (also run in CI)</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="license">License<a class="anchor" aria-label="anchor" href="#license"></a>
 </h2>
-<p>MIT. See LICENSE.</p>
+<p>MIT.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

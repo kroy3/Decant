@@ -9,10 +9,11 @@ correct_counts(
   observed,
   soup,
   rho,
-  method = c("subtract", "redistribute", "bayes"),
+  method = c("subtract", "redistribute", "bayes", "bayes_cell"),
   clusters = NULL,
   max_iter = 50,
-  drop_zeros = TRUE
+  drop_zeros = TRUE,
+  cap_q = 0.001
 )
 ```
 
@@ -34,11 +35,12 @@ correct_counts(
 
 - method:
 
-  one of "subtract", "redistribute", "bayes" (see Details).
+  one of "subtract", "redistribute", "bayes", "bayes_cell" (see
+  Details).
 
 - clusters:
 
-  cluster labels, required for method = "bayes".
+  cluster labels, required for the two bayes methods.
 
 - max_iter:
 
@@ -49,6 +51,12 @@ correct_counts(
   for sparse input, drop entries corrected to exactly 0. FALSE keeps the
   input's sparsity pattern (explicit zeros).
 
+- cap_q:
+
+  for "bayes_cell": an entry is treated as not explainable by ambient
+  RNA when its count exceeds the `1 - cap_q` Poisson quantile of its
+  ambient expectation.
+
 ## Value
 
 corrected counts, same class as `observed` (dense or dgCMatrix).
@@ -56,6 +64,6 @@ Guaranteed 0 \<= corrected \<= observed element-wise.
 
 ## Details
 
-See the header of `R/correct.R` for the three rules and
+See the header of `R/correct.R` for the rules and
 [`gate_correction()`](https://kroy3.github.io/Decant/reference/gate_correction.md)
 for how they compare against ground truth.
