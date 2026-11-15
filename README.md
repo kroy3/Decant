@@ -5,7 +5,6 @@ differential expression test that models ambient RNA instead of subtracting
 it. No other ambient RNA tool we found offers one.
 
 **Documentation:** the [User Guide](https://github.com/kroy3/Decant/wiki)
-(also on the [package website](https://kroy3.github.io/Decant/articles/00-Preface.html))
 covers installation, the Seurat workflow, multi-sample data, differential
 expression and diagnostics, chapter by chapter.
 
