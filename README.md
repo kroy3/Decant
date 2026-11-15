@@ -81,7 +81,7 @@ Rscript run_all_gates.R
 |-----------|-------------|---------|
 | **Contamination fraction (rho)**: cluster-pooled absent-gene estimator with empirical-Bayes per-cell shrinkage (`estimate_rho_cluster`) | **PASS** on 12 settings (easy + stress simulator, rho 0 to 0.3, k-means clusters, not oracle). Mean bias within 25% everywhere; negative control holds (rho=0 gives <0.01). Easy: RMSE 0.006-0.030, per-cell r = 0.94-0.98. Stress: RMSE 0.03-0.08, r = 0.50-0.81. | ON |
 | Legacy marker-ratio rho (v0.1 `estimate_rho`) | **FAIL.** Overestimated rho 1.5-4x on easy data (worst at the low rho typical of scRNA-seq) and reported 0.57-0.71 when the truth was 0.0-0.3 under stress. | kept only for reproducibility |
-| **Correction rule** | On simulated data `subtract` (v0) has the lowest mean L1 error (0.071), vs `redistribute` (SoupX-style, 0.073) and `bayes` (0.076); none dominates. On real PBMC data `bayes` removed 83 to 94% of foreign marker counts against 19 to 57% for `subtract`, at the same cost to native expression. | `bayes` (decided by the real data, against the simulated gate); others via `correction=` |
+| **Correction rule** | `bayes_cell` has the lowest mean L1 error on simulated data (0.065), ahead of `subtract` (0.071), `redistribute` (SoupX-style, 0.072) and `bayes` (0.075); it is best in three of four settings and second in the fourth. On real PBMC data it removes 88 to 95% of ambient-compatible foreign marker counts and leaves most counts that cannot be ambient. | `bayes_cell`; others via `correction=` |
 
 What the rho fix buys end to end (`compare_methods.R`, mean of 4 seeds,
 L1 error to the clean truth, lower is better):
@@ -316,9 +316,15 @@ the cell type that expresses them:
 | `redistribute` | 0.27 | 0.01 | 0.73 | 0.05 | 0.35 | 0.02 |
 | `subtract` | 0.19 | 0.01 | 0.57 | 0.04 | 0.24 | 0.01 |
 
-`decant()` now defaults to `correction = "bayes"`. The simulated
-`gate_correction()` still puts the three rules within a few percent of each
-other with `subtract` marginally ahead; the real data does not.
+`bayes` then became the default. A later comparison with DecontX showed that
+`bayes` also removed 82 to 98% of marker counts that are too high in a cell to
+be ambient (15 likely B-cell doublets hold a third of the foreign
+immunoglobulin UMIs). The default is now `bayes_cell`, which removes only the
+expected ambient from such entries: 88 to 95% of the ambient-compatible
+foreign counts removed, 14 to 37% of the incompatible ones, same native loss.
+It also has the lowest error in the simulated `gate_correction()`. The six-tool
+comparison is in `validation/BENCHMARK.md`; DecontX still removes 5 to 9
+points more of the ambient-compatible counts than Decant.
 
 Limits: one dataset, one tissue, no ground truth, and agreement with SoupX is
 agreement with another estimator, not with the truth. Three of eleven clusters

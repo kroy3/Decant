@@ -21,32 +21,66 @@ data bundled with SoupX). Every tool gets the same cells and clusters.
 |---|---|---|---|---|---|---|
 | rho, median | 0.063 | 0.061 | 0.078 | not reported | 0.185 | not reported |
 | UMIs removed | 7.9% | 6.1% | 11.6% | 3.0% | 21.3% | 43.8% |
-| immunoglobulin: foreign removed | 86% | 65% | 100% | 45% | 82% | 89% |
-| monocyte: foreign removed | 94% | 93% | 100% | 97% | 68% | 100% |
-| NK: foreign removed | 83% | 65% | 97% | 47% | 80% | 92% |
+| immunoglobulin: foreign removed | 70% | 65% | 100% | 45% | 82% | 89% |
+| monocyte: foreign removed | 93% | 93% | 100% | 97% | 68% | 100% |
+| NK: foreign removed | 79% | 65% | 97% | 47% | 80% | 92% |
 | immunoglobulin: native removed | 1.3% | 1.1% | 1.6% | 0.0% | 0.4% | 26.3% |
-| monocyte: native removed | 4.2% | 2.2% | 5.9% | 0.6% | 5.8% | 19.7% |
+| monocyte: native removed | 4.1% | 2.2% | 5.9% | 0.6% | 5.8% | 19.7% |
 | NK: native removed | 2.0% | 2.0% | 3.2% | 0.4% | 1.1% | 17.7% |
 | counts added (UMIs) | 0 | 0 | 0 | 0 | 0 | 727,390 |
-| run time, 4 CPU cores | 5 s | 14 s | 32 s | 55 min | 73 s | 15 min |
+| run time, 4 CPU cores | 11 s | 12 s | 34 s | 55 min | 73 s | 15 min |
 
-Reading it:
+### Foreign counts are not all ambient
 
-- **DecontX removes the most foreign signal** (97 to 100%), ahead of Decant
-  (83 to 94%) on all three sets. It also removes more in total and loses
-  somewhat more native signal.
-- **CellBender, as run here, is the most conservative**: almost no native
-  loss, but only 45 to 47% of two of the three foreign sets removed.
-- **Decant, SoupX and DecontX form a middle group**: 6 to 12% of UMIs
-  removed, native loss under 6%, no counts added. Within it Decant is the
-  fastest, ahead of SoupX on foreign removal and behind DecontX.
-- **AmbiDose estimates three times the contamination of the others** (0.185)
-  and removes 21% of UMIs, yet removes less monocyte signal than Decant. It
-  flagged 65% of its own per-cell estimates as "interpret with caution".
-- **scAR removes 44% of all UMIs, loses 18 to 26% of native marker signal,
-  and adds 727,390 counts** across 666,033 entries where the cell had fewer.
-  Its output is one random sample from its model, which accounts for part of
-  the added counts.
+"Foreign removed" treats every marker count in the wrong cell type as
+contamination. It is not. Fifteen non-B cells (14 annotated as monocytes)
+hold 397 of the 1,188 foreign immunoglobulin UMIs. They carry 16.7 UMIs per
+10,000 of CD79A, CD79B and MS4A1, against 0.7 in other non-B cells and 41.7
+in B cells, and have 1.5 times the UMIs of their neighbours: most likely
+B-cell doublets. Those molecules were in the droplet with the cell. An
+ambient tool that removes them is not removing ambient RNA.
+
+So the foreign counts are split. An entry is **incompatible** with ambient
+when its count is beyond the 99.9% Poisson bound of a deliberately generous
+ambient expectation (contamination 0.15, about twice any tool's estimate
+here, so the bound uses no tool's own rho). The share of foreign UMIs that
+is incompatible is 31% for immunoglobulins, 2% for monocyte markers and 18%
+for NK markers. A correct tool removes the compatible counts and leaves the
+incompatible ones.
+
+| | Decant | Decant, previous `bayes` rule | SoupX | DecontX | CellBender (CPU budget) | AmbiDose | scAR |
+|---|---|---|---|---|---|---|---|
+| immunoglobulin: compatible removed | 95% | 88% | 88% | 100% | 63% | 75% | 99% |
+| monocyte: compatible removed | 95% | 94% | 94% | 100% | 98% | 67% | 100% |
+| NK: compatible removed | 88% | 84% | 76% | 97% | 54% | 79% | 100% |
+| immunoglobulin: incompatible removed | 14% | 82% | 12% | 100% | 4% | 96% | 66% |
+| monocyte: incompatible removed | 16% | 98% | 31% | 100% | 68% | 100% | 82% |
+| NK: incompatible removed | 37% | 82% | 14% | 96% | 18% | 82% | 58% |
+
+Reading both tables:
+
+- **DecontX removes everything foreign, including the counts that cannot be
+  ambient** (96 to 100% of them). Its lead on "foreign removed" is partly
+  that. On the compatible counts it is still ahead of Decant: by 5 points on
+  two sets and 9 on the NK set.
+- **Decant's previous `bayes` rule had the same fault to a lesser degree**: it
+  scaled every cell of a cluster by one ratio and removed 82 to 98% of the
+  incompatible counts. The new default, `bayes_cell`, removes 14 to 37% of
+  them and more of the compatible counts than before (88 to 95%), at the
+  same native loss and the same total removal.
+- **SoupX and CellBender also leave the incompatible counts**, and remove
+  less of the compatible ones than Decant on two of three sets (SoupX) or on
+  two of three (CellBender, which is ahead on the monocyte set).
+- **AmbiDose and scAR** remove most incompatible counts; scAR also adds
+  727,390 counts and loses 18 to 26% of native marker signal.
+- **Decant and SoupX are the fastest** (11 and 12 s), and no tool except scAR
+  adds counts.
+
+Whether the remaining 5 to 12 points between Decant and DecontX on the
+compatible counts are real ambient RNA that Decant misses, or low native
+expression that DecontX removes, cannot be decided here. Decant removes what
+its rho and the soup predict; in the clusters where counts remain, the
+observed foreign counts exceed that prediction by 1.3 to 2.3 times.
 
 Limits that matter for this table:
 
@@ -127,7 +161,9 @@ See `results/de_comparators.csv`. Six control and six disease samples;
 disease samples carry more ambient RNA; 80 genes that are disease genes only
 in an abundant cell type can leak into the rare type being tested.
 
-Mean of 4 seeds. Every corrector gets the true cell-type labels.
+Mean of 4 seeds. Every corrector gets the true cell-type labels. The Decant
+correction arm uses the `bayes` rule; it has not been rerun with the current
+default, `bayes_cell`.
 
 | case | method | leaked genes called | null FP | power | FDP |
 |---|---|---|---|---|---|
@@ -217,10 +253,11 @@ against the papers before being cited.
 | Per-cell contamination estimate | ahead of SoupX (one value per channel); level with DecontX, CellBender, AmbiDose by design; accuracy of the per-cell values untested on real data | section 4 |
 | DE without leakage, power kept | level with Decant-correct-then-edgeR; slightly ahead of SoupX-then-edgeR (4 to 7 points of power); simulated only | section 3 |
 | DE with covariates in large cohorts | ahead of subtract-then-rank-test in simulation | `experiments/large_cohort_calibration/` |
-| Foreign marker removal against DecontX | behind on all three sets | section 1a |
-| Foreign marker removal against CellBender, AmbiDose | ahead on 2 of 3 and 3 of 3 sets; CellBender in a reduced configuration | section 1a |
+| Removal of ambient-compatible foreign counts, against DecontX | behind by 5 to 9 points on all three sets | section 1a |
+| Leaving counts that cannot be ambient (likely doublets) | ahead of DecontX, AmbiDose, scAR; level with SoupX and CellBender | section 1a |
+| Removal of ambient-compatible foreign counts, against SoupX, CellBender, AmbiDose | ahead on 3 of 3, 2 of 3 and 3 of 3 sets; CellBender in a reduced configuration | section 1a |
 | Native signal kept, against scAR | far ahead (1 to 4% lost against 18 to 26%) | section 1a |
-| Speed | fastest of the six on this dataset | section 1a |
+| Speed | level with SoupX, faster than the other four on this dataset | section 1a |
 | Accuracy on data with experimental ground truth | unknown, not run | species and genotype mixture scripts exist, data unreachable |
 | Robust to empties that over-represent some genes | behind: not detected | README, Known limitations |
 

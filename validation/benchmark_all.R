@@ -43,15 +43,19 @@ if (identical(mode, "export")) {
   quit(status = 0)
 }
 
+soup <- soup_counts / sum(soup_counts); names(soup) <- rownames(cells)
+T_c <- Matrix::colSums(cells); AMBIENT_BOUND <- 0.15
 timed <- function(f) { t <- system.time(r <- f())[["elapsed"]]; r$seconds <- t; r }
 res <- list(
   Decant = timed(function() run_decant(cells, empties, md$Cluster)),
+  `Decant (bayes, previous default)` = timed(function() run_decant(cells, empties, md$Cluster, correction = "bayes")),
   SoupX = timed(function() run_soupx(cells, empties, md$Cluster)),
   DecontX = timed(function() run_decontx(cells, empties, md$Cluster)),
   CellBender = read_python_tool(DIR, "cellbender", cells),
   scAR = read_python_tool(DIR, "scar", cells),
   AmbiDose = read_python_tool(DIR, "ambidose", cells))
 versions <- c(Decant = as.character(utils::packageVersion("Decant")),
+              `Decant (bayes, previous default)` = as.character(utils::packageVersion("Decant")),
               SoupX = as.character(utils::packageVersion("SoupX")),
               DecontX = as.character(utils::packageVersion("decontX")),
               CellBender = res$CellBender$version %||% NA, scAR = res$scAR$version %||% NA,
@@ -76,6 +80,16 @@ rows <- lapply(names(res), function(nm) {
     g <- sets[[s]]$genes; home <- md$Annotation %in% sets[[s]]$home
     row[[paste0(s, "_foreign_removed")]] <- 1 - sum(corr[g, !home]) / sum(cells[g, !home])
     row[[paste0(s, "_native_removed")]] <- 1 - sum(corr[g, home]) / sum(cells[g, home])
+    ## Split the foreign counts by whether ambient RNA could have produced
+    ## them: an entry is "incompatible" when its count is beyond the 99.9%
+    ## Poisson bound of a deliberately generous ambient expectation
+    ## (contamination 0.15, about twice any tool's estimate here). The bound
+    ## uses no tool's own rho.
+    X <- as.matrix(cells[g, !home]); C <- as.matrix(corr[g, !home])
+    inc <- X > 0 & stats::ppois(X - 1, outer(soup[g], AMBIENT_BOUND * T_c[!home]), lower.tail = FALSE) < 0.001
+    row[[paste0(s, "_compatible_removed")]] <- 1 - sum(C[!inc]) / sum(X[!inc])
+    row[[paste0(s, "_incompatible_removed")]] <- 1 - sum(C[inc]) / sum(X[inc])
+    row[[paste0(s, "_incompatible_share")]] <- sum(X[inc]) / sum(X)
   }
   row$note <- r$note %||% ""
   row

@@ -8,7 +8,7 @@ test_that("sparse and dense inputs give identical results", {
   r_d <- estimate_rho_cluster(sim$observed, soup, cl)
   r_s <- estimate_rho_cluster(sp, soup, cl)
   expect_equal(as.numeric(r_d), as.numeric(r_s))
-  for (m in c("subtract", "redistribute", "bayes")) {
+  for (m in c("subtract", "redistribute", "bayes", "bayes_cell")) {
     cd <- correct_counts(sim$observed, soup, as.numeric(r_d), method = m, clusters = cl)
     cs <- correct_counts(sp, soup, as.numeric(r_d), method = m, clusters = cl)
     expect_s4_class(cs, "dgCMatrix")
