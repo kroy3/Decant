@@ -1,16 +1,71 @@
 # Decant against existing tools
 
 What has been measured, against what, and what has not. Reproduce with
-`Rscript validation/benchmark_soupx.R` and `Rscript validation/de_comparators.R 1 2 3 4`.
+`validation/benchmark_all.R` (six tools, real PBMC), `validation/benchmark_soupx.R`
+and `Rscript validation/de_comparators.R 1 2 3 4`.
 
-Only SoupX 1.6.2 has been run head to head. DecontX, CellBender, scAR, FastCAR
-and AmbiDose have **not** been run: they could not be installed where these
-results were produced (CRAN, Bioconductor and Zenodo were unreachable; SoupX
-was installed from its GitHub source). Rows for those tools below describe
-what they do, taken from their papers and from published benchmarks, not from
-runs here.
+Six tools have been run on one real dataset (section 1a): Decant, SoupX
+1.6.2, DecontX 1.10.0, CellBender 0.4.0, scAR (scvi-tools 1.4.2) and AmbiDose
+0.5.15, all official releases installed from PyPI or from their GitHub
+source. FastCAR and CellClear have not been run. Sections 2 and 3 compare
+against SoupX only.
 
-## 1. Real data: 10x PBMC 4k (no ground truth)
+## 1a. Six tools on real data: 10x PBMC 4k (no ground truth)
+
+2,150 annotated cells, 33,694 genes, soup from 2.7M empty-droplet UMIs (the
+data bundled with SoupX). Every tool gets the same cells and clusters.
+"Foreign" is a marker set counted in cell types that should not express it;
+"native" is the same set in the type that does.
+
+| | Decant | SoupX | DecontX | CellBender (CPU budget) | AmbiDose | scAR |
+|---|---|---|---|---|---|---|
+| rho, median | 0.063 | 0.061 | 0.078 | not reported | 0.185 | not reported |
+| UMIs removed | 7.9% | 6.1% | 11.6% | 3.0% | 21.3% | 43.8% |
+| immunoglobulin: foreign removed | 86% | 65% | 100% | 45% | 82% | 89% |
+| monocyte: foreign removed | 94% | 93% | 100% | 97% | 68% | 100% |
+| NK: foreign removed | 83% | 65% | 97% | 47% | 80% | 92% |
+| immunoglobulin: native removed | 1.3% | 1.1% | 1.6% | 0.0% | 0.4% | 26.3% |
+| monocyte: native removed | 4.2% | 2.2% | 5.9% | 0.6% | 5.8% | 19.7% |
+| NK: native removed | 2.0% | 2.0% | 3.2% | 0.4% | 1.1% | 17.7% |
+| counts added (UMIs) | 0 | 0 | 0 | 0 | 0 | 727,390 |
+| run time, 4 CPU cores | 5 s | 14 s | 32 s | 55 min | 73 s | 15 min |
+
+Reading it:
+
+- **DecontX removes the most foreign signal** (97 to 100%), ahead of Decant
+  (83 to 94%) on all three sets. It also removes more in total and loses
+  somewhat more native signal.
+- **CellBender, as run here, is the most conservative**: almost no native
+  loss, but only 45 to 47% of two of the three foreign sets removed.
+- **Decant, SoupX and DecontX form a middle group**: 6 to 12% of UMIs
+  removed, native loss under 6%, no counts added. Within it Decant is the
+  fastest, ahead of SoupX on foreign removal and behind DecontX.
+- **AmbiDose estimates three times the contamination of the others** (0.185)
+  and removes 21% of UMIs, yet removes less monocyte signal than Decant. It
+  flagged 65% of its own per-cell estimates as "interpret with caution".
+- **scAR removes 44% of all UMIs, loses 18 to 26% of native marker signal,
+  and adds 727,390 counts** across 666,033 entries where the cell had fewer.
+  Its output is one random sample from its model, which accounts for part of
+  the added counts.
+
+Limits that matter for this table:
+
+- There is no ground truth. Which total removal is right (3%, 8%, 12%) cannot
+  be decided from marker sets; "removes more foreign signal" is only better if
+  those counts are ambient. Under Decant's own estimate the ambient model
+  predicts 92 to 106% of them, which is circular as evidence for Decant.
+- **The empty droplets are reconstructed.** The SoupX data ships the summed
+  empty-droplet counts, not the droplets. 40,000 droplets were made by
+  assigning each soup UMI to a droplet at random, so the pooled soup is real
+  but the droplets are not. This is most likely to handicap CellBender, which
+  models droplets directly; AmbiDose also uses them.
+- **CellBender was not run at its defaults.** With 150 epochs and cells plus
+  10,000 droplets it completed 28 epochs in two hours on 4 CPU cores. The row
+  above is 100 epochs with cells plus 3,000 droplets. It needs a GPU to be
+  run as intended.
+- One dataset, one tissue, clusters taken from the SoupX annotation.
+
+## 1b. Decant and SoupX on the real soup profile (no reconstructed droplets)
 
 2,150 annotated cells, 33,694 genes, soup from 2.7M empty-droplet UMIs (the
 data bundled with SoupX). Both tools were given the same cells, soup and
@@ -106,10 +161,10 @@ fallback on every sample.
 |---|---|---|---|---|---|---|
 | uses empty droplets | yes | yes | optional | yes (all droplets) | yes | yes |
 | contamination estimate | per cell, automatic | one per channel, automatic or manual | per cell | per cell | per cell | per cell |
-| can add counts | no (checked on every run) | no | no | no | reported to (see below) | stated not to |
+| can add counts | no (checked on every run) | no (0 here) | no (0 here) | no (0 here) | yes (727k UMIs here) | no (0 here) |
 | needs GPU | no | no | no | in practice | in practice | no |
 | contamination-aware DE test | yes (`ambient_de`) | no | no | no | no | no |
-| run here | yes | yes | no | no | no | no |
+| run here | yes | yes | yes | yes, reduced configuration | yes | yes |
 
 ## 5. What the recent literature supports, and what it does not
 
@@ -156,13 +211,16 @@ against the papers before being cited.
 
 | claim | status | evidence |
 |---|---|---|
-| Removes more foreign marker signal than SoupX at similar rho | ahead on 2 of 3 marker sets, one real dataset | section 1 |
-| Preserves native signal as well as SoupX | level on 2 of 3 sets, behind on monocytes | section 1 |
-| Never adds counts | level with SoupX; ahead of scAR and CellClear per a preprint, not tested here | sections 1, 5 |
+| Removes more foreign marker signal than SoupX at similar rho | ahead on 2 of 3 marker sets, one real dataset | sections 1a, 1b |
+| Preserves native signal as well as SoupX | level on 2 of 3 sets, behind on monocytes | sections 1a, 1b |
+| Never adds counts | level with SoupX, DecontX, CellBender, AmbiDose; ahead of scAR (727k UMIs added) | section 1a |
 | Per-cell contamination estimate | ahead of SoupX (one value per channel); level with DecontX, CellBender, AmbiDose by design; accuracy of the per-cell values untested on real data | section 4 |
 | DE without leakage, power kept | level with Decant-correct-then-edgeR; slightly ahead of SoupX-then-edgeR (4 to 7 points of power); simulated only | section 3 |
 | DE with covariates in large cohorts | ahead of subtract-then-rank-test in simulation | `experiments/large_cohort_calibration/` |
-| Accuracy against CellBender, DecontX, scAR, AmbiDose | unknown, not run | - |
+| Foreign marker removal against DecontX | behind on all three sets | section 1a |
+| Foreign marker removal against CellBender, AmbiDose | ahead on 2 of 3 and 3 of 3 sets; CellBender in a reduced configuration | section 1a |
+| Native signal kept, against scAR | far ahead (1 to 4% lost against 18 to 26%) | section 1a |
+| Speed | fastest of the six on this dataset | section 1a |
 | Accuracy on data with experimental ground truth | unknown, not run | species and genotype mixture scripts exist, data unreachable |
 | Robust to empties that over-represent some genes | behind: not detected | README, Known limitations |
 
