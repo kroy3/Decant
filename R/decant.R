@@ -20,12 +20,12 @@
 #' @param k number of clusters when `clusters` is NULL.
 #' @param rho optional user-supplied per-cell (or scalar) contamination
 #'   fraction; skips estimation entirely.
-#' @param correction correction rule, see [correct_counts()]. The default is
-#'   "bayes". On simulated data the three rules are within a few percent of
-#'   each other ([gate_correction()]); on real PBMC data
-#'   (`validation/pbmc_soupx.R`) "bayes" removed 83 to 94% of marker counts
-#'   in cell types that do not express them, against 19 to 57% for
-#'   "subtract", at the same loss in the cell types that do.
+#' @param correction correction rule, see [correct_counts()]. The default,
+#'   "bayes_cell", has the lowest error on simulated ground truth
+#'   ([gate_correction()]). On real PBMC data (`validation/benchmark_all.R`) it
+#'   removes 88 to 95% of marker counts that ambient RNA could explain in cell
+#'   types that do not express them, and leaves most of the counts that are
+#'   too high in a cell to be ambient (likely doublets), which "bayes" removed.
 #' @param obs_unspliced,obs_spliced genes x cells layers; if both given with
 #'   empty layers, correction is splice-aware (Gap 1).
 #' @param empties_unspliced,empties_spliced layer-resolved empties (matrix or
@@ -41,7 +41,7 @@
 #'   $ambient (genes x samples), $clusters, $lysis (if basis), $modules.
 #' @export
 decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
-                   rho = NULL, correction = c("bayes", "subtract", "redistribute"),
+                   rho = NULL, correction = c("bayes_cell", "bayes", "subtract", "redistribute"),
                    obs_unspliced = NULL, obs_spliced = NULL,
                    empties_unspliced = NULL, empties_spliced = NULL,
                    allelic = NULL, basis = NULL, verbose = FALSE) {
@@ -74,7 +74,7 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
   rownames(soup_by_sample) <- rownames(obs_total)
 
   ## ---- clusters (needed by the rho estimator and bayes correction) ----
-  need_clusters <- (is.null(rho) && is.null(allelic)) || correction == "bayes"
+  need_clusters <- (is.null(rho) && is.null(allelic)) || correction %in% c("bayes", "bayes_cell")
   if (is.null(clusters) && need_clusters) {
     clusters <- quick_labels(obs_total, k = k)
     modules <- c(modules, "kmeans_clusters")
