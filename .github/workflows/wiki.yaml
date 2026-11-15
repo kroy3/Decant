@@ -1,0 +1,52 @@
+name: wiki
+
+# Publishes the user guide in wiki/ to the repository's GitHub wiki.
+# Runs when wiki/ or this workflow changes on main, and can be started by
+# hand from the Actions tab. The wiki must already exist (create its first page once).
+
+on:
+  push:
+    branches: [main]
+    paths: ['wiki/**', '.github/workflows/wiki.yaml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone the wiki
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git clone --depth 1 \
+            "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git" \
+            wiki-repo
+
+      - name: Copy the guide pages
+        # Pages are added or updated; pages that exist only in the wiki are kept.
+        run: cp wiki/*.md wiki-repo/
+
+      - name: Commit and push
+        working-directory: wiki-repo
+        env:
+          ACTOR: ${{ github.actor }}
+          ACTOR_ID: ${{ github.actor_id }}
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Wiki is already up to date."
+            exit 0
+          fi
+          git -c user.name="$ACTOR" \
+              -c user.email="${ACTOR_ID}+${ACTOR}@users.noreply.github.com" \
+              commit -m "Sync user guide from ${GITHUB_SHA::7}"
+          git push

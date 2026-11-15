@@ -143,6 +143,7 @@ devtools::test()                              # unit tests
 Rscript scripts/run_falsification_gates.R     # falsification gates (also run in CI)
 Rscript scripts/check_user_guide.R            # run every example in the user guide
 Rscript scripts/build_user_guide.R            # copy wiki/ into the website articles
+# the GitHub wiki is updated from wiki/ by .github/workflows/wiki.yaml
 ```
 
 ## License
