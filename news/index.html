@@ -38,7 +38,8 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="development version" id="decant-development-version">Decant (development version)<a class="anchor" aria-label="anchor" href="#decant-development-version"></a></h2>
-<ul><li>
+<ul><li>New <code>validation/benchmark_all.R</code> and <code>validation/py/run_python_tools.py</code>: Decant against SoupX, DecontX, CellBender, scAR and AmbiDose on real PBMC data. DecontX removes more foreign marker signal than Decant; scAR adds counts and removes 44% of UMIs; Decant is the fastest. See <code>validation/BENCHMARK.md</code>.</li>
+<li>
 <strong>Bug fix, found on real data.</strong> <code><a href="../reference/estimate_rho_cluster.html">estimate_rho_cluster()</a></code> overestimated rho several-fold on real 10x data (median 0.22 on PBMC 4k, where SoupX gives 0.06 to 0.077). Low-count genes passed the absent-gene test for lack of power. The absent set now requires an expected ambient count of at least <code>min_expected = 5</code>; the PBMC estimate is 0.063 (median).</li>
 <li>
 <code><a href="../reference/decant.html">decant()</a></code> now defaults to <code>correction = "bayes"</code>: on the PBMC data it removed 83 to 94% of marker counts from cell types that do not express them, against 19 to 57% for <code>subtract</code>.</li>
