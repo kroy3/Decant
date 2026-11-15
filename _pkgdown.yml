@@ -1,7 +1,28 @@
 url: https://kroy3.github.io/Decant/
 template:
   bootstrap: 5
+  bslib:
+    bg: "#FFFFFF"
+    fg: "#000000"
+    primary: "#000000"
+    base_font: "Arial, Helvetica, sans-serif"
+    heading_font: "'Arial Black', Arial, Helvetica, sans-serif"
+
 navbar:
   structure:
-    left: [intro, reference, articles, news]
+    left: [intro, userguide, reference, articles, news]
     right: [search, github]
+  components:
+    userguide:
+      text: User Guide
+      href: articles/00-Preface.html
+
+articles:
+- title: User Guide
+  navbar: ~
+  contents:
+  - starts_with("articles/")
+- title: Workflows
+  navbar: Workflows
+  contents:
+  - contamination-aware-de

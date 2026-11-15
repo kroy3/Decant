@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
-## experiments/large_cohort_calibration/run.R
+## experiments/large_cohort_calibration/run_cohort_sweep.R
 ## Sample-size sweep behind gate_ambient_de_cohort(): does contamination-aware
 ## DE stay calibrated as cohorts grow and counts stop being negative binomial?
-## Run from the repo root:  Rscript experiments/large_cohort_calibration/run.R
+## Run from the repo root:  Rscript experiments/large_cohort_calibration/run_cohort_sweep.R
 if (requireNamespace("pkgload", quietly = TRUE)) pkgload::load_all(".", quiet = TRUE) else library(Decant)
 
 cases <- list(clean = list(), outliers = list(out_p = 0.01), heavy_tail = list(heavy_df = 3),

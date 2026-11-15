@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
-## validation/species_mix.R
+## validation/validate_species_mixture.R
 ## Experimental-ground-truth validation on public 10x human/mouse mixtures.
-## Run from the repo root:  Rscript validation/species_mix.R [dataset ...]
+## Run from the repo root:  Rscript validation/validate_species_mixture.R [dataset ...]
 ##
 ## Comparators are the OFFICIAL packages, used only if installed:
 ##   SoupX (CRAN)             install.packages("SoupX")

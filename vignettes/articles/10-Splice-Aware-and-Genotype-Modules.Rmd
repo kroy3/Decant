@@ -1,0 +1,91 @@
+---
+title: "Chapter 10. Splice-Aware and Genotype Modules"
+---
+
+<!-- Generated from wiki/ by scripts/build_user_guide.R. Edit the wiki page, not this file. -->
+
+
+Two optional modules extend Decant to RNA velocity data and to experiments
+that pool cells from genetically different donors.
+
+## 10.1 Splice-aware correction for RNA velocity
+
+RNA velocity uses spliced and unspliced counts separately. The soup has its
+own spliced/unspliced composition, which can differ from that of the cells.
+In single-nucleus data, for example, the soup is often richer in spliced
+cytoplasmic mRNA than the nuclei are. Correcting total counts and then
+splitting them by each cell's own ratio would distort velocity, so Decant
+corrects each layer with the soup of that layer, measured in the empty
+droplets.
+
+```r
+library(Decant)
+mm  <- simulate_multimodal(seed = 1)
+emp_u <- lapply(mm$empties, `[[`, "unspliced")
+emp_s <- lapply(mm$empties, `[[`, "spliced")
+emp_t <- Map(`+`, emp_u, emp_s)
+
+res <- decant(mm$obs_total, emp_t, sample_of = mm$sample_of, clusters = mm$labels,
+              obs_unspliced = mm$obs_unspliced, obs_spliced = mm$obs_spliced,
+              empties_unspliced = emp_u, empties_spliced = emp_s)
+res$modules
+#> [1] "hierarchical_ambient"    "cluster_rho"
+#> [3] "splice_aware_correction"
+```
+
+- `emp_u` and `emp_s` are the unspliced and spliced counts of the empty
+  droplets, one matrix per sample; `emp_t` is their sum.
+- Supplying all four layer arguments switches on splice-aware correction.
+- rho is still estimated on total counts.
+- The result gains `res$corrected_unspliced` and `res$corrected_spliced`;
+  `res$corrected` is their sum. Each layer keeps the guarantee that no count
+  increases.
+
+To use the corrected layers with velocity tools, replace the spliced and
+unspliced layers of your velocity object with these two matrices.
+
+## 10.2 Genotype-based contamination estimates
+
+When cells from several donors are pooled in one channel, each cell's own
+alleles are known after demultiplexing (for example with Vireo or
+souporcell). Reads carrying another donor's allele at a SNP must be ambient.
+This gives a contamination estimate that does not depend on gene expression
+at all.
+
+```r
+al <- simulate_allelic(seed = 1)
+rho_al <- estimate_rho_allelic(al)
+round(c(correlation = cor(rho_al, al$rho_true),
+        mean_estimated = mean(rho_al), mean_true = mean(al$rho_true)), 3)
+#>    correlation mean_estimated      mean_true
+#>          0.982          0.199          0.200
+```
+
+- `simulate_allelic()` simulates 1,500 cells from 8 donors with known
+  contamination.
+- The input is a list with four elements:
+
+| Element | Content |
+|---|---|
+| `own` | Per cell, reads carrying the cell's own allele at informative SNPs |
+| `other` | Per cell, reads carrying another donor's allele |
+| `donor` | Donor of each cell |
+| `abund` | Share of each donor in the pool |
+
+- `estimate_rho_allelic()` converts the share of foreign-allele reads into
+  rho, accounting for the fact that part of the soup comes from the cell's
+  own donor.
+
+To use it in a full run, pass the same list to `decant()`:
+
+```r
+# Requires your own data
+res <- decant(cells, empties, clusters = clusters, allelic = my_allele_counts)
+```
+
+- `allelic` replaces the expression-based estimate of rho; the soup and the
+  correction are unchanged.
+
+---
+
+**Previous:** [Chapter 9, Differential Expression](09-Differential-Expression.html) | **Next:** [Chapter 11, Diagnostics and Troubleshooting](11-Diagnostics-and-Troubleshooting.html)

@@ -1,17 +1,17 @@
 #!/usr/bin/env Rscript
-## validation/madsen_rho_check.R
+## validation/benchmark_species_mixture_rho.R
 ## On the low-complexity human/mouse mixture, compare each tool's per-cell
 ## contamination estimate with the contamination implied by cross-species
 ## reads. For a human cell, mouse reads can only be ambient, so
 ##   rho_true = (mouse fraction of the cell's UMIs) / (mouse fraction of the soup)
 ## and symmetrically for mouse cells. This is an estimate of the truth (it
 ## assumes the soup is the empty-droplet profile), but it uses no tool's output.
-## Needs the cache written by `Rscript validation/madsen_benchmark.R low_complexity`.
+## Needs the cache written by `Rscript validation/benchmark_species_mixture.R low_complexity`.
 
 if (requireNamespace("pkgload", quietly = TRUE)) pkgload::load_all(".", quiet = TRUE) else library(Decant)
 suppressPackageStartupMessages(library(Matrix))
 source(file.path("validation", "comparators.R"))
-p <- readRDS(file.path("validation", "data", "madsen", "low_complexity_prep.rds"))
+p <- readRDS(file.path("validation", "data", "species_mixture_20k", "low_complexity_prep.rds"))
 g <- ifelse(grepl("^GRCh38", rownames(p$cells)), "human", "mouse")
 soup <- Matrix::rowSums(p$empties); soup_h <- sum(soup[g == "human"]) / sum(soup)
 tot <- Matrix::colSums(p$cells)
@@ -30,4 +30,4 @@ for (nm in c("Decant", "SoupX", "DecontX")) {
 }
 res <- do.call(rbind, rows)
 cat(sprintf("soup: %.1f%% human UMIs\n", 100 * soup_h)); print(res, digits = 3, row.names = FALSE)
-utils::write.csv(res, file.path("validation", "results", "madsen_low_complexity_rho.csv"), row.names = FALSE)
+utils::write.csv(res, file.path("validation", "results", "species_mixture_rho.csv"), row.names = FALSE)

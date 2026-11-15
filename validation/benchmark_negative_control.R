@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
-## validation/segerstolpe_control.R
-## Negative control from Cargnelli, Nielsen & Madsen (2026): Smart-seq2 human
+## validation/benchmark_negative_control.R
+## Negative control from Cargnelli et al. (2026): Smart-seq2 human
 ## islets (Segerstolpe et al. 2016, ArrayExpress E-MTAB-5061). Each cell was
 ## sorted into its own well, so there is no ambient RNA to remove and the best
 ## possible correction is no correction. The score is the paper's endogenous
@@ -30,7 +30,7 @@
 ## donor's cells (sum over cells, normalised), the profile SoupX "reduced"
 ## uses; it needs no non-cell wells at all.
 ##
-## Usage (repo root): Rscript validation/segerstolpe_control.R
+## Usage (repo root): Rscript validation/benchmark_negative_control.R
 
 if (requireNamespace("pkgload", quietly = TRUE)) pkgload::load_all(".", quiet = TRUE) else library(Decant)
 suppressPackageStartupMessages(library(Matrix))
@@ -127,5 +127,5 @@ summ <- summ[match(unique(res$method), summ$method), ]
 cat("\nMean over donors:\n"); print(summ, digits = 3, row.names = FALSE)
 cat("\nPublished (Cargnelli et al. 2026, Smart-seq2 retain score):\n"); print(PUBLISHED, row.names = FALSE)
 dir.create(OUT, showWarnings = FALSE, recursive = TRUE)
-utils::write.csv(res, file.path(OUT, "segerstolpe_control_per_donor.csv"), row.names = FALSE)
-utils::write.csv(summ, file.path(OUT, "segerstolpe_control.csv"), row.names = FALSE)
+utils::write.csv(res, file.path(OUT, "negative_control_scores_per_donor.csv"), row.names = FALSE)
+utils::write.csv(summ, file.path(OUT, "negative_control_scores.csv"), row.names = FALSE)
