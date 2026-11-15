@@ -56,7 +56,7 @@ Decant measures the ambient RNA from **empty droplets**, so it needs the
 Genomics data this is the `raw_feature_bc_matrix` folder written by Cell
 Ranger, next to `filtered_feature_bc_matrix`. If you only kept the filtered
 matrix, you can still use Decant with an approximate soup (see
-[Chapter 11.5](11-Diagnostics-and-Troubleshooting)), but the result is less
+[Chapter 11.6](11-Diagnostics-and-Troubleshooting)), but the result is less
 reliable.
 
 ---

@@ -1,5 +1,26 @@
 # Decant (development version)
 
+* **Contamination estimate no longer halved on real data.** Genes a cluster
+  does not express scatter around rho by about 25-30% from gene to gene, far
+  more than Poisson noise. `estimate_rho_cluster()` tested them against a
+  Poisson, rejected the absent genes above the current rho and kept those
+  below, and settled near the bottom of their spread. It now uses a negative
+  binomial whose extra variance is estimated from the lower tail of the
+  absent genes (`overdispersed = TRUE`). On a 20k human/mouse mixture the
+  median rho went from 0.013 to 0.027 (truth 0.029) and ambient removal from
+  0.415 to 0.616; on held-out mixtures see `validation/BENCHMARK.md`, 1d.
+* **rho = 0 trap fixed.** With sparse counts the starting value could be 0,
+  which the fixed point cannot leave; on a 1k-cell mixture 7 of 8 clusters
+  returned exactly 0. The start is now at least `floor_rho`.
+* **Unidentifiable contamination is reported.** When the soup resembles the
+  cells (a single cell type), no gene is absent and rho cannot be estimated;
+  the estimator returned 0.5-0.94 for a true 0.004 without a warning.
+  Clusters above `max_rho = 0.5` are flagged `implausible` and borrow rho from
+  the others; when most cells are in such clusters `decant()` warns that rho
+  is not identifiable and should be supplied (`$rho_unidentifiable`).
+* `$rho_diagnostics` gains `dispersion` and `implausible` columns.
+* The placeholder-name note is removed from DESCRIPTION: no CRAN or
+  Bioconductor package is called Decant.
 * New user guide in 13 chapters (`wiki/`, also published as website
   articles). Every example runs on the bundled simulators, and
   `scripts/check_user_guide.R` checks that each shown output is current.

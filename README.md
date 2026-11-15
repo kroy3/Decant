@@ -40,16 +40,17 @@ numbers are the paper's own, not a run here.
 
 | | Decant | SoupX | DecontX | CellBender (published) |
 |---|---|---|---|---|
-| human/mouse mixture: retain | 0.991 | 0.992 | 0.983 | 0.996 |
-| human/mouse mixture: **removal** | **0.415** | 0.345 | **0.722** | 0.729 |
+| human/mouse mixture: retain | 0.989 | 0.992 | 0.983 | 0.996 |
+| human/mouse mixture: **removal** | **0.616** | 0.345 | **0.722** | 0.729 |
 | Smart-seq2, no ambient RNA: retain | 0.998 | 0.989 | 0.952 | 0.797 |
 
-Decant is conservative. Its contamination estimate is about half the true
-level on the species mixture, so it leaves roughly 30 points more ambient
-RNA than DecontX or CellBender. It also removes almost nothing where there is
-nothing to remove. If ambient removal matters more to you than keeping every
-endogenous count, DecontX did better here. Details:
-[`validation/BENCHMARK.md`](validation/BENCHMARK.md), section 1c.
+Decant still removes about 10 points less ambient RNA than DecontX or
+CellBender on the mixture, and keeps slightly more of the cells' own counts
+than DecontX. It removes almost nothing where there is nothing to remove.
+Its contamination estimate now matches the cross-species truth (median 0.027
+against 0.029; before this release 0.013). That mixture was used to find the
+estimator's flaw; results on held-out mixtures are in
+[`validation/BENCHMARK.md`](validation/BENCHMARK.md), sections 1c and 1d.
 
 ### Correction: six tools on real 10x PBMC 4k data
 
@@ -123,10 +124,13 @@ subset(res, ambient_driven)   # hits a standard pipeline reports that the soup e
 
 ## Limits
 
-- Ground truth so far is one species mixture and one negative control. On
-  the mixture, Decant's contamination estimate is about half the true level,
-  so it under-removes. The genotype mixture and the paper's medium- and
+- Ground truth so far is four human/mouse mixtures and one negative control,
+  all from cell lines. The genotype mixture and the paper's medium- and
   high-complexity datasets are not yet run.
+- When the soup resembles the cells (a single cell type), contamination
+  cannot be estimated from expression. Decant then warns and asks for `rho`;
+  the number it reports in that case is not reliable.
+- Memory: about 9.5 GB for 11,000 cells and 1.9 million empty droplets.
 - The DE results are simulated, from a simulator that follows the model's own
   ambient mechanism.
 - Empty droplets that over-represent genes the cells also express are not

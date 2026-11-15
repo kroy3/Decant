@@ -57,18 +57,22 @@ higher is better.
 
 | | Endogenous retained | Ambient removed |
 |---|---|---|
-| **Decant** | 0.991 | 0.415 |
+| **Decant** | 0.989 | 0.616 |
 | SoupX | 0.992 | 0.345 |
 | DecontX | 0.983 | 0.722 |
 | CellBender (published) | 0.996 | 0.729 |
 
-**Reading the result.** Decant keeps the cells' own signal as well as SoupX
-and removes more ambient RNA than SoupX. It removes clearly **less** than
-DecontX and CellBender. The reason is known: its contamination estimate is
-about half the true level on this dataset (median 0.013 against 0.029),
-although it ranks cells correctly (rank correlation 0.81). If removing as
-much ambient RNA as possible matters more to you than preserving every
-endogenous count, DecontX performed better here.
+**Reading the result.** Decant removes clearly more ambient RNA than SoupX,
+and about 10 points **less** than DecontX and CellBender, while keeping
+slightly more of the cells' own signal than DecontX. Its contamination
+estimate matches the truth from cross-species reads: median 0.027 against
+0.029, rank correlation 0.985.
+
+In version 0.4.0 the estimate was about half the truth here (0.013) and
+Decant removed only 0.415. The cause, absent genes scattering around rho
+more than a Poisson test allows, is described in
+[Chapter 7.2](07-Estimation-and-Correction). This mixture was used to find
+that cause, so section 12.3 tests the fix on mixtures it was not built on.
 
 ## 12.3 Ground truth: negative control
 
