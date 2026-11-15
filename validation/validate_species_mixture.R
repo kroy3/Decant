@@ -94,6 +94,7 @@ for (ds in todo) {
   raw <- read_10x_counts(fetch(ds, "raw"))
   filt <- read_10x_counts(fetch(ds, "filtered"))
   d <- split_droplets(raw, cells = colnames(filt))
+  rm(raw, filt); invisible(gc())   # a 10k channel's raw matrix is ~4 GB
   sp <- gene_species(rownames(d$cells))
   tr <- species_mix_truth(d$cells, d$empties, sp)
   cat(sprintf("  %d cells (%d doublets excluded), %d empties; soup share: %s\n",

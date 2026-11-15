@@ -159,9 +159,10 @@ clusters. The paper's other QC steps are not reproduced.
 
 | | retain | removal | run time |
 |---|---|---|---|
-| **Decant** | **0.991** | **0.415** | 136 s |
-| SoupX, run here | 0.992 | 0.345 | 157 s |
-| DecontX, run here | 0.983 | 0.722 | 123 s |
+| **Decant** | **0.989** | **0.616** | 194 s |
+| Decant before the estimator fix (0.4.0) | 0.991 | 0.415 | 136 s |
+| SoupX, run here | 0.992 | 0.345 | 216 s |
+| DecontX, run here | 0.983 | 0.722 | 134 s |
 | *published:* SoupX | 0.988 | 0.422 | |
 | *published:* DecontX | 0.980 | 0.624 | |
 | *published:* CellBender | 0.996 | 0.729 | |
@@ -169,26 +170,38 @@ clusters. The paper's other QC steps are not reproduced.
 | *published:* CellClear | 0.876 | 0.023 | |
 | *published:* FastCAR / scCDC | 1.000 | 0.000 / 0.002 | |
 
-**Decant removes too little ambient RNA here.** It keeps endogenous counts as
-well as SoupX does. It removes more ambient RNA than SoupX run on the same
-inputs (0.415 against 0.345) and about the same as the paper's SoupX (0.422).
-But DecontX removes 0.72 and the paper's CellBender 0.73, so Decant leaves
-roughly 30 points more ambient RNA in the cells than either. The cause is
-its contamination estimate (`validation/benchmark_species_mixture_rho.R`). Cross-species
-reads give each cell's contamination directly: in a human cell, mouse reads
-can only be ambient.
+**Decant still removes less ambient RNA than DecontX and CellBender, but the
+gap fell from about 30 points to about 10.** It removes 0.616 against
+DecontX's 0.722 and the published CellBender's 0.729, while keeping more of
+the cells' own counts than DecontX (0.989 against 0.983). The change comes
+from the contamination estimate (`validation/benchmark_species_mixture_rho.R`).
+Cross-species reads give each cell's contamination directly: in a human
+cell, mouse reads can only be ambient.
 
 | | rho, median | rho, mean | Spearman with cross-species rho |
 |---|---|---|---|
 | cross-species (truth) | 0.029 | 0.061 | 1 |
-| Decant | 0.013 | 0.036 | 0.81 |
+| **Decant** | **0.027** | **0.057** | **0.985** |
+| Decant before the fix | 0.013 | 0.036 | 0.81 |
 | SoupX | 0.014 | 0.014 | one value per channel |
 | DecontX | 0.024 | 0.093 | 0.95 |
 
-Decant's per-cell estimates rank the cells reasonably, but their level is
-about half the truth. The removal score depends directly on that level, so
-the gap to DecontX comes from the estimator, not from the correction rule.
-DecontX gets both the ranking and the median closer.
+**What was wrong.** Every gene the estimator called absent was truly foreign,
+but it kept only the low-ratio part of them (1,584 of 10,549 usable foreign
+genes in the largest cluster). Absent genes scatter around rho by about
+25-30% from gene to gene, far more than Poisson noise: their variance was 4
+to 200 times the Poisson variance. The Poisson test rejected absent genes
+above the current rho and kept those below, so the estimate settled near
+the bottom of their spread. The test is now a negative binomial whose extra
+variance is estimated from the lower tail of the absent genes (10th to 25th
+percentile), which expressed genes cannot reach. With no extra variance it
+is the Poisson test. A first version that used the median instead failed
+`gate_rho` (weakly expressed genes inflated the variance and rho ran 26-36%
+high in its stress setting) and was replaced.
+
+**This dataset was used to find the problem**, so it is a development set.
+The held-out mixtures in section 1d test the fix on data it was not built
+on.
 
 Caveats:
 - SoupX here scores 0.345 against the paper's 0.422. The setup differs: no
@@ -202,9 +215,9 @@ Caveats:
   `eta_tilda <- rowSums(countsBackground)`), so the results are the same. This
   was checked on the negative control below: per-donor scores were identical
   to the full-matrix run.
-- One dataset, two species, one platform. Species mixtures have unusually
-  clean marker genes, which helps the absent-gene estimators (Decant, SoupX)
-  more than it would in a single-species tissue.
+- Species mixtures have unusually clean marker genes, which helps the
+  absent-gene estimators (Decant, SoupX) more than it would in a
+  single-species tissue.
 
 ### Negative control: Smart-seq2 human islets (E-MTAB-5061)
 
@@ -222,8 +235,8 @@ PCs and resolution 0.3. Scores are means of the three donors.
 
 | | retain | counts removed | rho, mean |
 |---|---|---|---|
-| **Decant** | **0.998** | **0.18%** | **0.0022** |
-| Decant, soup = pooled expression of the donor's cells (no non-cell wells needed) | 0.998 | 0.24% | 0.0029 |
+| **Decant** | **0.998** | **0.17%** | **0.0020** |
+| Decant, soup = pooled expression of the donor's cells (no non-cell wells needed) | 0.998 | 0.28% | 0.0036 |
 | SoupX, run here | 0.989 | 1.0% | 0.010 |
 | DecontX, run here | 0.952 | 5.0% | 0.050 |
 | *published:* SoupX | 0.988 | | |
@@ -256,6 +269,58 @@ Caveats, and why this table should not be read alone:
   therefore close to cell expression, as it is in the paper's setup. This
   makes the control easier for estimators that look for genes absent from
   the soup.
+
+## 1d. Ground truth on further human/mouse mixtures (hgmm 1k, 5k, 10k)
+
+Reproduce with `Rscript validation/validate_species_mixture.R`. Three public
+10x v3 mixtures of human (HEK293T) and mouse (NIH3T3) cell lines. Doublets
+are excluded; the soup is the barcodes with 1 to 100 UMIs; clusters are
+k-means (k = 8) on the cells. Every tool gets the same inputs. Truth is each
+cell's contamination from its cross-species reads.
+
+**Full test (both genomes).** Mean rho, root-mean-square error against the
+per-cell truth, and Pearson correlation with it:
+
+| Dataset | True mean | Decant | Decant, 0.4.0 | DecontX | SoupX |
+|---|---|---|---|---|---|
+| 1k (1,045 cells) | 0.014 | **0.011** (error 0.023, r 0.88) | 0.001 (0.034, 0.68) | 0.011 (0.032, 0.65) | 0.010 (0.040) |
+| 5k (5,247 cells) | 0.040 | **0.030** (0.023, 0.95) | 0.029 (0.024, 0.94) | 0.027 (0.031, 0.91) | 0.016 (0.065) |
+| 10k (10,699 cells) | 0.062 | 0.021 (0.101, 0.18) | 0.021 (0.105, 0.11) | 0.026 (0.080, **0.67**) | 0.010 (0.108) |
+
+- On 1k and 5k Decant has the lowest error of the three tools.
+- **On 10k Decant fails.** Seven of eight clusters have too few absent genes
+  to estimate rho and borrow it from the one that does, so per-cell values
+  barely track the truth (r 0.18). DecontX ranks the cells much better. All
+  tools underestimate on this dataset.
+
+**Hidden test (the majority species' cells and genes only: mouse for 1k
+and 5k, human for 10k).** This removes the other genome, so the estimator
+must work as on single-species data. These are
+single cell lines: the soup has the same composition as the cells, no gene
+is absent, and contamination is not identifiable from expression.
+
+| Dataset | True mean | Decant | Decant, 0.4.0 | DecontX | SoupX |
+|---|---|---|---|---|---|
+| 1k | 0.004 | 0.13, warns | 0.64, silent | 0.35 | 0.026 |
+| 5k | 0.018 | 0.22, warns | 0.25, silent | 0.39 | failed |
+| 10k | 0.054 | 0.24, warns | 0.37, silent | 0.09 | 0.010 |
+
+Decant now reports that rho is not identifiable here (`$rho_unidentifiable`)
+instead of returning 25-64% without a warning. Its estimate is still wrong
+and should not be used; the warning asks for `rho` to be supplied.
+
+**Which data shaped the method.** The 20k mixture (1c) exposed the
+underestimate and was used to design the overdispersion-aware test. The 1k
+set exposed two further failures, the rho = 0 trap and the silent
+implausible estimates, and their fixes were designed on it. The 10k set was
+used to try a third change (estimating the spread from the lowest-ratio
+genes when the first pass leaves too few): it brought 10k to 0.046 (r 0.44)
+but drove PBMC to rho 0.99 (79% of UMIs removed) and the Smart-seq2 control
+from 0.002 to 0.015, so it was rejected. **Only the 5k set and PBMC were not
+used to make any design decision**; they are the cleanest evidence above.
+
+**Memory.** `decant()` peaks near 9.5 GB on the 10k channel (10,699 cells,
+1.9 million empty droplets), about the same as before these changes.
 
 ## 2. Simulated data with ground truth
 
@@ -385,8 +450,10 @@ against the papers before being cited.
 | Removal of ambient-compatible foreign counts, against SoupX, CellBender, AmbiDose | ahead on 3 of 3, 2 of 3 and 3 of 3 sets; CellBender in a reduced configuration | section 1a |
 | Native signal kept, against scAR | far ahead (1 to 4% lost against 18 to 26%) | section 1a |
 | Speed | level with SoupX, faster than the other four on this dataset | section 1a |
-| Ambient removal with experimental ground truth (species mixture) | behind DecontX and the published CellBender (0.42 against 0.72 to 0.73); ahead of SoupX run here (0.35), level with published SoupX (0.42); contamination estimated at about half its true level | section 1c |
-| Endogenous counts kept with experimental ground truth | level with SoupX on the species mixture (0.991 against 0.992), ahead of DecontX (0.983); best of those run on the Smart-seq2 negative control (0.998 against SoupX 0.989, DecontX 0.952) | section 1c |
+| Ambient removal with experimental ground truth (20k species mixture) | behind DecontX and the published CellBender (0.62 against 0.72 to 0.73); well ahead of SoupX run here (0.35) and published (0.42) | section 1c |
+| Contamination estimate on held-out species mixtures | lowest error of Decant, SoupX and DecontX on 1k and 5k; behind DecontX on 10k (per-cell correlation 0.18 against 0.67), where all tools underestimate | section 1d |
+| Endogenous counts kept with experimental ground truth | level with SoupX on the species mixture (0.989 against 0.992), ahead of DecontX (0.983); best of those run on the Smart-seq2 negative control (0.998 against SoupX 0.989, DecontX 0.952) | section 1c |
+| Contamination not identifiable (single cell type) | Decant warns (DecontX returns 9-39% silently; SoupX failed on one set); the number Decant reports is still wrong | section 1d |
 | Genotype mixture (kidney) and medium/high-complexity sets of the same paper | unknown, not run | `validate_genotype_mixture.R` exists |
 | Robust to empties that over-represent some genes | behind: not detected | README, Known limitations |
 

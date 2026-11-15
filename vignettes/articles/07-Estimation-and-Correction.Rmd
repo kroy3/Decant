@@ -26,7 +26,7 @@ round(sum(soup), 6)
 
 rho <- estimate_rho_cluster(sim$observed, soup, clusters = sim$labels)
 round(median(rho), 3)
-#> [1] 0.192
+#> [1] 0.199
 
 corrected <- correct_counts(sim$observed, soup, rho,
                             method = "bayes_cell", clusters = sim$labels)
@@ -75,8 +75,8 @@ for (m in c("subtract", "redistribute", "bayes", "bayes_cell")) {
   e <- score_correction(sim$observed, r$corrected, sim$truth)$l1_error
   cat(sprintf("%-13s %.3f\n", m, e))
 }
-#> subtract      0.070
-#> redistribute  0.062
+#> subtract      0.067
+#> redistribute  0.063
 #> bayes         0.047
 #> bayes_cell    0.049
 ```

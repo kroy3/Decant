@@ -35,31 +35,31 @@ res <- decant(sim$observed, sim$empty, clusters = sim$labels)
 res
 #> <decant> 600 genes x 1200 cells
 #>   modules : cluster_rho, correction_bayes_cell
-#>   rho     : median 0.192 (10%-90%: 0.108-0.294)
+#>   rho     : median 0.199 (10%-90%: 0.117-0.305)
 ```
 
 - `decant()` takes the cell counts, the empty droplets and the cluster
   labels, and returns a result object.
 - Printing the result shows its size, the steps that ran (`modules`) and a
-  summary of the estimated contamination: the median cell is 19.2%
-  ambient, and 80% of cells lie between 10.8% and 29.4%.
+  summary of the estimated contamination: the median cell is 19.9%
+  ambient, and 80% of cells lie between 11.7% and 30.5%.
 
 ## 3.3 Compare with the truth
 
 ```r
 summary(res$rho)
-#>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.
-#> 0.01718 0.14254 0.19223 0.19805 0.24450 0.54786
+#>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+#> 0.02389 0.14950 0.19933 0.20574 0.25223 0.55303 
 summary(sim$rho_true)
-#>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.
-#>  0.0148  0.1371  0.1907  0.1970  0.2473  0.5317
+#>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+#>  0.0148  0.1371  0.1907  0.1970  0.2473  0.5317 
 cor(res$rho, sim$rho_true)
-#> [1] 0.974427
+#> [1] 0.9760583
 ```
 
 - `res$rho` is the estimated contamination of every cell.
-- The estimated and true distributions agree closely, and the correlation
-  of 0.97 shows Decant ranks cells correctly as well.
+- The estimates sit slightly above the truth here (median 0.199 against
+  0.191), and the correlation of 0.98 shows Decant ranks cells correctly.
 
 ## 3.4 Score the correction
 
@@ -67,7 +67,7 @@ cor(res$rho, sim$rho_true)
 score_correction(sim$observed, sim$observed, sim$truth)$l1_error
 #> [1] 0.2451949
 score_correction(sim$observed, res$corrected, sim$truth)$l1_error
-#> [1] 0.04937078
+#> [1] 0.04877535
 ```
 
 - `score_correction()` compares a matrix with the clean truth. Its

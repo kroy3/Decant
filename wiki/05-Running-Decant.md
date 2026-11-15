@@ -12,7 +12,7 @@ res <- decant(sim$observed, sim$empty, clusters = sim$labels)
 res
 #> <decant> 600 genes x 1200 cells
 #>   modules : cluster_rho, correction_bayes_cell
-#>   rho     : median 0.192 (10%-90%: 0.108-0.294)
+#>   rho     : median 0.199 (10%-90%: 0.117-0.305)
 ```
 
 - First argument: the cell counts, genes × cells.
@@ -39,8 +39,9 @@ res
 
 ```r
 names(res)
-#> [1] "rho"             "rho_diagnostics" "soup_mismatch"   "ambient"
-#> [5] "clusters"        "corrected"       "modules"
+#> [1] "rho"                "rho_diagnostics"    "soup_mismatch"     
+#> [4] "rho_unidentifiable" "ambient"            "clusters"          
+#> [7] "corrected"          "modules"           
 ```
 
 | Element | Content |
@@ -49,6 +50,7 @@ names(res)
 | `rho` | Estimated contamination fraction of each cell |
 | `rho_diagnostics` | One row per cluster: its rho and how well it was determined |
 | `soup_mismatch` | `TRUE` if much of the soup is in genes no cell contains ([Chapter 11](11-Diagnostics-and-Troubleshooting)) |
+| `rho_unidentifiable` | `TRUE` if contamination could not be estimated from the data; supply `rho` ([Chapter 11.4](11-Diagnostics-and-Troubleshooting)) |
 | `ambient` | The soup profile, genes × samples |
 | `clusters` | The cluster labels used |
 | `modules` | The steps that ran |
@@ -58,11 +60,11 @@ names(res)
 ```r
 res$rho_diagnostics[, c("cluster", "n_cells", "rho", "n_absent_genes", "absent_soup_frac", "low_power")]
 #>   cluster n_cells       rho n_absent_genes absent_soup_frac low_power
-#> 1       1     222 0.1967116            165       0.61420102     FALSE
-#> 2       2     202 0.1922618            171       0.52167045     FALSE
-#> 3       3     201 0.2022715            180       0.47049120     FALSE
-#> 4       4     179 0.2081191            194       0.58404735     FALSE
-#> 5       5     196 0.2002628            145       0.53881685     FALSE
+#> 1       1     222 0.2008547            188       0.82722628     FALSE
+#> 2       2     202 0.2032755            214       0.84945162     FALSE
+#> 3       3     201 0.2130331            226       0.86184901     FALSE
+#> 4       4     179 0.2195561            239       0.85055138     FALSE
+#> 5       5     196 0.2099970            185       0.73371592     FALSE
 #> 6       6     200 0.1895710             97       0.05638816     FALSE
 ```
 
@@ -72,8 +74,11 @@ res$rho_diagnostics[, c("cluster", "n_cells", "rho", "n_absent_genes", "absent_s
 - `absent_soup_frac`: the share of the soup those genes cover. The larger
   it is, the better rho is determined. Cluster 6 relies on only 5.6% of
   the soup and is the least certain.
-- `low_power`: `TRUE` when the evidence is too thin. Such a cluster
-  borrows its rho from the other clusters, and Decant prints a warning.
+- `low_power`: `TRUE` when the evidence is too thin, or when the cluster's
+  estimate was implausible (above 0.5). Such a cluster borrows its rho from
+  the other clusters, and Decant prints a warning.
+- Two further columns, not shown here: `dispersion` (how widely absent genes
+  scatter around rho, from gene to gene) and `implausible`.
 
 ## 5.5 Sparse input
 
