@@ -54,9 +54,20 @@
 #' @param floor_rho the smallest contamination considered possible. Genes
 #'   whose total count in the cells is significantly below this fraction of
 #'   their soup expectation are treated as soup-only and dropped from the soup.
+#' @param overdispersed test genes against a negative binomial whose extra
+#'   gene-to-gene variance is estimated from the data, instead of a Poisson.
+#'   On real data, genes a cluster does not express scatter around rho by
+#'   about 25-30% (soup and capture differ slightly gene by gene), far more
+#'   than Poisson noise. A Poisson test then rejects the absent genes that
+#'   fall above the current rho and keeps those below, and the fixed point
+#'   settles near the bottom of their spread: on a human/mouse mixture this
+#'   halved rho. The variance is estimated from the lower half of the absent
+#'   genes, which cannot contain expressed genes. With no extra variance (as
+#'   in the package simulators) the test reduces to the Poisson one.
 #' @return numeric vector of per-cell rho, with attribute `"clusters"`: a
 #'   data.frame of per-cluster diagnostics (n_cells, rho, n_absent_genes,
-#'   absent_soup_frac, absent_counts, low_power, borrowed, rho_two_sided), and
+#'   absent_soup_frac, absent_counts, low_power, borrowed, rho_two_sided,
+#'   dispersion: the extra squared coefficient of variation used), and
 #'   attributes `"soup_mismatch"` (logical), `"soup_only"` (logical per gene)
 #'   and `"soup_only_frac"` (their share of the soup). Low-power clusters take the
 #'   evidence-weighted rho of the other clusters (`borrowed = TRUE`).
@@ -65,7 +76,7 @@
 #' @export
 estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
                                  min_absent_soup = 0.02, max_iter = 100, min_expected = 5,
-                                 floor_rho = 0.005) {
+                                 floor_rho = 0.005, overdispersed = TRUE) {
   observed <- .as_counts(observed, "observed")
   N <- ncol(observed)
   if (length(clusters) != N) stop("length(clusters) must equal ncol(observed)", call. = FALSE)
@@ -96,7 +107,7 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
     X <- Xk[, i]
     e <- soup * sum(T_c[idx])
     ok <- e > 0
-    rho <- rho2 <- 0; A <- rep(FALSE, length(X))
+    rho <- rho2 <- phi <- 0; A <- rep(FALSE, length(X))
     if (sum(X) > 0 && any(ok)) {
       r <- X / pmax(e, 1e-300)
       ## start among well-covered genes when there are enough of them (real
@@ -106,8 +117,9 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
       if (sum(pw) < 50) pw <- ok & e >= stats::quantile(e[ok], 0.5)
       lo <- pw & r <= stats::quantile(r[pw], 0.1)
       rho0 <- sum(X[lo]) / sum(e[lo])
-      fit <- .absent_fixed_point(X, e, ok, rho0, alpha, max_iter, two_sided = FALSE, min_expected)
-      rho <- fit$rho; A <- fit$A
+      fit <- .absent_fixed_point(X, e, ok, rho0, alpha, max_iter, two_sided = FALSE, min_expected,
+                                 overdispersed = overdispersed)
+      rho <- fit$rho; A <- fit$A; phi <- fit$phi
       ## two-sided variant, reported as a diagnostic only
       rho2 <- .absent_fixed_point(X, e, ok, rho0, alpha, max_iter, two_sided = TRUE)$rho
     }
@@ -119,6 +131,7 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
                             low_power = SA < min_absent_soup,
                             borrowed = FALSE,
                             rho_two_sided = rho2,
+                            dispersion = phi,
                             stringsAsFactors = FALSE)
   }
   diag <- do.call(rbind, diag)
@@ -173,13 +186,16 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
 ## with pure soup at the current rho (one-sided: not significantly ABOVE;
 ## two-sided: also not significantly BELOW).
 .absent_fixed_point <- function(X, e, ok, rho, alpha, max_iter, two_sided, min_expected = 0,
-                                n_top = 50) {
-  A <- rep(FALSE, length(X))
+                                n_top = 50, overdispersed = FALSE, min_disp_expected = 50) {
+  A <- rep(FALSE, length(X)); phi <- 0
   ## the best-covered soup genes stay eligible whatever rho is, so that small
   ## data sets and a true rho near zero still have a candidate set
   top <- ok & e >= sort(e[ok], decreasing = TRUE)[min(n_top, sum(ok))]
   for (it in seq_len(max_iter)) {
-    cons <- ok & stats::ppois(X - 1, rho * e, lower.tail = FALSE) > alpha
+    if (overdispersed) phi <- .lower_half_dispersion(X, e, A, rho, min_disp_expected)
+    cons <- ok & if (phi > 0)
+      stats::pnbinom(X - 1, size = 1 / phi, mu = rho * e, lower.tail = FALSE) > alpha
+    else stats::ppois(X - 1, rho * e, lower.tail = FALSE) > alpha
     if (two_sided) cons <- cons & stats::ppois(X, rho * e) > alpha
     ## when rho is so low that no gene reaches min_expected (true rho near
     ## zero, or very small data), coverage cannot be asked for: every
@@ -193,7 +209,26 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
     if (abs(new - rho) < 1e-8) { rho <- new; break }
     rho <- new
   }
-  list(rho = rho, A = A)
+  list(rho = rho, A = A, phi = phi)
+}
+
+## Extra (beyond Poisson) squared coefficient of variation of absent genes'
+## counts around rho * e. Estimated from the current absent set's own log
+## ratios (counts / soup expectation), from the spread between their median
+## and lower quartile: the lower half of the absent genes cannot contain
+## expressed genes, which lie above. Measuring the spread against the absent
+## genes' own median, not against the current rho, matters: when rho is too
+## low, only the far lower tail lies below it and the spread looks tiny,
+## which would keep rho low. Only genes with at least `min_n` expected counts
+## are used, and their mean Poisson variance (1 / mu on the log scale) is
+## subtracted.
+.lower_half_dispersion <- function(X, e, A, rho, min_n = 50) {
+  mu <- rho * e
+  use <- A & mu >= min_n & X > 0
+  if (sum(use) < 20) return(0)
+  lr <- log(X[use] / e[use])
+  s <- (stats::median(lr) - stats::quantile(lr, 0.25, names = FALSE)) / 0.6745
+  max(s^2 - mean(1 / mu[use]), 0)
 }
 
 #' Default clustering used when the caller supplies none.
