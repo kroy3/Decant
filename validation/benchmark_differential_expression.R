@@ -1,12 +1,12 @@
 #!/usr/bin/env Rscript
-## validation/de_comparators.R
+## validation/benchmark_differential_expression.R
 ## Does correcting counts with an existing tool, then testing, stop ambient
 ## leakage into differential expression? Compared against modelling the soup
 ## inside the test (ambient_de).
 ##
 ## Run from the repo root:
-##   Rscript validation/de_comparators.R            # seeds 1 2
-##   Rscript validation/de_comparators.R 1 2 3 4    # chosen seeds
+##   Rscript validation/benchmark_differential_expression.R            # seeds 1 2
+##   Rscript validation/benchmark_differential_expression.R 1 2 3 4    # chosen seeds
 ##
 ## Arms, all testing the rare cell type R with the same scoring as
 ## gate_ambient_de():
@@ -118,7 +118,7 @@ for (nm in names(CASES)) for (s in seeds) {
 }
 df <- do.call(rbind, all); rownames(df) <- NULL
 dir.create(OUT, showWarnings = FALSE, recursive = TRUE)
-utils::write.csv(df, file.path(OUT, "de_comparators_per_seed.csv"), row.names = FALSE)
+utils::write.csv(df, file.path(OUT, "differential_expression_per_seed.csv"), row.names = FALSE)
 
 ## mean over seeds; an arm that did not run in every seed is reported with its status
 num <- c("leak_called", "leak_total", "null_fp", "power", "power_shared", "fdp")
@@ -132,6 +132,6 @@ agg <- do.call(rbind, lapply(seq_len(nrow(key)), function(i) {
         n_seeds = nrow(d), as.data.frame(v),
         note = paste(setdiff(unique(d$note), ""), collapse = "; "))
 }))
-utils::write.csv(agg, file.path(OUT, "de_comparators.csv"), row.names = FALSE)
+utils::write.csv(agg, file.path(OUT, "differential_expression.csv"), row.names = FALSE)
 print(agg, digits = 3, row.names = FALSE)
-cat("\nwrote", file.path(OUT, "de_comparators.csv"), "\n")
+cat("\nwrote", file.path(OUT, "differential_expression.csv"), "\n")

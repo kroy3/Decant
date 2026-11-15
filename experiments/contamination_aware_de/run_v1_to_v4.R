@@ -1,4 +1,4 @@
-source("sim.R"); source("methods.R"); source("methods2.R")
+source("simulate_study.R"); source("models_v1.R"); source("models_v2_to_v4.R")
 cases <- list(
   base            = list(sim = list(), run = list()),
   neg_control     = list(sim = list(rho_dis = 0.05), run = list()),

@@ -1,12 +1,12 @@
 #!/usr/bin/env Rscript
-## validation/madsen_benchmark.R
-## Score Decant with the two metrics of Cargnelli, Nielsen & Madsen (2026),
+## validation/benchmark_species_mixture.R
+## Score Decant with the two metrics of Cargnelli et al. (2026),
 ## "Benchmarking computational decontamination of ambient RNA"
-## (bioRxiv 10.64898/2026.01.13.699237; code: github.com/madsen-lab/AmbientRemovalBenchmark),
+## (bioRxiv, doi:10.64898/2026.01.13.699237),
 ## so that Decant's numbers can be set beside their Supplementary Table S2.
 ##
 ## Their definitions (01_functions.R, calc_*_UMIs_per_feature), reproduced in
-## madsen_scores() below. In a two-species mixture, for the cells of one
+## retain_removal_scores() below. In a two-species mixture, for the cells of one
 ## species, "endogenous" genes are that species' genes and "ambient" genes the
 ## other species'. Per gene g with input count x_g > 0 (summed over the
 ## species' cells of one sample) and corrected count y_g:
@@ -16,13 +16,13 @@
 ## separately and averaged.
 ##
 ## Usage (from the repo root):
-##   Rscript validation/madsen_benchmark.R selftest
+##   Rscript validation/benchmark_species_mixture.R selftest
 ##       synthetic two-species mixture with known contamination; checks that
 ##       the scoring and the pipeline run, and prints scores for Decant, SoupX
 ##       and DecontX. NOT comparable to the paper.
-##   Rscript validation/madsen_benchmark.R low_complexity
+##   Rscript validation/benchmark_species_mixture.R low_complexity
 ##       the paper's low-complexity species-mixing dataset. Needs
-##       validation/data/madsen/20k_hgmm_3p_HT_nextgem_Chromium_X_raw_feature_bc_matrix.h5
+##       validation/data/species_mixture_20k/20k_hgmm_3p_HT_nextgem_Chromium_X_raw_feature_bc_matrix.h5
 ##       (cf.10xgenomics.com; downloaded automatically when reachable).
 ##
 ## Preprocessing follows the paper for this dataset: emptyDrops (lower = 500,
@@ -50,7 +50,7 @@ genome_of <- function(genes) {
 }
 
 ## per sample and species, then averaged over species, then over samples
-madsen_scores <- function(input, corrected, cell_species, sample = rep(1, ncol(input))) {
+retain_removal_scores <- function(input, corrected, cell_species, sample = rep(1, ncol(input))) {
   gs <- genome_of(rownames(input)); res <- NULL
   for (s in unique(sample)) for (sp in c("human", "mouse")) {
     cc <- sample == s & cell_species == sp
@@ -86,7 +86,7 @@ run_tools <- function(cells, empties, clusters, cell_species) {
     if (!is.null(r$error)) return(data.frame(method = nm, retain = NA, removal = NA, seconds = secs, note = r$error))
     corr <- methods::as(methods::as(r$corrected, "CsparseMatrix"), "dgCMatrix")
     dimnames(corr) <- dimnames(cells)
-    sc <- madsen_scores(cells, corr, cell_species)
+    sc <- retain_removal_scores(cells, corr, cell_species)
     message(sprintf("  %s: retain %.3f, removal %.3f, %.0f s", nm, sc[["retain"]], sc[["removal"]], secs))
     data.frame(method = nm, retain = sc[["retain"]], removal = sc[["removal"]], seconds = secs, note = r$note %||% "")
   }))
@@ -113,11 +113,11 @@ if (mode == "selftest") {
   tab <- stats::aggregate(cbind(retain, removal) ~ method + rho, df, mean)
   cat("Synthetic two-species mixture (self-test, not comparable to the paper), mean of 2 seeds:\n")
   print(tab, digits = 3, row.names = FALSE)
-  utils::write.csv(tab, file.path(OUT, "madsen_selftest.csv"), row.names = FALSE)
+  utils::write.csv(tab, file.path(OUT, "species_mixture_selftest.csv"), row.names = FALSE)
 }
 
 if (mode == "low_complexity") {
-  DATA <- file.path("validation", "data", "madsen")
+  DATA <- file.path("validation", "data", "species_mixture_20k")
   f <- file.path(DATA, "20k_hgmm_3p_HT_nextgem_Chromium_X_raw_feature_bc_matrix.h5")
   if (!file.exists(f)) {
     dir.create(DATA, recursive = TRUE, showWarnings = FALSE)
@@ -153,5 +153,5 @@ if (mode == "low_complexity") {
   r <- run_tools(cells, empties, cl, sp)
   print(r, digits = 3, row.names = FALSE)
   cat("\nPublished (Cargnelli et al. 2026, Table S2, low complexity):\n"); print(PUBLISHED_LOW, row.names = FALSE)
-  utils::write.csv(r, file.path(OUT, "madsen_low_complexity.csv"), row.names = FALSE)
+  utils::write.csv(r, file.path(OUT, "species_mixture_scores.csv"), row.names = FALSE)
 }

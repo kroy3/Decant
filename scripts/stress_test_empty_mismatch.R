@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-## steelman_empty_mismatch.R
+## scripts/stress_test_empty_mismatch.R
 ## Fair test of the structured-soup idea in the ONE regime where it could win:
 ## the empty-droplet pool is contaminated by an "off-manifold" technical profile
 ## (a junk vector that is NOT a mixture of real cell programs). The in-cell

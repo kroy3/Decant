@@ -6,7 +6,7 @@ samples with extreme counts shift a group mean while the NB dispersion
 understates their variance. `ambient_de()` is an NB quasi-likelihood test, so
 it was checked for the same failure, and it had it.
 
-`run.R` sweeps 6, 15, 50, 100 and 200 samples per group over four cases from
+`run_cohort_sweep.R` sweeps 6, 15, 50, 100 and 200 samples per group over four cases from
 `simulate_ambient_cohort()`: clean counts, 1% outlier entries (median 10-fold),
 heavy-tailed (log-t, 3 df) biological noise, and a batch that is confounded
 with condition and shifts 200 genes. Contamination is about 5% in controls and

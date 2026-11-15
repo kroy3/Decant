@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-## run_demo.R -- sources Decant directly (no install needed) and runs the
+## scripts/demo_structured_soup.R -- sources Decant directly (no install needed) and runs the
 ## benchmark. The point is the NEGATIVE CONTROL as much as the positive result:
 ##   soup_bias = 0  -> soup is uniform, the global assumption is exactly true,
 ##                     structured must NOT beat it (else the model is overfitting).
