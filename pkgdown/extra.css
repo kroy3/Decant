@@ -1,0 +1,55 @@
+/* Decant website: Arial throughout, black text on a white background. */
+
+body,
+.navbar,
+.dropdown-menu,
+.page-header,
+.sidebar,
+table {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #000000;
+  background-color: #FFFFFF;
+}
+
+h1, h2, h3, h4, .navbar-brand {
+  font-family: "Arial Black", Arial, Helvetica, sans-serif;
+  color: #000000;
+}
+
+a,
+a:hover,
+.navbar a,
+.nav-link {
+  color: #000000;
+}
+
+a { text-decoration: underline; }
+
+/* Code keeps a monospaced font so columns of output line up. */
+pre, code {
+  color: #000000;
+  background-color: #F4F4F4;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid #BBBBBB;
+  padding: 4px 8px;
+}
+
+/* White navigation bar with a thin black rule underneath. */
+.navbar,
+.navbar.bg-light,
+.navbar.bg-primary {
+  background-color: #FFFFFF !important;
+  border-bottom: 1px solid #000000;
+}
+
+.navbar .nav-link,
+.navbar .navbar-brand,
+.navbar .nav-text {
+  color: #000000 !important;
+}

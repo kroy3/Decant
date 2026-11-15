@@ -3,7 +3,7 @@
 
 Usage: run_python_tools.py <dataset_dir> [tool ...]     tools: ambidose scar cellbender
 
-<dataset_dir> is written by validation/benchmark_all.R:
+<dataset_dir> is written by validation/benchmark_pbmc_six_tools.R:
   raw/            10x v3 MTX folder: all droplets (cells + empties)
   cells.txt       cell barcodes, in the order the R side expects
   clusters.csv    barcode,cluster

@@ -1,7 +1,7 @@
 ## validation/comparators.R
 ## Wrappers around the OFFICIAL competing tools, for benchmarks only.
 ##
-## Contract (same as validation/species_mix.R): every wrapper takes
+## Contract (same as validation/validate_species_mixture.R): every wrapper takes
 ##   (cells, empties, clusters)   genes x droplets count matrices + cell labels
 ## and returns one of
 ##   NULL                          the tool is not installed  -> "not installed"
@@ -46,7 +46,7 @@ run_decant <- function(cells, empties, clusters, correction = "bayes_cell") {
 }
 
 ## `soup_range` and `force_accept` exist only to reproduce a published setup
-## (validation/segerstolpe_control.R, which follows Cargnelli et al. 2026);
+## (validation/benchmark_negative_control.R, which follows Cargnelli et al. 2026);
 ## the defaults are SoupX's own.
 run_soupx <- function(cells, empties, clusters, soup_range = NULL, force_accept = FALSE) {
   if (!requireNamespace("SoupX", quietly = TRUE)) return(NULL)

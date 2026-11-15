@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-## validation/kidney_mixture.R
+## validation/validate_genotype_mixture.R
 ## Per-cell rho validation against genotype ground truth.
 ##
 ## Data: Janssen et al. (2023) Genome Biology 24:140, Zenodo 10.5281/zenodo.15006097.
@@ -12,7 +12,7 @@
 ## chimeras), while Decant models ambient only. The paper finds ambient is the
 ## majority, so expect Decant slightly BELOW truth on average, not above.
 ##
-## Run from the repo root:  Rscript validation/kidney_mixture.R [replicate ...]
+## Run from the repo root:  Rscript validation/validate_genotype_mixture.R [replicate ...]
 ## Needs network access to zenodo.org, or the zips unpacked under
 ## validation/data/kidney/<replicate>/ by hand.
 
@@ -115,7 +115,7 @@ main <- function(reps) {
   dir.create(OUT, showWarnings = FALSE, recursive = TRUE)
   tab <- do.call(rbind, lapply(reps, run_rep))
   print(tab, digits = 3, row.names = FALSE)
-  utils::write.csv(tab, file.path(OUT, "kidney_mixture.csv"), row.names = FALSE)
+  utils::write.csv(tab, file.path(OUT, "genotype_mixture.csv"), row.names = FALSE)
   invisible(tab)
 }
 

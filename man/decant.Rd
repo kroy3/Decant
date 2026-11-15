@@ -40,7 +40,7 @@ fraction; skips estimation entirely.}
 
 \item{correction}{correction rule, see \code{\link[=correct_counts]{correct_counts()}}. The default,
 "bayes_cell", has the lowest error on simulated ground truth
-(\code{\link[=gate_correction]{gate_correction()}}). On real PBMC data (\code{validation/benchmark_all.R}) it
+(\code{\link[=gate_correction]{gate_correction()}}). On real PBMC data (\code{validation/benchmark_pbmc_six_tools.R}) it
 removes 88 to 95\% of marker counts that ambient RNA could explain in cell
 types that do not express them, and leaves most of the counts that are
 too high in a cell to be ambient (likely doublets), which "bayes" removed.}

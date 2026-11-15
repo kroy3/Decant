@@ -1,0 +1,16 @@
+**Decant User Guide**
+
+- [Preface](Home)
+- [1. Installation](01-Installation)
+- [2. Key Concepts](02-Key-Concepts)
+- [3. Quick Start](03-Quick-Start)
+- [4. Preparing Your Data](04-Preparing-Your-Data)
+- [5. Running Decant](05-Running-Decant)
+- [6. Seurat Integration](06-Seurat-Integration)
+- [7. Estimation and Correction](07-Estimation-and-Correction)
+- [8. Multi-Sample Experiments](08-Multi-Sample-Experiments)
+- [9. Differential Expression](09-Differential-Expression)
+- [10. Splice-Aware and Genotype Modules](10-Splice-Aware-and-Genotype-Modules)
+- [11. Diagnostics and Troubleshooting](11-Diagnostics-and-Troubleshooting)
+- [12. Validation and Benchmarks](12-Validation-and-Benchmarks)
+- [13. Function Reference](13-Function-Reference)

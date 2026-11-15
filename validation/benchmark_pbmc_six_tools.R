@@ -1,11 +1,11 @@
 #!/usr/bin/env Rscript
-## validation/benchmark_all.R
+## validation/benchmark_pbmc_six_tools.R
 ## Decant against SoupX, DecontX, CellBender, scAR and AmbiDose on the real
 ## 10x PBMC 4k data bundled with SoupX. No ground truth; see BENCHMARK.md.
 ##
-##   Rscript validation/benchmark_all.R export     write the dataset for the Python tools
+##   Rscript validation/benchmark_pbmc_six_tools.R export     write the dataset for the Python tools
 ##   <venv>/bin/python validation/py/run_python_tools.py validation/data/bench_pbmc
-##   Rscript validation/benchmark_all.R score      run the R tools and score everything
+##   Rscript validation/benchmark_pbmc_six_tools.R score      run the R tools and score everything
 ##
 ## The SoupX data ships the summed empty-droplet counts per gene, not the
 ## droplets. AmbiDose and CellBender need droplets, so 40,000 empty droplets
@@ -16,7 +16,7 @@
 
 if (requireNamespace("pkgload", quietly = TRUE)) pkgload::load_all(".", quiet = TRUE) else library(Decant)
 suppressPackageStartupMessages(library(Matrix))
-source(file.path("validation", "comparators.R")); source(file.path("validation", "benchmark_export.R"))
+source(file.path("validation", "comparators.R")); source(file.path("validation", "python_tool_io.R"))
 mode <- commandArgs(trailingOnly = TRUE)[1]
 DIR <- file.path("validation", "data", "bench_pbmc"); OUT <- file.path("validation", "results")
 
@@ -98,4 +98,4 @@ allc <- unique(unlist(lapply(rows, names)))
 tab <- do.call(rbind, lapply(rows, function(r) { r[setdiff(allc, names(r))] <- NA; r[allc] }))
 print(t(tab), quote = FALSE)
 dir.create(OUT, showWarnings = FALSE, recursive = TRUE)
-utils::write.csv(tab, file.path(OUT, "benchmark_all_pbmc.csv"), row.names = FALSE)
+utils::write.csv(tab, file.path(OUT, "pbmc_six_tools.csv"), row.names = FALSE)

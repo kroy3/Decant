@@ -1,4 +1,4 @@
-source("sim.R"); source("methods.R")
+source("simulate_study.R"); source("models_v1.R")
 res <- list()
 for (s in 1:3) {
   st <- sim_study(seed = s); r <- run_all(st)

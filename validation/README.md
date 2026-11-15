@@ -4,14 +4,14 @@ Run from the repo root. Results go to `validation/results/`.
 
 | script | ground truth | status |
 |---|---|---|
-| `de_comparators.R` | simulated case/control study | run; results in `results/de_comparators.csv` |
-| `pbmc_soupx.R` | none (10x PBMC 4k bundled with SoupX; compared with SoupX's published estimates and marker specificity) | run; results in `results/pbmc_soupx_*.csv` |
-| `benchmark_all.R` + `py/run_python_tools.py` | none (PBMC 4k); six tools | run; results in `results/benchmark_all_pbmc.csv` |
-| `madsen_benchmark.R` | species mixing; the two scores of Cargnelli, Nielsen & Madsen (2026) | self-test run on a synthetic mixture; `low_complexity` run; results in `results/madsen_low_complexity.csv` (BENCHMARK.md section 1c) |
-| `madsen_rho_check.R` | cross-species reads give each cell's contamination | run; results in `results/madsen_low_complexity_rho.csv` |
-| `segerstolpe_control.R` | Smart-seq2 negative control (E-MTAB-5061), no ambient RNA | run; results in `results/segerstolpe_control*.csv` |
-| `species_mix.R` | 10x human/mouse mixtures | **not yet run** |
-| `kidney_mixture.R` | Janssen et al. 2023 genotype mixture | **not yet run** (needs `zenodo.org`) |
+| `benchmark_differential_expression.R` | simulated case/control study | run; results in `results/differential_expression.csv` |
+| `validate_pbmc_markers.R` | none (10x PBMC 4k bundled with SoupX; compared with SoupX's published estimates and marker specificity) | run; results in `results/pbmc_*.csv` |
+| `benchmark_pbmc_six_tools.R` + `py/run_python_tools.py` | none (PBMC 4k); six tools | run; results in `results/pbmc_six_tools.csv` |
+| `benchmark_species_mixture.R` | species mixing; the two scores of Cargnelli et al. (2026) | self-test run on a synthetic mixture; `low_complexity` run; results in `results/species_mixture_scores.csv` (BENCHMARK.md section 1c) |
+| `benchmark_species_mixture_rho.R` | cross-species reads give each cell's contamination | run; results in `results/species_mixture_rho.csv` |
+| `benchmark_negative_control.R` | Smart-seq2 negative control (E-MTAB-5061), no ambient RNA | run; results in `results/negative_control_scores*.csv` |
+| `validate_species_mixture.R` | 10x human/mouse mixtures | **not yet run** |
+| `validate_genotype_mixture.R` | Janssen et al. 2023 genotype mixture | **not yet run** (needs `zenodo.org`) |
 
 ## Comparator wrappers (`comparators.R`)
 
@@ -28,12 +28,12 @@ Official packages only. A tool that is not installed is reported as
 Do not quote a number from a wrapper marked "not yet run" until its output
 has been checked on a case with a known answer.
 
-`species_mix.R` still carries its own SoupX and DecontX wrappers. Pointing it
+`validate_species_mixture.R` still carries its own SoupX and DecontX wrappers. Pointing it
 at `comparators.R` is left for when it is first run on real data, because
 FastCAR and CellBender return no per-cell rho and its scoring expects one.
 
 ## Reproduce the DE comparator table
 
 ```bash
-Rscript validation/de_comparators.R 1 2 3 4
+Rscript validation/benchmark_differential_expression.R 1 2 3 4
 ```

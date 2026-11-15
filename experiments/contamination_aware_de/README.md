@@ -4,13 +4,13 @@ Question: when ambient RNA differs between samples, do standard pseudobulk DE
 pipelines report an abundant cell type's disease genes as DE in a rare cell
 type, and does modelling the measured soup inside the test fix it?
 
-Design (`sim.R`): 6 control vs 6 disease samples, biological between-sample
+Design (`simulate_study.R`): 6 control vs 6 disease samples, biological between-sample
 variation (BCV 0.25), an abundant type A with 80 disease genes (3x), a rare
 type R (10% of cells) with 40 true disease genes (2x), contamination ~5% in
 controls vs ~12% in fragile disease tissue, a per-sample soup measured from
 that sample's empty droplets.
 
-Methods (`methods.R`), all testing type R:
+Methods (`models_v1.R`), all testing type R:
 - `naive`: edgeR QL on raw pseudobulk.
 - `corrected`: Decant correction per sample, then edgeR QL.
 - `caware`: negative binomial with mean `N_s * exp(b0 + b1*x_s) + E_s`, where
@@ -18,7 +18,7 @@ Methods (`methods.R`), all testing type R:
   KNOWN additive term (identity scale, not a log covariate). LRT on b1,
   dispersion borrowed from edgeR on the corrected counts.
 
-Run from this directory: `Rscript run1.R` (v1), `Rscript run2.R` (v1-v4 stress grid)
+Run from this directory: `Rscript run_v1.R` (v1), `Rscript run_v1_to_v4.R` (v1-v4 stress grid)
 (set `DECANT_ROOT` if not run from inside the repo).
 
 ## Results (mean of 3 seeds)
@@ -37,7 +37,7 @@ Run from this directory: `Rscript run1.R` (v1), `Rscript run2.R` (v1-v4 stress g
 Other-null false-positive rate at p < 0.05: caware 0.045-0.09 vs naive
 0.20-0.24. Power on true R genes: ~0.93 for all methods.
 
-## Iteration: making the model robust (`methods2.R`, `run2.R`)
+## Iteration: making the model robust (`models_v2_to_v4.R`, `run_v1_to_v4.R`)
 
 v1 trusted the ambient load and broke when it was under-estimated or the soup
 was noisy. Changes, each kept only if it helped:
