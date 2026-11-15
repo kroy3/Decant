@@ -11,7 +11,7 @@ test_that("cluster rho estimator is calibrated on ground truth", {
     d <- attr(r, "clusters")
     expect_setequal(names(d), c("cluster", "n_cells", "rho", "n_absent_genes",
                                 "absent_soup_frac", "absent_counts", "low_power",
-                                "borrowed", "rho_two_sided"))
+                                "borrowed", "rho_two_sided", "dispersion", "implausible"))
     expect_false(attr(r, "soup_mismatch"))
   }
 })

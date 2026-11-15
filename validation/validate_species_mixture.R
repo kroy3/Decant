@@ -5,7 +5,7 @@
 ##
 ## Comparators are the OFFICIAL packages, used only if installed:
 ##   SoupX (CRAN)             install.packages("SoupX")
-##   DecontX (Bioconductor)   BiocManager::install("celda")
+##   DecontX (Bioconductor)   BiocManager::install("decontX")   (see comparators.R)
 ## A missing comparator is reported as "not run", never replaced by the
 ## in-repo reimplementations (those are not fair stand-ins).
 ##
@@ -42,31 +42,17 @@ fetch <- function(name, which) {
 }
 
 ## ---- methods: each returns list(corrected, rho) or NULL if unavailable ----
+## SoupX and DecontX come from comparators.R (official packages; empty
+## droplets passed as per-gene totals, which is all either tool reads and
+## keeps a 10k-cell channel with ~2M empties within 16 GB).
+source(file.path("validation", "comparators.R"))
+
 run_decant <- function(cells, empties, clusters) {
   res <- suppressWarnings(decant(cells, empties, clusters = clusters))
-  list(corrected = res$corrected, rho = res$rho,
-       note = if (isTRUE(res$soup_mismatch)) "soup_mismatch warning" else "")
-}
-
-run_soupx <- function(cells, empties, clusters) {
-  if (!requireNamespace("SoupX", quietly = TRUE)) return(NULL)
-  tryCatch({
-    tod <- cbind(cells, empties)
-    sc <- SoupX::SoupChannel(tod, cells, calcSoupProfile = FALSE)
-    sc <- SoupX::estimateSoup(sc, soupRange = c(1, 100))
-    sc <- SoupX::setClusters(sc, stats::setNames(as.character(clusters), colnames(cells)))
-    sc <- suppressWarnings(SoupX::autoEstCont(sc, doPlot = FALSE, verbose = FALSE))
-    list(corrected = SoupX::adjustCounts(sc, verbose = 0),
-         rho = sc$metaData$rho, note = "")
-  }, error = function(e) list(error = conditionMessage(e)))
-}
-
-run_decontx <- function(cells, empties, clusters) {
-  if (!requireNamespace("celda", quietly = TRUE)) return(NULL)
-  tryCatch({
-    d <- celda::decontX(x = cells, z = clusters, background = empties, verbose = FALSE)
-    list(corrected = d$decontXcounts, rho = d$contamination, note = "")
-  }, error = function(e) list(error = conditionMessage(e)))
+  notes <- c(if (isTRUE(res$soup_mismatch)) "soup_mismatch",
+             if (isTRUE(res$rho_unidentifiable)) "rho not identifiable (warned)",
+             if (any(res$rho_diagnostics$low_power)) sprintf("%d low-power cluster(s)", sum(res$rho_diagnostics$low_power)))
+  list(corrected = res$corrected, rho = res$rho, note = paste(notes, collapse = "; "))
 }
 
 METHODS <- list(Decant = run_decant, SoupX = run_soupx, DecontX = run_decontx)
@@ -124,5 +110,8 @@ for (ds in todo) {
   all[[ds]] <- res
 }
 res <- do.call(rbind, all)
-utils::write.csv(res, file.path(OUT, "species_mix.csv"), row.names = FALSE)
-cat("\nwrote", file.path(OUT, "species_mix.csv"), "\n")
+for (ds in names(all)) {
+  f <- file.path(OUT, sprintf("species_mixture_%s.csv", ds))
+  utils::write.csv(all[[ds]], f, row.names = FALSE)
+  cat("wrote", f, "\n")
+}

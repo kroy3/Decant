@@ -99,6 +99,7 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
     rho_diag <- attr(rho, "clusters")
     mismatch <- isTRUE(attr(rho, "soup_mismatch"))
     so <- attr(rho, "soup_only"); so_frac <- attr(rho, "soup_only_frac")
+    unidentifiable <- isTRUE(attr(rho, "unidentifiable"))
     rho <- as.numeric(rho)
     modules <- c(modules, "cluster_rho")
     if (any(so)) {
@@ -113,16 +114,28 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
               "Those genes were dropped from the soup, but other genes may be ",
               "affected too, in which case rho is UNDERestimated. ",
               "See $rho_diagnostics; consider supplying `rho`.", call. = FALSE)
-    if (any(rho_diag$low_power))
+    if (unidentifiable) {
+      warning("rho could not be identified: no cluster has genes that are cleanly ",
+              "absent, or most cells are in clusters whose estimate is implausibly high ",
+              "(> 0.5). This happens ",
+              "when the soup resembles the cells, e.g. a single cell type. The estimate ",
+              "(median ", sprintf("%.2f", stats::median(rho)), ") is NOT reliable and correction may ",
+              "remove real signal. Supply `rho` from an independent source (genotypes, a ",
+              "species-mixing control, or a value from comparable data).", call. = FALSE)
+    } else if (any(rho_diag$low_power)) {
+      n_imp <- sum(rho_diag$implausible)
       warning(sum(rho_diag$low_power), " cluster(s) have almost no genes that are ",
-              "cleanly absent, so rho is weakly identified there and likely ",
-              "OVERestimated. See $rho_diagnostics.", call. = FALSE)
+              "cleanly absent", if (n_imp) sprintf(" or an implausible rho above 0.5 (%d)", n_imp) else "",
+              ", so rho is weakly identified there; they borrow rho from the other ",
+              "clusters. See $rho_diagnostics.", call. = FALSE)
+    }
   }
 
   ## ---- correction ----
   splice_mode <- !is.null(obs_unspliced) && !is.null(obs_spliced) &&
                  !is.null(empties_unspliced) && !is.null(empties_spliced)
   out <- list(rho = rho, rho_diagnostics = rho_diag, soup_mismatch = mismatch,
+              rho_unidentifiable = if (is.null(rho_diag)) FALSE else unidentifiable,
               ambient = soup_by_sample,
               clusters = clusters)
 
@@ -189,9 +202,11 @@ print.decant <- function(x, ...) {
   cat(sprintf("  rho     : median %.3f (10%%-90%%: %.3f-%.3f)\n", q[2], q[1], q[3]))
   if (isTRUE(x$soup_mismatch))
     cat("  WARNING : soup/cell mismatch (soup-only genes dropped; rho may be UNDERestimated)\n")
-  if (!is.null(x$rho_diagnostics) && any(x$rho_diagnostics$low_power))
+  if (isTRUE(x$rho_unidentifiable))
+    cat("  WARNING : rho NOT identifiable from these data; supply `rho`\n")
+  else if (!is.null(x$rho_diagnostics) && any(x$rho_diagnostics$low_power))
     cat("  WARNING : ", sum(x$rho_diagnostics$low_power),
-        " cluster(s) low-power for rho (likely overestimated)\n", sep = "")
+        " cluster(s) without usable evidence for rho; they borrow it from the others\n", sep = "")
   invisible(x)
 }
 
