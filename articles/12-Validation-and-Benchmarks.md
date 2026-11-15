@@ -1,0 +1,145 @@
+# Chapter 12. Validation and Benchmarks
+
+This chapter summarises how Decant performs and how to reproduce every
+number. Results are reported whether they favour Decant or not. The full
+record is in `validation/BENCHMARK.md` in the repository.
+
+## 12.1 Falsification gates
+
+Each component of Decant has a **gate**: an automated test on simulated
+data with a known answer. A component is enabled by default only if it
+passes its gate.
+
+``` r
+
+library(Decant)
+g <- gate_rho(rho_grid = c(0, 0.1, 0.2), seeds = 1)
+#>   setting   rho |   true | cluster: mean rmse cor | legacy: mean rmse | ok
+#>   easy     0.00 |  0.000 |  0.000  0.000      - |  0.140  0.317 | ok
+#>   stress   0.00 |  0.000 |  0.002  0.002      - |  0.579  0.596 | ok
+#>   easy     0.10 |  0.098 |  0.101  0.015   0.97 |  0.256  0.310 | ok
+#>   stress   0.10 |  0.103 |  0.109  0.018   0.96 |  0.626  0.539 | ok
+#>   easy     0.20 |  0.197 |  0.201  0.020   0.97 |  0.362  0.274 | ok
+#>   stress   0.20 |  0.203 |  0.223  0.082   0.65 |  0.672  0.483 | ok
+#>   => PASS: cluster estimator calibrated and beats legacy
+```
+
+- [`gate_rho()`](https://kroy3.github.io/Decant/reference/gate_rho.md)
+  simulates experiments at several true contamination levels, in an easy
+  and a harder (“stress”) setting, and checks that the estimate is close
+  to the truth.
+- The rows with a true rho of 0 are **negative controls**: an estimator
+  must not report contamination where there is none.
+- The `legacy` columns show an older estimator for comparison.
+
+| Gate | Tests |
+|----|----|
+| [`gate_rho()`](https://kroy3.github.io/Decant/reference/gate_rho.md) | Contamination estimate |
+| [`gate_correction()`](https://kroy3.github.io/Decant/reference/gate_correction.md) | The four correction rules |
+| [`gate_hier()`](https://kroy3.github.io/Decant/reference/gate_hier.md) | Per-sample soups with partial pooling |
+| [`gate_splice()`](https://kroy3.github.io/Decant/reference/gate_splice.md) | Splice-aware correction |
+| [`gate_allelic()`](https://kroy3.github.io/Decant/reference/gate_allelic.md) | Genotype-based estimate |
+| [`gate_ambient_de()`](https://kroy3.github.io/Decant/reference/gate_ambient_de.md), [`gate_ambient_de_cohort()`](https://kroy3.github.io/Decant/reference/gate_ambient_de_cohort.md) | Contamination-aware differential expression |
+
+To run all gates, as the continuous integration does:
+
+``` r
+
+# Requires the source repository
+# From a terminal, in the repository folder:
+#   Rscript scripts/run_falsification_gates.R
+```
+
+## 12.2 Ground truth: species mixture
+
+A 10x mixture of human and mouse cells (20k HGMM) gives each cell’s true
+contamination directly: in a human cell, mouse reads can only be
+ambient. Decant, SoupX and DecontX were run on identical inputs and
+scored with the two metrics of Cargnelli et al. (2026). Both scores
+range from 0 to 1, and higher is better.
+
+|                        | Endogenous retained | Ambient removed |
+|------------------------|---------------------|-----------------|
+| **Decant**             | 0.991               | 0.415           |
+| SoupX                  | 0.992               | 0.345           |
+| DecontX                | 0.983               | 0.722           |
+| CellBender (published) | 0.996               | 0.729           |
+
+**Reading the result.** Decant keeps the cells’ own signal as well as
+SoupX and removes more ambient RNA than SoupX. It removes clearly
+**less** than DecontX and CellBender. The reason is known: its
+contamination estimate is about half the true level on this dataset
+(median 0.013 against 0.029), although it ranks cells correctly (rank
+correlation 0.81). If removing as much ambient RNA as possible matters
+more to you than preserving every endogenous count, DecontX performed
+better here.
+
+## 12.3 Ground truth: negative control
+
+Smart-seq2 data (human islets, E-MTAB-5061) have no ambient RNA, because
+each cell is sorted into its own well. The ideal correction removes
+nothing.
+
+|                        | Endogenous retained |
+|------------------------|---------------------|
+| **Decant**             | 0.998               |
+| SoupX                  | 0.989               |
+| DecontX                | 0.952               |
+| CellBender (published) | 0.797               |
+
+Decant estimates almost no contamination (0.2%) and leaves the data
+essentially unchanged. A tool that does nothing would score 1.0 here, so
+this control tests only that a tool does not over-correct. Together with
+12.2 it shows that Decant is **conservative**.
+
+## 12.4 Real data without ground truth: PBMC
+
+On the 10x PBMC 4k dataset, marker genes found in cell types that do not
+express them were used as a proxy for contamination.
+
+|  | Decant | SoupX | DecontX | CellBender | AmbiDose | scAR |
+|----|----|----|----|----|----|----|
+| Removed: counts ambient RNA can explain | 88–95% | 76–94% | 97–100% | 54–98% | 67–79% | 99–100% |
+| Removed: counts too high to be ambient (lower is better) | 14–37% | 12–31% | 96–100% | 4–68% | 82–100% | 58–82% |
+| Own marker signal lost | 1–4% | 1–2% | 2–6% | 0–1% | 0–6% | 18–26% |
+| Counts added | 0 | 0 | 0 | 0 | 0 | 727,390 |
+| Run time | 11 s | 12 s | 34 s | 55 min | 73 s | 15 min |
+
+CellBender was run on CPU with a reduced configuration; it is designed
+for a GPU.
+
+## 12.5 Reproducing the benchmarks
+
+All scripts are in the `validation/` folder of the repository and are
+run from the repository root.
+
+| Script | What it does |
+|----|----|
+| `benchmark_species_mixture.R` | Species-mixture scores (12.2) |
+| `benchmark_species_mixture_rho.R` | Each tool’s contamination estimate against the truth |
+| `benchmark_negative_control.R` | Smart-seq2 negative control (12.3) |
+| `benchmark_pbmc_six_tools.R` | Six tools on PBMC data (12.4) |
+| `benchmark_soupx.R` | Decant against SoupX on real and simulated data |
+| `benchmark_differential_expression.R` | Correct-then-test against [`ambient_de()`](https://kroy3.github.io/Decant/reference/ambient_de.md) |
+| `validate_pbmc_markers.R` | Contamination on PBMC compared with published estimates |
+| `validate_species_mixture.R` | Contamination against cross-species truth on further mixtures |
+| `validate_genotype_mixture.R` | Contamination against genotype truth (kidney mixture) |
+| `comparators.R` | Wrappers that run the official SoupX, DecontX, FastCAR and CellBender |
+
+``` r
+
+# Requires the source repository
+# From a terminal, in the repository folder:
+#   Rscript validation/benchmark_species_mixture.R low_complexity
+#   Rscript validation/benchmark_negative_control.R
+```
+
+- Each script downloads its public dataset on first use and writes its
+  results to `validation/results/`.
+
+------------------------------------------------------------------------
+
+**Previous:** [Chapter 11, Diagnostics and
+Troubleshooting](https://kroy3.github.io/Decant/articles/11-Diagnostics-and-Troubleshooting.md)
+\| **Next:** [Chapter 13, Function
+Reference](https://kroy3.github.io/Decant/articles/13-Function-Reference.md)

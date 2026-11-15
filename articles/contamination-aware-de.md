@@ -136,9 +136,9 @@ subset(res, ambient_driven)
   assumes. This vignette shows the method does what it is designed to
   do. It is not real-data evidence.
 - Correcting counts first and then testing is not always worse. In
-  `validation/de_comparators.R`, official SoupX followed by edgeR
-  removes almost all leakage on this simulator, at some cost in power.
-  See the README for the table.
+  `validation/benchmark_differential_expression.R`, official SoupX
+  followed by edgeR removes almost all leakage on this simulator, at
+  some cost in power. See the README for the table.
 - With very few empty droplets, or three samples per group, the test
   leaks or loses power. The README lists the measured limits.
 

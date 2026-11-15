@@ -2,6 +2,15 @@
 
 ## Decant (development version)
 
+- New user guide in 13 chapters (`wiki/`, also published as website
+  articles). Every example runs on the bundled simulators, and
+  `scripts/check_user_guide.R` checks that each shown output is current.
+- Scripts renamed for clarity: repository-level scripts moved to
+  `scripts/` (`run_falsification_gates.R`,
+  `compare_correction_methods.R`, `demo_structured_soup.R`,
+  `stress_test_empty_mismatch.R`); validation scripts follow
+  `benchmark_*` (Decant against other tools) and `validate_*` (Decant
+  against ground truth); result files renamed to match.
 - New correction rule `"bayes_cell"`, now the default in
   [`decant()`](https://kroy3.github.io/Decant/reference/decant.md).
   `"bayes"` scaled every cell of a cluster by one ratio, so a cell whose
@@ -14,10 +23,10 @@
   95% of ambient-compatible foreign marker counts (previously 84 to 94%)
   and 14 to 37% of the incompatible ones (previously 82 to 98%), at the
   same native loss.
-- `validation/benchmark_all.R` splits foreign marker counts into those
-  ambient RNA could and could not have produced. DecontX removes both
-  (96 to 100% of the incompatible ones).
-- New `validation/benchmark_all.R` and
+- `validation/benchmark_pbmc_six_tools.R` splits foreign marker counts
+  into those ambient RNA could and could not have produced. DecontX
+  removes both (96 to 100% of the incompatible ones).
+- New `validation/benchmark_pbmc_six_tools.R` and
   `validation/py/run_python_tools.py`: Decant against SoupX, DecontX,
   CellBender, scAR and AmbiDose on real PBMC data. DecontX removes more
   foreign marker signal than Decant; scAR adds counts and removes 44% of
@@ -42,7 +51,8 @@
   limitation.
 - A cluster that cannot identify its own rho borrows the weighted median
   of the others, not a count-weighted mean.
-- New `validation/pbmc_soupx.R`, the first validation run on real data.
+- New `validation/validate_pbmc_markers.R`, the first validation run on
+  real data.
 - New `validation/benchmark_soupx.R` and `validation/BENCHMARK.md`:
   Decant against the official SoupX on real PBMC and simulated data,
   with the literature and what is and is not new. With the `bayes`
@@ -78,14 +88,14 @@
   [`gate_ambient_de_cohort()`](https://kroy3.github.io/Decant/reference/gate_ambient_de_cohort.md):
   large cohorts with outlier samples, heavy-tailed noise, or a
   confounding batch.
-- `run_all_gates.R` exits non-zero when a required gate fails; CI runs
-  each gate once.
+- `scripts/run_falsification_gates.R` exits non-zero when a required
+  gate fails; CI runs each gate once.
 - `experiments/large_cohort_calibration/`: sweep over 6 to 200 samples
   per group, with its limits.
-- New `validation/de_comparators.R`: contamination-aware DE against
-  correct-then-test with the official SoupX, DecontX, FastCAR and
-  CellBender (each run only if installed). Wrappers live in
-  `validation/comparators.R`.
+- New `validation/benchmark_differential_expression.R`:
+  contamination-aware DE against correct-then-test with the official
+  SoupX, DecontX, FastCAR and CellBender (each run only if installed).
+  Wrappers live in `validation/comparators.R`.
 - README: the claim that correcting counts first does not stop DE
   leakage is narrowed. It holds for Decant’s default `subtract` rule;
   official SoupX followed by edgeR removes almost all leakage on the

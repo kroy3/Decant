@@ -4,6 +4,12 @@ Ambient RNA decontamination for single-cell and single-nucleus RNA-seq,
 with a differential expression test that models ambient RNA instead of
 subtracting it. No other ambient RNA tool we found offers one.
 
+**Documentation:** the [User
+Guide](https://github.com/kroy3/Decant/wiki) (also on the [package
+website](https://kroy3.github.io/Decant/articles/00-Preface.html))
+covers installation, the Seurat workflow, multi-sample data,
+differential expression and diagnostics, chapter by chapter.
+
 ## What is new
 
 1.  **Contamination-aware differential expression**
@@ -30,11 +36,11 @@ subtracting it. No other ambient RNA tool we found offers one.
 
 ### Correction against experimental ground truth
 
-Two datasets from the benchmark of Cargnelli, Nielsen & Madsen (2026),
-scored with the paper’s metrics. Retain is the share of the cell’s own
-signal that is kept, and removal the share of ambient signal removed,
-both per gene, 1 is best. Decant, SoupX and DecontX were run on the same
-inputs. CellBender’s numbers are the paper’s own, not a run here.
+Two datasets from the benchmark of Cargnelli et al. (2026), scored with
+the paper’s metrics. Retain is the share of the cell’s own signal that
+is kept, and removal the share of ambient signal removed, both per gene,
+1 is best. Decant, SoupX and DecontX were run on the same inputs.
+CellBender’s numbers are the paper’s own, not a run here.
 
 |  | Decant | SoupX | DecontX | CellBender (published) |
 |----|----|----|----|----|
@@ -142,8 +148,10 @@ changes are in [`NEWS.md`](https://kroy3.github.io/Decant/NEWS.md).
 ## Development
 
 ``` r
-devtools::test()          # unit tests
-Rscript run_all_gates.R   # falsification gates (also run in CI)
+devtools::test()                              # unit tests
+Rscript scripts/run_falsification_gates.R     # falsification gates (also run in CI)
+Rscript scripts/check_user_guide.R            # run every example in the user guide
+Rscript scripts/build_user_guide.R            # copy wiki/ into the website articles
 ```
 
 ## License

@@ -1,0 +1,108 @@
+# Decant User Guide
+
+**Ambient RNA decontamination for single-cell and single-nucleus
+RNA-seq**
+
+------------------------------------------------------------------------
+
+## Preface
+
+Every droplet-based single-cell experiment contains RNA that did not
+come from the cell in the droplet. Cells that lyse during dissociation
+release transcripts into the suspension, and these free molecules are
+captured alongside every cell. This background, called *ambient RNA* or
+the *soup*, adds the expression of abundant cell types to every other
+cell. Marker genes then appear where they do not belong, rare
+populations look like mixtures, and differential expression can report
+the soup instead of biology.
+
+Decant estimates how much of each cell’s signal is ambient and removes
+it. It is designed around three principles:
+
+1.  **Measure the soup, do not guess it.** The ambient profile is taken
+    from the empty droplets of your own experiment.
+2.  **Never add counts.** A corrected count is always between zero and
+    the observed count, so the output can never contain signal that was
+    not in the input.
+3.  **Every default is tested.** Each component is enabled only after it
+    passes a test against data with a known answer, and the results are
+    reported whether they favour Decant or not.
+
+Decant also provides contamination-aware differential expression, which
+models the soup inside the statistical test instead of removing it
+first.
+
+### Who this guide is for
+
+This guide is written for anyone who analyses droplet-based single-cell
+data in R. If you can load a count matrix and run a Seurat workflow, you
+have everything you need. No knowledge of the statistics behind Decant
+is assumed; the concepts are introduced in [Chapter
+2](https://kroy3.github.io/Decant/articles/02-Key-Concepts.md).
+
+### How this guide is organised
+
+The chapters follow the order of a typical analysis. Read Chapters 1 to
+3 first; the remaining chapters can be read as needed.
+
+| Chapter | Title | What you will learn |
+|----|----|----|
+| 1 | [Installation](https://kroy3.github.io/Decant/articles/01-Installation.md) | Installing Decant and its optional dependencies |
+| 2 | [Key Concepts](https://kroy3.github.io/Decant/articles/02-Key-Concepts.md) | Ambient RNA, the soup, empty droplets and the contamination fraction |
+| 3 | [Quick Start](https://kroy3.github.io/Decant/articles/03-Quick-Start.md) | A complete analysis in ten lines of code |
+| 4 | [Preparing Your Data](https://kroy3.github.io/Decant/articles/04-Preparing-Your-Data.md) | Reading 10x output and separating cells from empty droplets |
+| 5 | [Running Decant](https://kroy3.github.io/Decant/articles/05-Running-Decant.md) | The [`decant()`](https://kroy3.github.io/Decant/reference/decant.md) function, its arguments and its output |
+| 6 | [Seurat Integration](https://kroy3.github.io/Decant/articles/06-Seurat-Integration.md) | Correcting a Seurat object with [`RunDecant()`](https://kroy3.github.io/Decant/reference/RunDecant.md) |
+| 7 | [Estimation and Correction](https://kroy3.github.io/Decant/articles/07-Estimation-and-Correction.md) | How contamination is estimated and removed, and how to choose a rule |
+| 8 | [Multi-Sample Experiments](https://kroy3.github.io/Decant/articles/08-Multi-Sample-Experiments.md) | One soup per sample, with information shared across samples |
+| 9 | [Differential Expression](https://kroy3.github.io/Decant/articles/09-Differential-Expression.md) | Contamination-aware testing with [`ambient_de()`](https://kroy3.github.io/Decant/reference/ambient_de.md) and [`DecantDE()`](https://kroy3.github.io/Decant/reference/DecantDE.md) |
+| 10 | [Splice-Aware and Genotype Modules](https://kroy3.github.io/Decant/articles/10-Splice-Aware-and-Genotype-Modules.md) | RNA velocity layers and genotype-based contamination estimates |
+| 11 | [Diagnostics and Troubleshooting](https://kroy3.github.io/Decant/articles/11-Diagnostics-and-Troubleshooting.md) | Reading warnings, checking results, and fixing common problems |
+| 12 | [Validation and Benchmarks](https://kroy3.github.io/Decant/articles/12-Validation-and-Benchmarks.md) | How Decant performs against other tools and against ground truth |
+| 13 | [Function Reference](https://kroy3.github.io/Decant/articles/13-Function-Reference.md) | Every exported function, grouped by task |
+
+### Conventions used in this guide
+
+- Code is shown in grey blocks and can be copied into an R session.
+- Lines that begin with `#>` show the output the code produces. They are
+  not code.
+- Every code block is followed by a short explanation of what each line
+  does.
+- Examples use simulated data that ships with Decant, so every example
+  runs without downloading anything. Blocks that need your own files
+  start with the comment `# Requires your own data`.
+- Matrices are always **genes in rows and droplets (cells) in columns**,
+  the same orientation as Seurat and Cell Ranger.
+
+### Getting help
+
+- Function documentation:
+  [`?decant`](https://kroy3.github.io/Decant/reference/decant.md),
+  [`?RunDecant`](https://kroy3.github.io/Decant/reference/RunDecant.md),
+  [`?ambient_de`](https://kroy3.github.io/Decant/reference/ambient_de.md).
+- Questions and bug reports: [GitHub
+  issues](https://github.com/kroy3/Decant/issues). Include the output of
+  [`sessionInfo()`](https://rdrr.io/r/utils/sessionInfo.html) and, if
+  possible, a small example that reproduces the problem.
+
+### Citing Decant
+
+If you use Decant in published work, please cite the package:
+
+``` r
+
+citation("Decant")
+```
+
+### Acknowledgements
+
+Decant builds on ideas from earlier ambient RNA methods, in particular
+SoupX (Young & Behjati, 2020), DecontX (Yang et al., 2020) and
+CellBender (Fleming et al., 2023). Its ground-truth evaluation uses
+metrics and datasets described by Cargnelli et al. (2026), Segerstolpe
+et al. (2016) and Janssen et al. (2023).
+
+------------------------------------------------------------------------
+
+**Next:** [Chapter 1,
+Installation](https://kroy3.github.io/Decant/articles/01-Installation.md)

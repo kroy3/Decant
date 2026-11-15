@@ -1,6 +1,20 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://kroy3.github.io/Decant/404.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/LICENSE-text.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/articles/00-Preface.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/articles/01-Installation.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/articles/02-Key-Concepts.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/articles/03-Quick-Start.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/articles/04-Preparing-Your-Data.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/articles/05-Running-Decant.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/articles/06-Seurat-Integration.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/articles/07-Estimation-and-Correction.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/articles/08-Multi-Sample-Experiments.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/articles/09-Differential-Expression.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/articles/10-Splice-Aware-and-Genotype-Modules.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/articles/11-Diagnostics-and-Troubleshooting.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/articles/12-Validation-and-Benchmarks.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/articles/13-Function-Reference.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/articles/contamination-aware-de.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/articles/index.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/authors.html</loc></url>

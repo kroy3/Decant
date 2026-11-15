@@ -2,8 +2,22 @@ pandoc: 3.8.3
 pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
+  articles/00-Preface: 00-Preface.html
+  articles/01-Installation: 01-Installation.html
+  articles/02-Key-Concepts: 02-Key-Concepts.html
+  articles/03-Quick-Start: 03-Quick-Start.html
+  articles/04-Preparing-Your-Data: 04-Preparing-Your-Data.html
+  articles/05-Running-Decant: 05-Running-Decant.html
+  articles/06-Seurat-Integration: 06-Seurat-Integration.html
+  articles/07-Estimation-and-Correction: 07-Estimation-and-Correction.html
+  articles/08-Multi-Sample-Experiments: 08-Multi-Sample-Experiments.html
+  articles/09-Differential-Expression: 09-Differential-Expression.html
+  articles/10-Splice-Aware-and-Genotype-Modules: 10-Splice-Aware-and-Genotype-Modules.html
+  articles/11-Diagnostics-and-Troubleshooting: 11-Diagnostics-and-Troubleshooting.html
+  articles/12-Validation-and-Benchmarks: 12-Validation-and-Benchmarks.html
+  articles/13-Function-Reference: 13-Function-Reference.html
   contamination-aware-de: contamination-aware-de.html
-last_built: 2026-11-15T16:24Z
+last_built: 2026-11-15T17:27Z
 urls:
   reference: https://kroy3.github.io/Decant/reference
   article: https://kroy3.github.io/Decant/articles

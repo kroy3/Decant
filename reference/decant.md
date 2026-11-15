@@ -62,10 +62,11 @@ decant(
   The default, "bayes_cell", has the lowest error on simulated ground
   truth
   ([`gate_correction()`](https://kroy3.github.io/Decant/reference/gate_correction.md)).
-  On real PBMC data (`validation/benchmark_all.R`) it removes 88 to 95%
-  of marker counts that ambient RNA could explain in cell types that do
-  not express them, and leaves most of the counts that are too high in a
-  cell to be ambient (likely doublets), which "bayes" removed.
+  On real PBMC data (`validation/benchmark_pbmc_six_tools.R`) it removes
+  88 to 95% of marker counts that ambient RNA could explain in cell
+  types that do not express them, and leaves most of the counts that are
+  too high in a cell to be ambient (likely doublets), which "bayes"
+  removed.
 
 - obs_unspliced, obs_spliced:
 
