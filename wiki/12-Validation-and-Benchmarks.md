@@ -72,9 +72,29 @@ In version 0.4.0 the estimate was about half the truth here (0.013) and
 Decant removed only 0.415. The cause, absent genes scattering around rho
 more than a Poisson test allows, is described in
 [Chapter 7.2](07-Estimation-and-Correction). This mixture was used to find
-that cause, so section 12.3 tests the fix on mixtures it was not built on.
+that cause, so section 12.3 tests the fix on further mixtures.
 
-## 12.3 Ground truth: negative control
+## 12.3 Ground truth: further mixtures
+
+Three more 10x human/mouse mixtures (1k, 5k and 10k cells). Mean
+contamination estimate against the truth:
+
+| Dataset | True | Decant | DecontX | SoupX |
+|---|---|---|---|---|
+| 1k | 0.014 | 0.011 | 0.011 | 0.010 |
+| 5k | 0.040 | 0.030 | 0.027 | 0.016 |
+| 10k | 0.062 | 0.021 | 0.026 | 0.010 |
+
+Decant has the lowest error on 1k and 5k. **On 10k it fails**: most clusters
+have too few absent genes, and its per-cell values barely follow the truth
+(correlation 0.18, DecontX 0.67). All tools underestimate there.
+
+When only one species is kept, each sample is a single cell line, whose soup
+looks like the cells. Contamination then cannot be estimated from
+expression; Decant warns ([Chapter 11.4](11-Diagnostics-and-Troubleshooting))
+while DecontX returns a number without comment.
+
+## 12.4 Ground truth: negative control
 
 Smart-seq2 data (human islets, E-MTAB-5061) have no ambient RNA, because
 each cell is sorted into its own well. The ideal correction removes
@@ -92,7 +112,7 @@ essentially unchanged. A tool that does nothing would score 1.0 here, so
 this control tests only that a tool does not over-correct. Together with
 12.2 it shows that Decant is **conservative**.
 
-## 12.4 Real data without ground truth: PBMC
+## 12.5 Real data without ground truth: PBMC
 
 On the 10x PBMC 4k dataset, marker genes found in cell types that do not
 express them were used as a proxy for contamination.
@@ -108,7 +128,7 @@ express them were used as a proxy for contamination.
 CellBender was run on CPU with a reduced configuration; it is designed for a
 GPU.
 
-## 12.5 Reproducing the benchmarks
+## 12.6 Reproducing the benchmarks
 
 All scripts are in the `validation/` folder of the repository and are run
 from the repository root.
@@ -117,12 +137,12 @@ from the repository root.
 |---|---|
 | `benchmark_species_mixture.R` | Species-mixture scores (12.2) |
 | `benchmark_species_mixture_rho.R` | Each tool's contamination estimate against the truth |
-| `benchmark_negative_control.R` | Smart-seq2 negative control (12.3) |
-| `benchmark_pbmc_six_tools.R` | Six tools on PBMC data (12.4) |
+| `benchmark_negative_control.R` | Smart-seq2 negative control (12.4) |
+| `benchmark_pbmc_six_tools.R` | Six tools on PBMC data (12.5) |
 | `benchmark_soupx.R` | Decant against SoupX on real and simulated data |
 | `benchmark_differential_expression.R` | Correct-then-test against `ambient_de()` |
 | `validate_pbmc_markers.R` | Contamination on PBMC compared with published estimates |
-| `validate_species_mixture.R` | Contamination against cross-species truth on further mixtures |
+| `validate_species_mixture.R` | Contamination against cross-species truth on further mixtures (12.3) |
 | `validate_genotype_mixture.R` | Contamination against genotype truth (kidney mixture) |
 | `comparators.R` | Wrappers that run the official SoupX, DecontX, FastCAR and CellBender |
 

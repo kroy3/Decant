@@ -8,7 +8,9 @@
   binomial whose extra variance is estimated from the lower tail of the
   absent genes (`overdispersed = TRUE`). On a 20k human/mouse mixture the
   median rho went from 0.013 to 0.027 (truth 0.029) and ambient removal from
-  0.415 to 0.616; on held-out mixtures see `validation/BENCHMARK.md`, 1d.
+  0.415 to 0.616. On further mixtures (`validation/BENCHMARK.md`, 1d) it
+  has the lowest error of Decant, SoupX and DecontX on 1k and 5k cells, but
+  still underestimates on 10k cells, where DecontX ranks cells better.
 * **rho = 0 trap fixed.** With sparse counts the starting value could be 0,
   which the fixed point cannot leave; on a 1k-cell mixture 7 of 8 clusters
   returned exactly 0. The start is now at least `floor_rho`.

@@ -125,8 +125,10 @@ subset(res, ambient_driven)   # hits a standard pipeline reports that the soup e
 ## Limits
 
 - Ground truth so far is four human/mouse mixtures and one negative control,
-  all from cell lines. The genotype mixture and the paper's medium- and
-  high-complexity datasets are not yet run.
+  all from cell lines. On the 10k mixture Decant underestimates contamination
+  (0.021 against 0.062) and ranks cells poorly; DecontX does better there.
+  The genotype mixture and the paper's medium- and high-complexity datasets
+  are not yet run.
 - When the soup resembles the cells (a single cell type), contamination
   cannot be estimated from expression. Decant then warns and asks for `rho`;
   the number it reports in that case is not reliable.
