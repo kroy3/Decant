@@ -52,11 +52,11 @@ obj <- RunDecant(obj, raw = "sample/outs/raw_feature_bc_matrix")
 
 ```r
 summary(obj$decant_rho)
-#>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.
-#> 0.01718 0.14254 0.19223 0.19805 0.24450 0.54786
+#>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+#> 0.02389 0.14950 0.19933 0.20574 0.25223 0.55303 
 names(Misc(obj, "decant"))
-#> [1] "rho_diagnostics" "soup_mismatch"   "ambient"         "modules"
-#> [5] "source_assay"
+#> [1] "rho_diagnostics" "soup_mismatch"   "ambient"         "modules"        
+#> [5] "source_assay"   
 ```
 
 | Location | Content |

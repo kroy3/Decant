@@ -293,8 +293,9 @@ per-cell truth, and Pearson correlation with it:
   barely track the truth (r 0.18). DecontX ranks the cells much better. All
   tools underestimate on this dataset.
 
-**Hidden test (mouse cells, mouse genes only).** This removes the other
-genome, so the estimator must work as on single-species data. These are
+**Hidden test (the majority species' cells and genes only: mouse for 1k
+and 5k, human for 10k).** This removes the other genome, so the estimator
+must work as on single-species data. These are
 single cell lines: the soup has the same composition as the cells, no gene
 is absent, and contamination is not identifiable from expression.
 

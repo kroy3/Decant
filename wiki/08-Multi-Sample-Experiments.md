@@ -30,7 +30,7 @@ res <- decant(mm$obs_total, empties,
 res
 #> <decant> 600 genes x 1500 cells
 #>   modules : hierarchical_ambient, cluster_rho, correction_bayes_cell
-#>   rho     : median 0.196 (10%-90%: 0.108-0.305)
+#>   rho     : median 0.203 (10%-90%: 0.115-0.315)
 ```
 
 - `simulate_multimodal()` simulates six samples. Half have 3,000 empty
@@ -50,14 +50,14 @@ dim(res$ambient)
 round(rbind(estimated = tapply(res$rho, mm$sample_of, median),
             true      = tapply(mm$rho_true, mm$sample_of, median)), 3)
 #>               1     2     3     4     5     6
-#> estimated 0.201 0.203 0.189 0.188 0.198 0.192
+#> estimated 0.208 0.214 0.200 0.194 0.204 0.204
 #> true      0.197 0.195 0.186 0.183 0.191 0.195
 ```
 
 - `res$ambient` now has one soup column per sample.
 - The table compares the median estimated and true contamination in each
-  sample. The estimates are within about one percentage point of the truth,
-  including the samples with only 300 empty droplets.
+  sample. The estimates are one to two percentage points above the truth,
+  and no worse for the samples with only 300 empty droplets.
 
 ## 8.4 The pooled soups directly
 
