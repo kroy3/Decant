@@ -11,7 +11,7 @@ decant(
   clusters = NULL,
   k = 8,
   rho = NULL,
-  correction = c("bayes", "subtract", "redistribute"),
+  correction = c("bayes_cell", "bayes", "subtract", "redistribute"),
   obs_unspliced = NULL,
   obs_spliced = NULL,
   empties_unspliced = NULL,
@@ -38,12 +38,12 @@ Used by the rho estimator. If NULL, k-means with \code{k} clusters is run.}
 \item{rho}{optional user-supplied per-cell (or scalar) contamination
 fraction; skips estimation entirely.}
 
-\item{correction}{correction rule, see \code{\link[=correct_counts]{correct_counts()}}. The default is
-"bayes". On simulated data the three rules are within a few percent of
-each other (\code{\link[=gate_correction]{gate_correction()}}); on real PBMC data
-(\code{validation/pbmc_soupx.R}) "bayes" removed 83 to 94\% of marker counts
-in cell types that do not express them, against 19 to 57\% for
-"subtract", at the same loss in the cell types that do.}
+\item{correction}{correction rule, see \code{\link[=correct_counts]{correct_counts()}}. The default,
+"bayes_cell", has the lowest error on simulated ground truth
+(\code{\link[=gate_correction]{gate_correction()}}). On real PBMC data (\code{validation/benchmark_all.R}) it
+removes 88 to 95\% of marker counts that ambient RNA could explain in cell
+types that do not express them, and leaves most of the counts that are
+too high in a cell to be ambient (likely doublets), which "bayes" removed.}
 
 \item{obs_unspliced, obs_spliced}{genes x cells layers; if both given with
 empty layers, correction is splice-aware (Gap 1).}

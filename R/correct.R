@@ -16,6 +16,14 @@
 ##                   x ~ (1-rho)*phi_k + rho*soup, with phi_k each cluster's
 ##                   soup-subtracted profile. Removes contamination where the
 ##                   soup explains the counts, not blindly by soup rank.
+##  "bayes_cell"   : "bayes" made cell-aware. "bayes" scales every cell of a
+##                   cluster by the same ratio, so a cell whose count of a gene
+##                   is far too high to be ambient (a doublet, a rare expresser)
+##                   loses most of it, and it inflates the cluster's native
+##                   profile so that the other cells keep ambient counts. Here
+##                   an entry above the upper Poisson bound of its own ambient
+##                   expectation loses only that expectation, and the cluster
+##                   profile is built from the remaining entries.
 ## Which rule is the default is decided by gate_correction(), not by taste.
 
 #' Remove ambient counts from each cell (mass-conserving).
@@ -24,19 +32,23 @@
 #' @param soup length-G ambient probability vector (one soup for all cells;
 #'   for per-sample soups use [decant()]).
 #' @param rho length-cells contamination fractions.
-#' @param method one of "subtract", "redistribute", "bayes" (see Details).
-#' @param clusters cluster labels, required for method = "bayes".
+#' @param method one of "subtract", "redistribute", "bayes", "bayes_cell"
+#'   (see Details).
+#' @param clusters cluster labels, required for the two bayes methods.
 #' @param max_iter iterations for "redistribute".
+#' @param cap_q for "bayes_cell": an entry is treated as not explainable by
+#'   ambient RNA when its count exceeds the `1 - cap_q` Poisson quantile of
+#'   its ambient expectation.
 #' @param drop_zeros for sparse input, drop entries corrected to exactly 0.
 #'   FALSE keeps the input's sparsity pattern (explicit zeros).
 #' @return corrected counts, same class as `observed` (dense or dgCMatrix).
 #'   Guaranteed 0 <= corrected <= observed element-wise.
-#' @details See the header of `R/correct.R` for the three rules and
+#' @details See the header of `R/correct.R` for the rules and
 #'   [gate_correction()] for how they compare against ground truth.
 #' @export
 correct_counts <- function(observed, soup, rho,
-                           method = c("subtract", "redistribute", "bayes"),
-                           clusters = NULL, max_iter = 50, drop_zeros = TRUE) {
+                           method = c("subtract", "redistribute", "bayes", "bayes_cell"),
+                           clusters = NULL, max_iter = 50, drop_zeros = TRUE, cap_q = 1e-3) {
   method <- match.arg(method)
   observed <- .as_counts(observed, "observed")
   if (length(soup) != nrow(observed)) stop("length(soup) must equal nrow(observed)", call. = FALSE)
@@ -52,6 +64,10 @@ correct_counts <- function(observed, soup, rho,
     bayes = {
       if (is.null(clusters)) stop("method = 'bayes' needs `clusters`", call. = FALSE)
       .corr_bayes(observed, nz, soup, rho, T_c, clusters)
+    },
+    bayes_cell = {
+      if (is.null(clusters)) stop("method = 'bayes_cell' needs `clusters`", call. = FALSE)
+      .corr_bayes_cell(observed, nz, soup, rho, T_c, clusters, cap_q)
     })
   ## the guarantee, enforced (not assumed) on every path
   v <- pmin(pmax(v, 0), nz$v)
@@ -127,4 +143,38 @@ estimate_rho <- function(observed, soup, low_expr_q = 0.5) {
   rho <- pmin(pmax(ratio, 0), 0.95)
   rho[is.na(rho)] <- 0
   rho
+}
+
+## Cell-aware bayes. lambda = rho_c * T_c * soup_g is an entry's expected ambient
+## count. An entry above the (1 - cap_q) Poisson quantile of lambda cannot be
+## ambient alone: it keeps everything but lambda. The cluster's native profile
+## is then estimated from the other entries only, against the ambient expected
+## in those same cells, and applied to them as in "bayes".
+.corr_bayes_cell <- function(observed, nz, soup, rho, T_c, clusters, cap_q) {
+  ks <- sort(unique(clusters)); K <- length(ks); G <- nrow(observed)
+  kj <- match(clusters, ks)[nz$j]
+  amb_c <- rho * T_c
+  lam <- amb_c[nz$j] * soup[nz$i]
+  high <- nz$v > stats::qpois(1 - cap_q, lam)
+  gk <- function(w) {                       # sum w over entries, by (gene, cluster)
+    m <- matrix(0, G, K)
+    s <- rowsum(w, (kj - 1L) * G + nz$i, reorder = FALSE)
+    m[as.integer(rownames(s))] <- s[, 1]
+    m
+  }
+  ## counts and expected ambient among the entries that ambient could explain.
+  ## Zero entries are always in that set, so start from the cluster totals.
+  amb_k <- as.numeric(tapply(amb_c, factor(clusters, levels = ks), sum))
+  X_low <- gk(ifelse(high, 0, nz$v))
+  E_low <- outer(soup, amb_k) - soup * gk(ifelse(high, amb_c[nz$j], 0))
+  native <- pmax(X_low - E_low, 0)
+  ## native rate per native UMI, among the same cells: their native depth is
+  ## the cluster's minus that of the cells set aside for this gene
+  nat_c <- (1 - rho) * T_c
+  nat_k <- as.numeric(tapply(nat_c, factor(clusters, levels = ks), sum))
+  D_low <- pmax(matrix(nat_k, G, K, byrow = TRUE) - gk(ifelse(high, nat_c[nz$j], 0)), 1e-300)
+  phi <- native / D_low
+  a <- (1 - rho[nz$j]) * phi[cbind(nz$i, kj)]
+  b <- rho[nz$j] * soup[nz$i]
+  ifelse(high, nz$v - pmin(lam, nz$v), nz$v * a / pmax(a + b, 1e-300))
 }

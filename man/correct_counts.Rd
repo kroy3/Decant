@@ -8,10 +8,11 @@ correct_counts(
   observed,
   soup,
   rho,
-  method = c("subtract", "redistribute", "bayes"),
+  method = c("subtract", "redistribute", "bayes", "bayes_cell"),
   clusters = NULL,
   max_iter = 50,
-  drop_zeros = TRUE
+  drop_zeros = TRUE,
+  cap_q = 0.001
 )
 }
 \arguments{
@@ -22,14 +23,19 @@ for per-sample soups use \code{\link[=decant]{decant()}}).}
 
 \item{rho}{length-cells contamination fractions.}
 
-\item{method}{one of "subtract", "redistribute", "bayes" (see Details).}
+\item{method}{one of "subtract", "redistribute", "bayes", "bayes_cell"
+(see Details).}
 
-\item{clusters}{cluster labels, required for method = "bayes".}
+\item{clusters}{cluster labels, required for the two bayes methods.}
 
 \item{max_iter}{iterations for "redistribute".}
 
 \item{drop_zeros}{for sparse input, drop entries corrected to exactly 0.
 FALSE keeps the input's sparsity pattern (explicit zeros).}
+
+\item{cap_q}{for "bayes_cell": an entry is treated as not explainable by
+ambient RNA when its count exceeds the \code{1 - cap_q} Poisson quantile of
+its ambient expectation.}
 }
 \value{
 corrected counts, same class as \code{observed} (dense or dgCMatrix).
@@ -39,6 +45,6 @@ Guaranteed 0 <= corrected <= observed element-wise.
 Remove ambient counts from each cell (mass-conserving).
 }
 \details{
-See the header of \code{R/correct.R} for the three rules and
+See the header of \code{R/correct.R} for the rules and
 \code{\link[=gate_correction]{gate_correction()}} for how they compare against ground truth.
 }
