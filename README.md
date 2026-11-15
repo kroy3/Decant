@@ -25,6 +25,27 @@ it. No other ambient RNA tool we found offers one.
 
 ## How it compares
 
+### Correction against experimental ground truth
+
+Two datasets from the benchmark of Cargnelli, Nielsen & Madsen (2026), scored
+with the paper's metrics. Retain is the share of the cell's own signal that
+is kept, and removal the share of ambient signal removed, both per gene, 1
+is best. Decant, SoupX and DecontX were run on the same inputs. CellBender's
+numbers are the paper's own, not a run here.
+
+| | Decant | SoupX | DecontX | CellBender (published) |
+|---|---|---|---|---|
+| human/mouse mixture: retain | 0.991 | 0.992 | 0.983 | 0.996 |
+| human/mouse mixture: **removal** | **0.415** | 0.345 | **0.722** | 0.729 |
+| Smart-seq2, no ambient RNA: retain | 0.998 | 0.989 | 0.952 | 0.797 |
+
+Decant is conservative. Its contamination estimate is about half the true
+level on the species mixture, so it leaves roughly 30 points more ambient
+RNA than DecontX or CellBender. It also removes almost nothing where there is
+nothing to remove. If ambient removal matters more to you than keeping every
+endogenous count, DecontX did better here. Details:
+[`validation/BENCHMARK.md`](validation/BENCHMARK.md), section 1c.
+
 ### Correction: six tools on real 10x PBMC 4k data
 
 Same cells, soup and clusters for every tool. "Ambient-compatible" foreign
@@ -97,8 +118,10 @@ subset(res, ambient_driven)   # hits a standard pipeline reports that the soup e
 
 ## Limits
 
-- Real-data evidence is one dataset (PBMC 4k) without ground truth. Species-
-  and genotype-mixing benchmarks are scripted (`validation/`) but not yet run.
+- Ground truth so far is one species mixture and one negative control. On
+  the mixture, Decant's contamination estimate is about half the true level,
+  so it under-removes. The genotype mixture and the paper's medium- and
+  high-complexity datasets are not yet run.
 - The DE results are simulated, from a simulator that follows the model's own
   ambient mechanism.
 - Empty droplets that over-represent genes the cells also express are not

@@ -7,8 +7,10 @@ and `Rscript validation/de_comparators.R 1 2 3 4`.
 Six tools have been run on one real dataset (section 1a): Decant, SoupX
 1.6.2, DecontX 1.10.0, CellBender 0.4.0, scAR (scvi-tools 1.4.2) and AmbiDose
 0.5.15, all official releases installed from PyPI or from their GitHub
-source. FastCAR and CellClear have not been run. Sections 2 and 3 compare
-against SoupX only.
+source. FastCAR and CellClear have not been run. Section 1c scores Decant,
+SoupX and DecontX on two datasets with experimental ground truth from
+Cargnelli, Nielsen & Madsen (2026). Sections 2 and 3 compare against SoupX
+only.
 
 ## 1a. Six tools on real data: 10x PBMC 4k (no ground truth)
 
@@ -129,6 +131,132 @@ over-correction cannot be decided without ground truth.
 
 This is one dataset from one tissue. Before the fix in this release Decant
 estimated rho at 0.22 on it, and would have lost this comparison badly.
+
+## 1c. Ground truth: two datasets from Cargnelli, Nielsen & Madsen (2026)
+
+Two datasets from "Benchmarking computational decontamination of ambient RNA"
+(bioRxiv 10.64898/2026.01.13.699237; code
+github.com/madsen-lab/AmbientRemovalBenchmark), scored with the paper's two
+metrics. For each gene with input count x > 0 (summed over a sample's cells
+of one species) and corrected count y:
+
+- **endogenous retain score** = mean over the cell's own species' genes of max(0, 1 - |y - x| / x). 1 means nothing endogenous was removed.
+- **ambient removal score** = mean over the other species' genes of min(1, |x - y| / x). 1 means all ambient counts were removed.
+
+Both are unweighted means over genes. The tools that ran here were Decant,
+SoupX 1.6.2 and DecontX 1.10.0 (R 4.3.3, Seurat 5.0.1, DropletUtils 1.22.0).
+The other rows are the paper's published numbers, from the paper's own
+pipeline. They are context only, not a run here.
+
+### Low-complexity human/mouse mixture (10x 20k HGMM, 3' HT)
+
+Reproduce with `Rscript validation/madsen_benchmark.R low_complexity`.
+Preprocessing follows the paper: emptyDrops (lower = 500, FDR <= 0.05), cells
+with at least 75% of UMIs from one species kept, and Seurat clusters at
+resolution 0.1. This gives 17,619 cells (9,030 human, 8,589 mouse) and 6
+clusters. The soup is the 2,952,920 non-cell barcodes with 1 to 100 UMIs,
+which is SoupX's default range. Every tool gets the same cells, soup and
+clusters. The paper's other QC steps are not reproduced.
+
+| | retain | removal | run time |
+|---|---|---|---|
+| **Decant** | **0.991** | **0.415** | 136 s |
+| SoupX, run here | 0.992 | 0.345 | 157 s |
+| DecontX, run here | 0.983 | 0.722 | 123 s |
+| *published:* SoupX | 0.988 | 0.422 | |
+| *published:* DecontX | 0.980 | 0.624 | |
+| *published:* CellBender | 0.996 | 0.729 | |
+| *published:* scAR | 0.470 | 0.959 | |
+| *published:* CellClear | 0.876 | 0.023 | |
+| *published:* FastCAR / scCDC | 1.000 | 0.000 / 0.002 | |
+
+**Decant removes too little ambient RNA here.** It keeps endogenous counts as
+well as SoupX does. It removes more ambient RNA than SoupX run on the same
+inputs (0.415 against 0.345) and about the same as the paper's SoupX (0.422).
+But DecontX removes 0.72 and the paper's CellBender 0.73, so Decant leaves
+roughly 30 points more ambient RNA in the cells than either. The cause is
+its contamination estimate (`validation/madsen_rho_check.R`). Cross-species
+reads give each cell's contamination directly: in a human cell, mouse reads
+can only be ambient.
+
+| | rho, median | rho, mean | Spearman with cross-species rho |
+|---|---|---|---|
+| cross-species (truth) | 0.029 | 0.061 | 1 |
+| Decant | 0.013 | 0.036 | 0.81 |
+| SoupX | 0.014 | 0.014 | one value per channel |
+| DecontX | 0.024 | 0.093 | 0.95 |
+
+Decant's per-cell estimates rank the cells reasonably, but their level is
+about half the truth. The removal score depends directly on that level, so
+the gap to DecontX comes from the estimator, not from the correction rule.
+DecontX gets both the ranking and the median closer.
+
+Caveats:
+- SoupX here scores 0.345 against the paper's 0.422. The setup differs: no
+  extra QC, and SoupX ran without `forceAccept`. The comparison between
+  tools within this run is fairer than comparing one of these rows with a
+  published row.
+- SoupX and DecontX receive the empties as per-gene totals, not as millions
+  of droplet columns. Building SoupX's channel and DecontX's background over
+  2.95M droplets ran out of memory in 16 GB. Both tools read their empties
+  only through row sums (`SoupX::estimateSoup`; decontX's
+  `eta_tilda <- rowSums(countsBackground)`), so the results are the same. This
+  was checked on the negative control below: per-donor scores were identical
+  to the full-matrix run.
+- One dataset, two species, one platform. Species mixtures have unusually
+  clean marker genes, which helps the absent-gene estimators (Decant, SoupX)
+  more than it would in a single-species tissue.
+
+### Negative control: Smart-seq2 human islets (E-MTAB-5061)
+
+Reproduce with `Rscript validation/segerstolpe_control.R`. Each cell was
+sorted into its own well (Segerstolpe et al. 2016), so there is no ambient
+RNA. The ideal correction is none, and every gene counts as endogenous.
+Following the paper, the donors are HP1506401, HP1507101 and HP1508501T2D,
+each run separately. Cells are wells with 100,000 to 500,000 counts and
+2,500 to 10,500 detected genes. The "empty" boundaries are set at 1,000 to
+100,000 counts. SoupX gets `soupRange = c(1000, 1e5)` with
+`forceAccept = TRUE`. DecontX gets every non-cell well as background, as in
+the paper, which passes the raw matrix. Decant gets the same soup wells as
+SoupX. Clusters are computed on all three donors with Harmony by donor, 10
+PCs and resolution 0.3. Scores are means of the three donors.
+
+| | retain | counts removed | rho, mean |
+|---|---|---|---|
+| **Decant** | **0.998** | **0.18%** | **0.0022** |
+| Decant, soup = pooled expression of the donor's cells (no non-cell wells needed) | 0.998 | 0.24% | 0.0029 |
+| SoupX, run here | 0.989 | 1.0% | 0.010 |
+| DecontX, run here | 0.952 | 5.0% | 0.050 |
+| *published:* SoupX | 0.988 | | |
+| *published:* DecontX | 0.833 | | |
+| *published:* CellBender | 0.797 | | |
+| *published:* scAR | 0.401 | | |
+
+Decant estimates near-zero contamination and removes almost nothing, which
+is the correct answer here. SoupX matches its published score, which
+suggests the setup is close to the paper's. DecontX does not match: 0.952
+here against 0.833 published.
+
+Caveats, and why this table should not be read alone:
+- **Doing nothing scores 1.0 here.** This control penalises over-removal
+  only. Read together with the species mixture, it shows Decant is
+  conservative: it is the best tool here for the same reason it is behind
+  DecontX and CellBender on removal above.
+- SoupX's 0.010 is the lower bound of its search grid, not an estimate, so
+  SoupX cannot score higher than about 0.99 on any dataset without ambient
+  RNA. For one donor (HP1506401), SoupX's defaults found no marker genes, and
+  the wrapper retried once with `soupQuantile = 0.5`, as the SoupX error
+  message suggests. The paper does not report doing this.
+- Counts are the authors' processed RefSeq count matrix from EBI
+  (`pancreas_refseq_rpkms_counts_3514sc.txt`), not the paper's own STARsolo
+  re-alignment. The paper's thresholds applied to these counts keep 129, 155
+  and 131 cells. The DecontX gap with the paper is most likely due to this
+  difference, but that has not been checked.
+- The 1k to 100k "soup" wells (124 to 168 per donor) include 150 wells that
+  the original authors rated as good cells, only shallower. The soup is
+  therefore close to cell expression, as it is in the paper's setup. This
+  makes the control easier for estimators that look for genes absent from
+  the soup.
 
 ## 2. Simulated data with ground truth
 
@@ -258,7 +386,9 @@ against the papers before being cited.
 | Removal of ambient-compatible foreign counts, against SoupX, CellBender, AmbiDose | ahead on 3 of 3, 2 of 3 and 3 of 3 sets; CellBender in a reduced configuration | section 1a |
 | Native signal kept, against scAR | far ahead (1 to 4% lost against 18 to 26%) | section 1a |
 | Speed | level with SoupX, faster than the other four on this dataset | section 1a |
-| Accuracy on data with experimental ground truth | unknown, not run | species and genotype mixture scripts exist, data unreachable |
+| Ambient removal with experimental ground truth (species mixture) | behind DecontX and the published CellBender (0.42 against 0.72 to 0.73); ahead of SoupX run here (0.35), level with published SoupX (0.42); contamination estimated at about half its true level | section 1c |
+| Endogenous counts kept with experimental ground truth | level with SoupX on the species mixture (0.991 against 0.992), ahead of DecontX (0.983); best of those run on the Smart-seq2 negative control (0.998 against SoupX 0.989, DecontX 0.952) | section 1c |
+| Genotype mixture (kidney) and medium/high-complexity sets of the same paper | unknown, not run | `kidney_mixture.R` exists |
 | Robust to empties that over-represent some genes | behind: not detected | README, Known limitations |
 
 ## 7. Novelty

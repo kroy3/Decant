@@ -337,7 +337,13 @@ agreement with another estimator, not with the truth. Three of eleven clusters
 rho and borrowed it. The two-sided soup/cell mismatch tripwire raised a false
 alarm on this data and was retired (see Known limitations).
 
-### Species mixtures (not yet run)
+### Species mixtures
+
+One species mixture (10x 20k HGMM) has been run, with the metrics of
+Cargnelli, Nielsen & Madsen (2026). Results are in `validation/BENCHMARK.md`,
+section 1c: Decant retain 0.991, removal 0.415. Its contamination estimate is
+about half the cross-species truth, so it under-removes compared with
+DecontX (0.722). The script below has not yet been run.
 
 `validation/species_mix.R` scores Decant on public 10x human/mouse mixtures
 (`hgmm_1k_v3`, `hgmm_5k_v3`, `hgmm_10k_v3`), where every cross-species read is
