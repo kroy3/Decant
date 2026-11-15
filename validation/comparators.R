@@ -52,13 +52,19 @@ run_soupx <- function(cells, empties, clusters, soup_range = NULL, force_accept 
   if (!requireNamespace("SoupX", quietly = TRUE)) return(NULL)
   tryCatch({
     d <- .name_droplets(.as_dgc(cells), .as_dgc(empties))
-    tod <- cbind(d$cells, d$empties)
-    sc <- SoupX::SoupChannel(tod, d$cells, calcSoupProfile = FALSE)
     ## SoupX's default soupRange is c(0, 100); the upper bound is raised only
     ## if the supplied empties are larger than that, so that the droplets the
     ## caller has already declared empty are the ones used.
-    hi <- max(100, max(Matrix::colSums(d$empties)) + 1)
-    sc <- SoupX::estimateSoup(sc, soupRange = soup_range %||% c(0, hi))
+    rng <- soup_range %||% c(0, max(100, max(Matrix::colSums(d$empties)) + 1))
+    ## Same arithmetic as SoupX::estimateSoup (rowSums / sum over the droplets
+    ## with soupRange[1] < nUMI < soupRange[2]), computed from the empties
+    ## alone: building a SoupChannel over millions of droplets does not fit in
+    ## 16 GB, and estimateSoup uses nothing but these row sums.
+    ne <- Matrix::colSums(d$empties)
+    w <- which(ne > rng[1] & ne < rng[2])
+    cnt <- Matrix::rowSums(d$empties[, w, drop = FALSE])
+    sc <- SoupX::SoupChannel(d$cells, d$cells, calcSoupProfile = FALSE)
+    sc <- SoupX::setSoupProfile(sc, data.frame(row.names = rownames(d$cells), est = cnt / sum(cnt), counts = cnt))
     sc <- SoupX::setClusters(sc, stats::setNames(as.character(clusters), colnames(d$cells)))
     ## Defaults first. If autoEstCont finds no marker genes it says to "reduce
     ## tfidfMin or soupQuantile"; follow that once, with one fixed setting
@@ -83,7 +89,16 @@ run_decontx <- function(cells, empties, clusters) {
   tryCatch({
     d <- .name_droplets(.as_dgc(cells), .as_dgc(empties))
     f <- utils::getFromNamespace("decontX", pkg)
-    r <- f(x = d$cells, z = as.character(clusters), background = d$empties, verbose = FALSE)
+    ## decontX uses the background only through its row sums (eta_tilda <-
+    ## rowSums(countsBackground)), so two columns holding those row sums are
+    ## exactly equivalent and avoid holding millions of droplets twice. Two,
+    ## not one: decontX subsets the background by batch without drop = FALSE.
+    rs <- as.numeric(Matrix::rowSums(d$empties)); half <- floor(rs / 2)
+    bg <- methods::as(matrix(c(half, rs - half), ncol = 2,
+                             dimnames = list(rownames(d$cells), c("background_sum_1", "background_sum_2"))),
+                      "CsparseMatrix")
+    bg <- methods::as(methods::as(bg, "generalMatrix"), "dMatrix")
+    r <- f(x = d$cells, z = as.character(clusters), background = bg, verbose = FALSE)
     list(corrected = r$decontXcounts, rho = r$contamination, note = pkg)
   }, error = function(e) list(error = conditionMessage(e)))
 }

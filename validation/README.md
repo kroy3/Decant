@@ -7,8 +7,10 @@ Run from the repo root. Results go to `validation/results/`.
 | `de_comparators.R` | simulated case/control study | run; results in `results/de_comparators.csv` |
 | `pbmc_soupx.R` | none (10x PBMC 4k bundled with SoupX; compared with SoupX's published estimates and marker specificity) | run; results in `results/pbmc_soupx_*.csv` |
 | `benchmark_all.R` + `py/run_python_tools.py` | none (PBMC 4k); six tools | run; results in `results/benchmark_all_pbmc.csv` |
-| `madsen_benchmark.R` | species mixing; the two scores of Cargnelli, Nielsen & Madsen (2026) | self-test run on a synthetic mixture; `low_complexity` **not yet run** (needs `cf.10xgenomics.com`) |
-| `species_mix.R` | 10x human/mouse mixtures | **not yet run** (needs `cf.10xgenomics.com`) |
+| `madsen_benchmark.R` | species mixing; the two scores of Cargnelli, Nielsen & Madsen (2026) | self-test run on a synthetic mixture; `low_complexity` run; results in `results/madsen_low_complexity.csv` (BENCHMARK.md section 1c) |
+| `madsen_rho_check.R` | cross-species reads give each cell's contamination | run; results in `results/madsen_low_complexity_rho.csv` |
+| `segerstolpe_control.R` | Smart-seq2 negative control (E-MTAB-5061), no ambient RNA | run; results in `results/segerstolpe_control*.csv` |
+| `species_mix.R` | 10x human/mouse mixtures | **not yet run** |
 | `kidney_mixture.R` | Janssen et al. 2023 genotype mixture | **not yet run** (needs `zenodo.org`) |
 
 ## Comparator wrappers (`comparators.R`)
