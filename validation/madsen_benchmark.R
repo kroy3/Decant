@@ -145,6 +145,7 @@ if (mode == "low_complexity") {
     cl <- seurat_clusters(cells, resolution = 0.1)
     prep <- list(cells = cells, empties = empties, sp = sp, cl = cl)
     saveRDS(prep, prep_f)
+    rm(raw, ed, is_cell, tot, keep, hfrac, gs); invisible(gc())
   }
   cells <- prep$cells; empties <- prep$empties; sp <- prep$sp; cl <- prep$cl
   cat(sprintf("cells %d (human %d, mouse %d), empties %d, clusters %d\n",
