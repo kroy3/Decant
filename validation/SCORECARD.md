@@ -12,8 +12,9 @@ against ground truth. This is not a finished CellBender replacement and does not
 claim to be one. Its value is that every capability in it has been shown to earn
 its place, and the things that did not are documented as failures.
 
-> "Decant" is a working placeholder name. Check CRAN, Bioconductor, and GitHub
-> for collisions before any release.
+> Name check (November 2026): no CRAN or Bioconductor package is called
+> Decant. Two unrelated single-cell Python projects on GitHub are named DECANT
+> (drug-perturbation learning and batch correction).
 
 ## Install and run
 
