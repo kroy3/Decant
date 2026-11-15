@@ -79,6 +79,7 @@ seurat_clusters <- function(cells, resolution = 0.1) {
 run_tools <- function(cells, empties, clusters, cell_species) {
   tools <- list(Decant = run_decant, SoupX = run_soupx, DecontX = run_decontx)
   do.call(rbind, lapply(names(tools), function(nm) {
+    invisible(gc()); message("running ", nm)
     t0 <- Sys.time(); r <- tools[[nm]](cells, empties, clusters)
     secs <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
     if (is.null(r)) return(data.frame(method = nm, retain = NA, removal = NA, seconds = NA, note = "not installed"))
@@ -86,6 +87,7 @@ run_tools <- function(cells, empties, clusters, cell_species) {
     corr <- methods::as(methods::as(r$corrected, "CsparseMatrix"), "dgCMatrix")
     dimnames(corr) <- dimnames(cells)
     sc <- madsen_scores(cells, corr, cell_species)
+    message(sprintf("  %s: retain %.3f, removal %.3f, %.0f s", nm, sc[["retain"]], sc[["removal"]], secs))
     data.frame(method = nm, retain = sc[["retain"]], removal = sc[["removal"]], seconds = secs, note = r$note %||% "")
   }))
 }
@@ -122,20 +124,30 @@ if (mode == "low_complexity") {
     utils::download.file(paste0("https://cf.10xgenomics.com/samples/cell-exp/6.1.0/20k_hgmm_3p_HT_nextgem_Chromium_X/",
                                 basename(f)), f, mode = "wb")
   }
-  raw <- Seurat::Read10X_h5(f); if (is.list(raw)) raw <- raw[["Gene Expression"]]
-  raw <- raw[Matrix::rowSums(raw) > 0, ]
-  set.seed(1)
-  ed <- DropletUtils::emptyDrops(raw, lower = 500)
-  is_cell <- !is.na(ed$FDR) & ed$FDR <= 0.05
-  cells <- raw[, is_cell]
-  gs <- genome_of(rownames(cells))
-  hfrac <- Matrix::colSums(cells[gs == "human", ]) / Matrix::colSums(cells)
-  keep <- hfrac >= 0.75 | hfrac <= 0.25
-  cells <- cells[, keep]; sp <- ifelse(hfrac[keep] >= 0.75, "human", "mouse")
-  ## empties: SoupX's default range, among droplets emptyDrops did not call
-  tot <- Matrix::colSums(raw)
-  empties <- raw[, !is_cell & tot > 0 & tot <= 100]
-  cl <- seurat_clusters(cells, resolution = 0.1)
+  ## emptyDrops on ~3M barcodes is the slow step; cache the preprocessed inputs
+  prep_f <- file.path(DATA, "low_complexity_prep.rds")
+  if (file.exists(prep_f)) {
+    prep <- readRDS(prep_f)
+  } else {
+    raw <- Seurat::Read10X_h5(f); if (is.list(raw)) raw <- raw[["Gene Expression"]]
+    raw <- raw[Matrix::rowSums(raw) > 0, ]
+    set.seed(1)
+    ed <- DropletUtils::emptyDrops(raw, lower = 500)
+    is_cell <- !is.na(ed$FDR) & ed$FDR <= 0.05
+    cells <- raw[, is_cell]
+    gs <- genome_of(rownames(cells))
+    hfrac <- Matrix::colSums(cells[gs == "human", ]) / Matrix::colSums(cells)
+    keep <- hfrac >= 0.75 | hfrac <= 0.25
+    cells <- cells[, keep]; sp <- ifelse(hfrac[keep] >= 0.75, "human", "mouse")
+    ## empties: SoupX's default range, among droplets emptyDrops did not call
+    tot <- Matrix::colSums(raw)
+    empties <- raw[, !is_cell & tot > 0 & tot <= 100]
+    cl <- seurat_clusters(cells, resolution = 0.1)
+    prep <- list(cells = cells, empties = empties, sp = sp, cl = cl)
+    saveRDS(prep, prep_f)
+    rm(raw, ed, is_cell, tot, keep, hfrac, gs); invisible(gc())
+  }
+  cells <- prep$cells; empties <- prep$empties; sp <- prep$sp; cl <- prep$cl
   cat(sprintf("cells %d (human %d, mouse %d), empties %d, clusters %d\n",
               ncol(cells), sum(sp == "human"), sum(sp == "mouse"), ncol(empties), length(unique(cl))))
   r <- run_tools(cells, empties, cl, sp)
