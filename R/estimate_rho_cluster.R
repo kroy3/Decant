@@ -217,21 +217,7 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
   ## data sets and a true rho near zero still have a candidate set
   top <- ok & e >= sort(e[ok], decreasing = TRUE)[min(n_top, sum(ok))]
   for (it in seq_len(max_iter)) {
-    if (overdispersed) {
-      phi <- .lower_half_dispersion(X, e, A, rho, min_disp_expected)
-      ## bootstrap: in large clusters the first (Poisson) pass can reject
-      ## almost every gene, leaving too few to measure the spread from, so the
-      ## fit never leaves the Poisson test. Then measure it from the lowest
-      ## quarter (by ratio) of the well-covered genes, which are absent genes.
-      if (phi == 0 && sum(A & rho * e >= min_disp_expected) < 20) {
-        cand <- ok & rho * e >= min_disp_expected & X > 0
-        if (sum(cand) >= 80) {
-          r <- X[cand] / e[cand]
-          low <- which(cand)[r <= stats::quantile(r, 0.25)]
-          phi <- .lower_half_dispersion(X, e, seq_along(X) %in% low, rho, min_disp_expected)
-        }
-      }
-    }
+    if (overdispersed) phi <- .lower_half_dispersion(X, e, A, rho, min_disp_expected)
     cons <- ok & if (phi > 0)
       stats::pnbinom(X - 1, size = 1 / phi, mu = rho * e, lower.tail = FALSE) > alpha
     else stats::ppois(X - 1, rho * e, lower.tail = FALSE) > alpha
