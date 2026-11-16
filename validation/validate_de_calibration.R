@@ -90,11 +90,16 @@ if (!file.exists(pbf)) {
       d <- split_droplets(raw, cells = bc)
     }
     colnames(d$cells) <- paste0(s, "_", colnames(d$cells))
-    cells[[s]] <- d$cells; empties[[s]] <- d$empties
+    ## the soup needs only per-gene totals over the empty droplets: keep a
+    ## one-column matrix of row sums (soup_eb gives the same result)
+    cells[[s]] <- d$cells
+    empties[[s]] <- Matrix::Matrix(Matrix::rowSums(d$empties), ncol = 1, sparse = TRUE,
+                                   dimnames = list(rownames(d$empties), NULL))
     cat(s, ": cells", ncol(d$cells), " empties", ncol(d$empties), "\n")
     rm(raw, d); invisible(gc(verbose = FALSE))
   }
-  so <- Seurat::CreateSeuratObject(do.call(cbind, cells), min.cells = 10)
+  X <- do.call(cbind, cells); rm(cells); invisible(gc(verbose = FALSE))
+  so <- Seurat::CreateSeuratObject(X, min.cells = 10)
   so <- subset(so, nFeature_RNA >= 300)
   so <- Seurat::NormalizeData(so, verbose = FALSE)
   so <- Seurat::FindVariableFeatures(so, nfeatures = 2000, verbose = FALSE)
@@ -109,9 +114,11 @@ if (!file.exists(pbf)) {
   names(lab) <- sub("^g", "", rownames(sc))
   ct <- stats::setNames(lab[as.character(so$seurat_clusters)], colnames(so))
   print(table(sub("_.*", "", names(ct)), ct))
+  ## pseudobulks use the typed cells (>= 300 genes)
+  rm(so); invisible(gc(verbose = FALSE))
   pb <- lapply(stats::setNames(D$types, D$types), function(t) sapply(samples, function(s) {
-    cs <- intersect(names(ct)[ct == t], colnames(cells[[s]]))
-    Matrix::rowSums(cells[[s]][, cs, drop = FALSE])
+    cs <- names(ct)[ct == t & startsWith(names(ct), paste0(s, "_"))]
+    Matrix::rowSums(X[, cs, drop = FALSE])
   }))
   saveRDS(list(pb = pb, empties = empties, celltypes = ct), pbf)
 }
