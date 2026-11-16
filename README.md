@@ -17,7 +17,9 @@ expression and diagnostics, chapter by chapter.
    then test. Decant puts each sample's measured ambient RNA, and its
    uncertainty, inside the negative binomial model:
    `mu = native expression + ambient`. It supports covariates and is robust to
-   outlier samples in large cohorts.
+   outlier samples in large cohorts. **On real data its current default is
+   not calibrated** (it reports genes when there is no effect); see
+   [Limits](#limits) before using it.
 2. **Correction that keeps what cannot be ambient** (`bayes_cell`). Counts far
    above what ambient RNA could produce in a cell (doublets, rare expressers)
    keep their molecules; only the expected ambient share is removed.
@@ -90,6 +92,13 @@ Nominal false-positive rate 0.05. In the 6 vs 6 study, correcting with
 Decant's `bayes` rule and then running edgeR was as good as `ambient_de`;
 `ambient_de` is the option that stays valid with covariates such as batch.
 
+**These are simulations, and they do not carry over to real data.** On a real
+Alzheimer's study (GSE272082, 5 vs 4 donors), with disease labels shuffled
+between donors so that there is nothing to find, `ambient_de` with default
+settings reported genes in 40 of 48 shuffles (up to 574 genes); naive edgeR
+did so in 1 of 48. The fix is in progress. Details:
+[`validation/BENCHMARK.md`](validation/BENCHMARK.md), section 3b.
+
 ## Install
 
 ```r
@@ -132,8 +141,14 @@ subset(res, ambient_driven)   # hits a standard pipeline reports that the soup e
   cannot be estimated from expression. Decant then warns and asks for `rho`;
   the number it reports in that case is not reliable.
 - Memory: about 9.5 GB for 11,000 cells and 1.9 million empty droplets.
-- The DE results are simulated, from a simulator that follows the model's own
-  ambient mechanism.
+- **`ambient_de()` is not calibrated on real data.** On shuffled labels it
+  reports many false hits (section 3b of
+  [`validation/BENCHMARK.md`](validation/BENCHMARK.md)). Until this is fixed,
+  do not report its hits as findings; a standard pseudobulk test is the
+  conservative choice. Switching off `joint_rho` removes the false hits only
+  by over-subtracting and losing power, so it is not a workaround.
+  The other DE results are simulated, from a simulator that follows the
+  model's own ambient mechanism.
 - Empty droplets that over-represent genes the cells also express are not
   detected and make the contamination estimate too low.
 

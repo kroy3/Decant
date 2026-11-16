@@ -383,6 +383,68 @@ simulation the gain from modelling the ambient term inside the test, over a
 good correction, is within noise. SoupX needed its `soupQuantile = 0.5`
 fallback on every sample.
 
+## 3b. Calibration of `ambient_de` on real case/control data
+
+Script: `validate_de_calibration.R`; results:
+`results/de_calibration_gse272082_pfc.csv`.
+
+Data: GSE272082 (sporadic early-onset Alzheimer's disease, 10x Multiome,
+gene expression used), prefrontal cortex, 5 control and 4 patient donors,
+about 31,600 nuclei, 340,000 to 620,000 empty droplets per sample. Cell types
+from a fixed recipe (Seurat clustering, clusters labelled by marker genes).
+Pseudobulk per donor for microglia (17 to 606 nuclei per donor) and
+oligodendrocytes (303 to 2,040).
+
+Disease labels were shuffled between donors 24 times (the same 24 shuffles
+for every method; at most 2 of the 4 true patients in the patient arm), so
+apart from what those donors carry there is no effect to find. A calibrated
+test reports a hit in few shuffles and about 1% of genes at p < 0.01.
+
+| cell type | method | shuffles with a hit (of 24) | median hits | max hits | median share p < 0.01 |
+|---|---|---|---|---|---|
+| microglia | naive edgeR | 1 | 0 | 1 | 0.007 |
+| | `ambient_de`, default | 21 | 4 | 90 | 0.016 |
+| | `ambient_de`, `joint_rho = FALSE` | 0 | 0 | 0 | 0.003 |
+| oligodendrocytes | naive edgeR | 0 | 0 | 0 | 0.004 |
+| | `ambient_de`, default | 19 | 3 | 574 | 0.011 |
+| | `ambient_de`, `joint_rho = FALSE` | 0 | 0 | 0 | 0.001 |
+
+On the true labels, `ambient_de` (default) reported 20 genes in microglia
+and 293 in oligodendrocytes; naive edgeR 0 and 3. Against the
+shuffles, the true-label counts are not unusual, so **they cannot be read as
+disease effects.**
+
+**With default settings, `ambient_de` is not calibrated on these data.** It
+reports hits in most shuffles; a few shuffles give hundreds. Naive edgeR is
+conservative. Switching off the Huber down-weighting (`robust = FALSE`) made
+no difference.
+
+**Switching off `joint_rho` removes every hit, but it is not a fix.**
+Without it, each sample's ambient fraction comes from that sample's
+pseudobulk alone, which for a single cell type is not identifiable: for
+microglia it gave 0.83 (NIH16) and 0.22 (NIH10), for oligodendrocytes 0.78
+(NIH10) and 0.22 (NIH04), against 0.02 to 0.06 for the other samples. Most of
+those samples' counts are then treated as ambient, and the test loses power:
+the share of genes at p < 0.01 falls to 0.1 to 0.3%, below the 1% a
+calibrated test gives. `joint_rho` gives plausible values (0.02 to 0.065) but
+reports their standard errors from a Poisson model (0.0001 to 0.004), and
+picks its absent genes with a Poisson test. Whether the inflation comes from
+that understated uncertainty or from the test itself is being checked.
+
+**Until this is resolved, `ambient_de` hits on real data should not be
+reported as findings.** A standard pseudobulk test is the conservative
+choice; running the same shuffled-label check on your own data shows
+whether a method is calibrated there.
+
+Limits of this check: one dataset, two cell types, 9 donors (so the shuffles
+are not pure nulls).
+
+This dataset was first used for a pre-registered test of whether the genes
+`ambient_de` flags as ambient-driven have closed chromatin in the tested cell
+type (from the ATAC side of the same nuclei). That test could not be run:
+naive edgeR found 0 genes in microglia and 3 in oligodendrocytes, so there
+was nothing to flag.
+
 ## 4. What each tool does
 
 | | Decant | SoupX | DecontX | CellBender | scAR | AmbiDose |
@@ -444,6 +506,7 @@ against the papers before being cited.
 | Never adds counts | level with SoupX, DecontX, CellBender, AmbiDose; ahead of scAR (727k UMIs added) | section 1a |
 | Per-cell contamination estimate | ahead of SoupX (one value per channel); level with DecontX, CellBender, AmbiDose by design; accuracy of the per-cell values untested on real data | section 4 |
 | DE without leakage, power kept | level with Decant-correct-then-edgeR; slightly ahead of SoupX-then-edgeR (4 to 7 points of power); simulated only | section 3 |
+| DE calibration on real data (shuffled labels) | **behind naive edgeR**: default `ambient_de` reports hits in 40 of 48 shuffles, naive edgeR in 1; one dataset | section 3b |
 | DE with covariates in large cohorts | ahead of subtract-then-rank-test in simulation | `experiments/large_cohort_calibration/` |
 | Removal of ambient-compatible foreign counts, against DecontX | behind by 5 to 9 points on all three sets | section 1a |
 | Leaving counts that cannot be ambient (likely doublets) | ahead of DecontX, AmbiDose, scAR; level with SoupX and CellBender | section 1a |
