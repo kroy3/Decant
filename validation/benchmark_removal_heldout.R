@@ -84,12 +84,18 @@ for (ds in DATASETS) {
     }
     cmp <- do.call(rbind, cmp); saveRDS(cmp, cf); cmp
   }
+  ## single-sample decant() reads the empties only through their per-gene
+  ## totals (ambient_global), so keep just those: identical output, and a
+  ## 5k-cell channel with 1.1M empty droplets fits in memory
+  x$empties <- Matrix::Matrix(Matrix::rowSums(x$empties), ncol = 1, sparse = TRUE,
+                              dimnames = list(rownames(x$cells), NULL))
+  invisible(gc())
   t0 <- Sys.time()
   res <- suppressWarnings(do.call(decant, c(list(x$cells, x$empties, clusters = x$clusters, correction = CORR),
                                              if (!is.null(CAPT)) list(cap_test = CAPT))))
   secs <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
   cm <- res$corrected; dimnames(cm) <- dimnames(x$cells)
-  stopifnot(all(cm <= x$cells))   # never adds counts
+  stopifnot(max(cm - x$cells) <= 1e-9)   # never adds counts (sparse check)
   sc <- scores(x$cells, cm, x$gene_sp, x$cell_sp)
   rows[[ds]] <- rbind(comp, data.frame(dataset = ds, method = paste0("Decant (", TAG, ")"),
                                        retain = sc[["retain"]], removal = sc[["removal"]], seconds = secs,
