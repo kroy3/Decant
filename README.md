@@ -17,9 +17,10 @@ expression and diagnostics, chapter by chapter.
    then test. Decant puts each sample's measured ambient RNA, and its
    uncertainty, inside the negative binomial model:
    `mu = native expression + ambient`. It supports covariates and is robust to
-   outlier samples in large cohorts. On two real datasets with shuffled
-   labels it reports false hits about as rarely as standard edgeR (an
-   earlier version did not; see [Limits](#limits)).
+   outlier samples in large cohorts. **Status: experimental.** With shuffled
+   labels on three real datasets it now rarely reports false hits, a little
+   more often than standard edgeR; it has not yet been shown to beat a
+   standard test on real data (see [Limits](#limits)).
 2. **Correction that keeps what cannot be ambient** (`bayes_cell`). Counts far
    above what ambient RNA could produce in a cell (doublets, rare expressers)
    keep their molecules; only the expected ambient share is removed.
@@ -41,13 +42,16 @@ numbers are the paper's own, not a run here.
 
 | | Decant | SoupX | DecontX | CellBender (published) |
 |---|---|---|---|---|
-| human/mouse mixture: retain | 0.989 | 0.992 | 0.983 | 0.996 |
-| human/mouse mixture: **removal** | **0.616** | 0.345 | **0.722** | 0.729 |
+| human/mouse mixture 20k: retain | 0.989 | 0.992 | 0.983 | 0.996 |
+| human/mouse mixture 20k: **removal** | **0.616** | 0.345 | **0.722** | 0.729 |
+| held-out mixtures 1k, 5k, 10k: retain (mean) | **0.992** | 0.982 | 0.984 | not run |
+| held-out mixtures 1k, 5k, 10k: **removal** (mean) | **0.444** | 0.679 | **0.637** | not run |
 | Smart-seq2, no ambient RNA: retain | 0.998 | 0.989 | 0.952 | 0.797 |
 
-Decant still removes about 10 points less ambient RNA than DecontX or
-CellBender on the mixture, and keeps slightly more of the cells' own counts
-than DecontX. It removes almost nothing where there is nothing to remove.
+**Decant removes less ambient RNA than DecontX: 10 points less on the 20k
+mixture and 19 points less on held-out mixtures**, where its contamination
+estimate is too low. It keeps more of the cells' own counts than DecontX and
+SoupX. It removes almost nothing where there is nothing to remove.
 Its contamination estimate now matches the cross-species truth (median 0.027
 against 0.029; before this release 0.013). That mixture was used to find the
 estimator's flaw; results on held-out mixtures are in
@@ -92,21 +96,34 @@ Nominal false-positive rate 0.05. In the 6 vs 6 study, correcting with
 Decant's `bayes` rule and then running edgeR was as good as `ambient_de`;
 `ambient_de` is the option that stays valid with covariates such as batch.
 
-**Calibration on real data.** Two real single-nucleus datasets, with
-condition labels shuffled between donors so that there is nothing to find
-(24 shuffles each, microglia and oligodendrocytes):
+**Calibration on real data.** Condition labels shuffled between donors so
+that there is nothing to find, 24 shuffles per cell type. A calibrated test
+reports a hit in a few shuffles, and few genes when it does.
 
-| | GSE272082, AD vs control: shuffles with a hit (of 48) | GSE190015, nine controls: shuffles with a hit (of 48) | most hits in one shuffle |
+| data, cell types | `ambient_de`: shuffles with a hit | most hits in one shuffle | naive edgeR: shuffles with a hit |
 |---|---|---|---|
-| **`ambient_de`** | **4** | **5** | **9** |
-| naive edgeR | 1 | 3 | 1 |
-| `ambient_de` before this release | 40 | 42 | 574 |
+| GSE272082 brain, AD vs control; microglia, oligodendrocytes | 4 of 48 | 9 | 1 of 48 |
+| GSE190015 brain, nine controls; microglia, oligodendrocytes | 5 of 48 | 1 | 3 of 48 |
+| GSE273597 pancreas, T1D vs control; acinar | 1 of 24 | 1 | 0 of 24 |
+| GSE273597 pancreas; ductal | 4 of 24 (before this release: 5, up to **2,300** genes) | 1 | 0 of 24 |
+| GSE273597 pancreas; alpha | 6 of 24 | 5 | 4 of 24 |
 
-The earlier version paired each gene's own NB dispersion with a
-quasi-likelihood test, which counts that gene's extra variance twice; it now
-uses the trended dispersion, as edgeR does. GSE190015 was not used to find
-or fix the problem. Details:
-[`validation/BENCHMARK.md`](validation/BENCHMARK.md), section 3b.
+On the pancreas data, for 6 of 23 donors the ductal ambient fraction came out
+at 0.86 to 0.96 (the others 0.02 to 0.16): a single cell type's pseudobulk
+cannot always identify its own ambient fraction. The model treated most of
+those donors' counts as soup, and splits that separated them gave over a
+thousand false hits. `ambient_de` now replaces a value above `max_rho` (0.5)
+with the median of the other samples, adds their spread to its uncertainty,
+and warns. That removed the false hits; it changed nothing on the two brain
+datasets. The pancreas data were used to find the problem, so they do not
+show the guard works elsewhere. `ambient_de` is slightly more liberal than
+naive edgeR overall (hits in 20 of 168 shuffles against 8, never more than 9
+genes). Details: [`validation/BENCHMARK.md`](validation/BENCHMARK.md),
+sections 3b and 3c.
+
+An earlier problem, the cause of hits in most shuffles on the brain data
+(82 of 96 tests, up to 574 genes), was fixed by using edgeR's trended
+dispersion (section 3b).
 
 ## Install
 
@@ -150,12 +167,16 @@ subset(res, ambient_driven)   # hits a standard pipeline reports that the soup e
   cannot be estimated from expression. Decant then warns and asks for `rho`;
   the number it reports in that case is not reliable.
 - Memory: about 9.5 GB for 11,000 cells and 1.9 million empty droplets.
-- On real data, `ambient_de()` has been checked for calibration only (two
-  datasets, shuffled labels). That it removes ambient-driven hits that a
-  standard test reports is shown in simulation, from a simulator that
-  follows the model's own ambient mechanism; there is no real-data ground
-  truth for it yet. Versions before this release were not calibrated on
-  real data; rerun analyses made with them.
+- **`ambient_de()` is experimental.** On real data it has been checked for
+  calibration only (three datasets, shuffled labels); before this release it
+  failed in pancreas ductal cells. That it removes
+  ambient-driven hits a standard test reports is shown only in simulation,
+  from a simulator that follows the model's own mechanism. Two pre-registered
+  real-data tests (pancreas, T1D vs control; brain regions within donors)
+  could not show it: the standard test found no ambient-driven hits to
+  remove (`validation/BENCHMARK.md`, 3c and 3d). Until there is real-data evidence, report `ambient_de` hits together
+  with a standard pseudobulk test. Analyses made with earlier versions
+  should be rerun.
 - Empty droplets that over-represent genes the cells also express are not
   detected and make the contamination estimate too low.
 

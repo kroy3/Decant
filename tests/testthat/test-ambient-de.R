@@ -160,3 +160,23 @@ test_that("ambient-dominated genes are skipped and reported", {
   expect_length(attr(all_in, "ambient_dominated"), 0)
   expect_setequal(setdiff(all_in$gene, r$gene), attr(r, "ambient_dominated"))
 })
+
+test_that("an implausible per-sample ambient fraction is replaced, with a warning", {
+  ## the guard itself
+  g <- .guard_rho(c(0.04, 0.05, 0.90, 0.06), rep(1e-6, 4), max_rho = 0.5)
+  expect_equal(g$imputed, c(FALSE, FALSE, TRUE, FALSE))
+  expect_equal(g$rho[3], 0.05)
+  expect_gt(g$var[3], stats::var(c(0.04, 0.05, 0.06)))
+  expect_equal(g$rho[-3], c(0.04, 0.05, 0.06))
+  expect_error(.guard_rho(c(0.04, 0.9, 0.95), rep(0, 3), 0.5), "cannot be estimated")
+  ## in ambient_de: a sample whose pseudobulk is nearly all soup
+  st <- simulate_ambient_study(seed = 3, G = 600, n_cells = 500)
+  Y <- pb_R(st)
+  sp <- soup_eb(st$empties)
+  Y[, 2] <- stats::rpois(nrow(Y), sp$soup[, 2] * sum(Y[, 2]))
+  expect_warning(res <- ambient_de(Y, st$empties, model.matrix(~st$cond)), "implausible ambient fraction")
+  s <- attr(res, "samples")
+  expect_true(s$ambient_frac_imputed[2])
+  expect_lte(max(s$ambient_frac), 0.5)
+  expect_equal(sum(s$ambient_frac_imputed), 1)
+})

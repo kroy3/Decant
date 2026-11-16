@@ -322,6 +322,126 @@ used to make any design decision**; they are the cleanest evidence above.
 **Memory.** `decant()` peaks near 9.5 GB on the 10k channel (10,699 cells,
 1.9 million empty droplets), about the same as before these changes.
 
+## 1e. Ambient removal on held-out mixtures, and a change that failed
+
+Script: `benchmark_removal_heldout.R` (the per-gene retain/removal scorer of
+section 1c, on the hgmm 1k, 5k and 10k mixtures; clusters by the same Seurat
+recipe as the 20k mixture). Results: `results/removal_heldout_current.csv`,
+`results/removal_heldout_cap_cluster.csv`. The 20k mixture is the
+development set: used below to diagnose, not to judge.
+
+**Held-out, current default (`bayes_cell`).** Decant removes the least and
+keeps the most:
+
+| mixture | Decant retain | Decant removal | DecontX retain | DecontX removal | SoupX retain | SoupX removal |
+|---|---|---|---|---|---|---|
+| 1k | 0.998 | 0.489 | 0.995 | 0.653 | 0.994 | 0.767 |
+| 5k | 0.993 | 0.464 | 0.988 | 0.656 | 0.988 | 0.609 |
+| 10k | 0.986 | 0.378 | 0.969 | 0.602 | 0.963 | 0.662 |
+| mean | 0.992 | **0.444** | 0.984 | **0.637** | 0.982 | **0.679** |
+
+**On held-out data the removal gap to DecontX is 19 points, not the 10 seen
+on the 20k mixture.**
+
+**Diagnosis (20k, development set).**
+
+| rule | rho | retain | removal |
+|---|---|---|---|
+| subtract | estimated / true | 0.997 / 0.996 | 0.048 / 0.049 |
+| redistribute | estimated / true | 0.994 / 0.994 | 0.067 / 0.069 |
+| bayes | estimated / true | 0.983 / 0.982 | 0.718 / 0.741 |
+| bayes_cell (default) | estimated / true | 0.989 / 0.988 | 0.616 / 0.639 |
+| bayes_cell, no cap | estimated / true | 0.983 / 0.982 | 0.718 / 0.741 |
+
+- Estimation costs about 2 points on the 20k mixture (per-cell rho is close
+  to the truth there: median 0.027 vs 0.029, Spearman 0.985).
+- Allocation costs about 10: `bayes_cell`'s cap. An entry whose count
+  exceeds the 99.9% Poisson quantile of its ambient expectation keeps all but
+  that expectation. For a gene whose expected ambient count per cell is below
+  0.001 the quantile is 0, so every single count is kept. Foreign genes with
+  1 or 2 counts had 0.14 to 0.18 removal, those with over 100 counts 0.83.
+- The cap is also what keeps real signal: without it retain falls from
+  0.989 to 0.983. The single counts it keeps of foreign genes and of the
+  cell's own rarely expressed genes look the same to a per-entry test.
+
+**The change tried** (`cap_test = "cluster"`): correct the cap's test for the
+number of cells of the cluster it is applied to (Bonferroni; no new
+constant). On the 20k mixture it gave retain 0.983, removal 0.717: it removes
+the cap's effect on both sides.
+
+| held-out | retain 1k / 5k / 10k | removal 1k / 5k / 10k | mean removal |
+|---|---|---|---|
+| current | 0.998 / 0.993 / 0.986 | 0.489 / 0.464 / 0.378 | 0.444 |
+| `cap_test = "cluster"` | 0.997 / 0.990 / **0.974** | 0.534 / 0.540 / 0.484 | 0.519 |
+| DecontX | 0.995 / 0.988 / 0.969 | 0.653 / 0.656 / 0.602 | 0.637 |
+
+**It fails the pre-stated criteria** (mean removal within 0.03 of DecontX:
+it is 0.118 behind; retain >= 0.985 on every mixture: 0.974 on 10k). The
+default is unchanged; `cap_test = "cluster"` stays available as a documented
+trade-off (more removal, less retained signal). The negative-control and
+PBMC checks were not run, as they could not change the decision.
+
+**What was learned.** On the held-out mixtures Decant's contamination
+estimate is low (mean 0.0105 vs truth 0.014 on 1k, 0.0295 vs 0.040 on 5k,
+0.021 vs 0.062 on 10k; section 1d), unlike on the 20k mixture. The removal
+gap there is mostly estimation, not allocation: the allocation fix recovered
+7.5 of 19 points. The next step is the estimator on these designs, not the
+correction rule.
+
+## 1f. Contamination estimate on the 10k mixture: diagnosis, and a change that failed
+
+The 10k mixture is development data from here on; held-out data judge.
+
+**Diagnosis (hgmm 10k, Seurat clusters).** The absent-gene set collapses.
+Each cluster has 5,000 to 13,000 genes that are truly absent and well
+covered (the other species' genes), but the fixed point kept 1 to 6. Four of
+five clusters were flagged low-power and borrowed one value (0.027) from a
+104-cell cluster; truths 0.026 to 0.066, per-cell Spearman 0.66.
+
+- The overdispersion term is estimated from the current absent set. On the
+  first pass that set is empty, so it is 0 and the test is Poisson. Absent
+  genes scatter 2 to 4 times more than Poisson (log-ratio SD 0.43 to 0.76
+  against 0.21 to 0.30), so 62 to 77% of them were rejected and the spread
+  never became estimable.
+- The empty droplets do not match the cells' ambient profile: in the human
+  cluster the typical mouse gene sits at twice the true rho (median ratio
+  0.052 against 0.026); only the count-weighted average is right, because
+  the most abundant soup genes sit low.
+- The fixed point only rejects genes above the current rho, so it settles on
+  whichever self-consistent value is nearest its start. Started at the median
+  ratio of well-covered genes instead of the lowest decile, it found
+  6,000 to 13,000 absent genes and rho within 10% of each cluster's
+  count-weighted truth.
+
+**The change tried.** As the default, the high start failed `gate_rho`
+(about 0.68 whatever the truth in its stress setting: it pulls expressed
+genes into the absent set). Used only when the low start's absent set has
+collapsed, and accepted only if well covered and at most 0.5, it passed
+`gate_rho`; on the 10k mixture (development) median 0.036 vs truth 0.038,
+Spearman 0.98. With it, a result was also declared not identifiable (rho NA,
+counts not corrected) when most cells sit in clusters without usable
+evidence, instead of only when all do.
+
+| check | current | candidate | bar |
+|---|---|---|---|
+| hgmm 5k full, held out: median vs truth 0.0256 | 0.0129 (-50%) | 0.0145 (**-43%**) | within 25% |
+| hgmm 5k full, held out: per-cell Spearman | 0.35 | **0.49** | >= 0.6 |
+| hidden-species tests 1k / 5k / 10k (truth 0.004 / 0.018 / 0.054) | 0.135 / 0.221 / 0.239 | declined (NA) | an honest answer |
+| PBMC 4k median (SoupX 0.06 to 0.077) | 0.067 | 0.067 | |
+| 20k median, Spearman | 0.027, 0.985 | unchanged | no regression |
+| 1k full | 0.0105 | unchanged | no regression |
+| Smart-seq2 negative control (truth 0) | 0.0014 | **NA** | no regression |
+| `gate_rho` | pass | pass | pass |
+
+**It fails** (5k median and Spearman; the negative control's correct answer
+became NA). The estimator is unchanged. Two lessons: the mean and Pearson
+correlation of rho flatter an estimator (on 5k the candidate's mean was
+within 18% and Pearson 0.975, driven by a minority of heavily contaminated
+cells), so medians and rank correlations are the measures to report; and the
+"not identifiable" rule needs to tell a sample with no contamination from one
+whose contamination cannot be seen, which the share of low-power cells does
+not.
+
 ## 2. Simulated data with ground truth
 
 `simulate_experiment()`, easy and stress settings, k-means clusters given to
@@ -443,7 +563,10 @@ by breaking the test: without it, each sample's ambient fraction comes from
 that sample's pseudobulk alone, which for a single cell type is not
 identifiable (0.78 to 0.83 for some donors against 0.02 to 0.06 for the
 others), most of their counts are treated as ambient, and the share of genes
-at p < 0.01 falls to 0.1 to 0.3%. It stays on.
+at p < 0.01 falls to 0.1 to 0.3%. It stays on. (Since the ambient-fraction
+guard of section 3c, `joint_rho = FALSE` replaces those values with the median
+of the other samples instead; one GSE272082 oligodendrocyte shuffle then gives
+91 hits.)
 
 The simulation gates pass with the trended dispersion, with power unchanged
 (`gate_ambient_de`: null false-positive rate 0.045 to 0.054, power 0.90 to
@@ -463,6 +586,108 @@ This dataset was first used for a pre-registered test of whether the genes
 type (from the ATAC side of the same nuclei). That test could not be run:
 naive edgeR found 0 genes in microglia and 3 in oligodendrocytes, so there
 was nothing to flag.
+
+## 3c. Pre-registered test on type 1 diabetes pancreas (GSE273597)
+
+Pre-registration: `preregistration/t1d_leakage.md` (committed before any DE,
+with two amendments recorded before any DE, each with its reason). Script:
+`validate_de_leakage_t1d.R`. Results: `results/t1d_leakage_*.csv` (as
+pre-registered) and `results/t1d_leakage_*_guard.csv` (rerun with the
+ambient-fraction guard, below).
+
+Design: whole-pancreas snRNA-seq, 11 non-diabetic vs 12 T1D donors
+(Melton et al. 2025); acinar, ductal and alpha pseudobulks. T1D destroys
+beta cells, and soup insulin varies 61-fold between libraries; insulin in
+acinar, alpha and ductal pseudobulks tracks it (Spearman 0.74 to 0.81). A
+gene called DE in a cell type that does not express it (>= 100-fold below
+another type in Segerstolpe Smart-seq2 islets) counts as an ambient-driven
+false positive.
+
+**Primary result: null.** Naive edgeR called no gene at all in acinar cells,
+foreign or not (pre-stated precondition: at least 5 foreign genes). Between
+donors, soup composition varies as much within each group as between them,
+so 11 vs 12 donors did not separate. Every method called 0 or 1 foreign
+genes in every test, including the contrast with long-standing T1D only
+(5 donors). These data do not show ambient-driven DE from a standard test,
+and so cannot show `ambient_de` removing it.
+
+**Calibration failed as pre-registered**, in ductal cells: in 5 of 24
+shuffled labellings `ambient_de` reported 1,106 to 2,300 genes (naive edgeR
+0), and 1,064 on the true labels. Cause: for 6 of 23 donors the ductal
+ambient fraction came out at 0.86 to 0.96 (others 0.02 to 0.16). In the five
+bad shuffles, setting the ambient term to zero, or replacing those six values
+with the median of the others, removed every hit; widening their variance
+100-fold, turning off the Huber weights or `joint_rho`, did not.
+
+**Guard** (`max_rho = 0.5`, the plausibility limit of
+`estimate_rho_cluster`): after the joint refinement, a sample above it takes
+the median of the plausible samples, with their between-sample variance
+added to its uncertainty; `ambient_de` warns and names it. A first version
+also replaced implausible single-sample start values before the joint
+refinement; on held-out GSE190015 oligodendrocytes that produced a shuffle
+with 76 hits (it fired on four samples the joint step corrects by itself),
+so it was removed.
+
+| cell type (24 shuffles each) | `ambient_de` as pre-registered | with the guard | naive edgeR |
+|---|---|---|---|
+| acinar | 1 shuffle with a hit, max 1 gene | 1, max 1 | 0 |
+| ductal | 5, max 2,300 | 4, max 1 | 0 |
+| alpha | 6, max 5 | 6, max 5 | 4, max 3 |
+
+With the guard, `ambient_de` reports 0 genes in ductal cells on the true
+labels (1,064 before). GSE190015 and GSE272082 are unchanged by it with
+default settings. Alpha cells still exceed the pre-stated limit of 5 shuffles
+with a hit (6), though never more than 5 genes; naive edgeR also has hits in 4
+of 24 there (17 donors, often fewer than 100 alpha cells each).
+
+What this does not show: the pancreas data were used to find the problem, so
+they do not show that the guard works on other data; and there is still no
+real dataset on which `ambient_de` beats a standard test.
+
+## 3d. Pre-registered test: paired brain regions (GSE272082)
+
+Pre-registration: `preregistration/region_leakage.md` (committed before any
+DE; Amendment 1, a crash fix in `ambient_de`'s robust weights, made before
+any result was seen). Script: `validate_de_region_leakage.R`. Results:
+`results/region_leakage_*.csv`.
+
+Design: six donors with prefrontal cortex (PFC), entorhinal cortex (EC) and
+hippocampus (HIP); microglia (primary) and oligodendrocytes; `~ donor +
+region`. Truth: genes foreign to each type in Darmanis et al. 2015 (C1 single
+cells; microglia 1,435 genes including SNAP25, SYT1, GAD1; oligodendrocytes
+690, without canonical neuronal genes because the reference's
+oligodendrocytes carry neuronal RNA at about 10%). One donor's PFC had 9
+microglia, below the minimum of 20, so the microglia tests have 5 donors.
+
+**Primary result: null.** Microglia, HIP vs PFC: standard edgeR called no
+gene at all (precondition: at least 5 foreign genes), and neither did any
+other method.
+
+| test | standard edgeR: foreign / other | `ambient_de` | Decant, SoupX, DecontX then edgeR |
+|---|---|---|---|
+| microglia HIP vs PFC (primary) | 0 / 0 | 0 / 0 | 0 / 0 each |
+| microglia EC vs PFC | 0 / 0 | 0 / 0 | 0 / 0 each |
+| oligodendrocytes HIP vs PFC | 3 / 37 | 2 / 45 | 0 / 0, 0 / 0, 0 / 1 |
+| oligodendrocytes EC vs PFC | 0 / 0 | 0 / 0 | 0 / 0 each |
+
+Calibration, region labels swapped within donors:
+
+| test | `ambient_de`: relabelings with a hit (max genes) | standard edgeR (max genes) |
+|---|---|---|
+| microglia HIP | 0 of 15 | 0 of 15 |
+| microglia EC | **8 of 15** (1) | 0 of 15 |
+| oligodendrocytes HIP | 2 of 31 (1) | 3 of 31 (**107**) |
+| oligodendrocytes EC | 3 of 31 (2) | 2 of 31 (**393**) |
+
+- The precondition failed, so the test says nothing about whether
+  `ambient_de` removes ambient-driven hits. Region differences in the soup
+  did not make a standard test call genes foreign to microglia here.
+- Microglia EC vs PFC exceeds the pre-stated calibration limit (6 of 31,
+  i.e. about 3 of 15): `ambient_de` has a hit in 8 of 15 relabelings, one gene
+  each time.
+- Not pre-registered as an endpoint, but noted: in two oligodendrocyte
+  relabelings standard edgeR reported 107 and 393 genes; `ambient_de` never
+  more than 2.
 
 ## 4. What each tool does
 
@@ -525,7 +750,8 @@ against the papers before being cited.
 | Never adds counts | level with SoupX, DecontX, CellBender, AmbiDose; ahead of scAR (727k UMIs added) | section 1a |
 | Per-cell contamination estimate | ahead of SoupX (one value per channel); level with DecontX, CellBender, AmbiDose by design; accuracy of the per-cell values untested on real data | section 4 |
 | DE without leakage, power kept | level with Decant-correct-then-edgeR; slightly ahead of SoupX-then-edgeR (4 to 7 points of power); simulated only | section 3 |
-| DE calibration on real data (shuffled labels) | level with naive edgeR, slightly more liberal (hits in 9 of 96 tests against 4; at most 9 genes); one dataset held out. Before the dispersion fix, far behind (82 of 96) | section 3b |
+| DE calibration on real data (shuffled labels) | slightly more liberal than naive edgeR: hits in 20 of 168 shuffles against 8, at most 9 genes (three datasets, one held out). Before the dispersion fix and the ambient-fraction guard, far behind (up to 2,300 genes) | sections 3b, 3c |
+| DE: removes ambient-driven hits on real data | unknown: two pre-registered tests (pancreas, paired brain regions) were null, because the standard test found no ambient-driven hits to remove | sections 3c, 3d |
 | DE with covariates in large cohorts | ahead of subtract-then-rank-test in simulation | `experiments/large_cohort_calibration/` |
 | Removal of ambient-compatible foreign counts, against DecontX | behind by 5 to 9 points on all three sets | section 1a |
 | Leaving counts that cannot be ambient (likely doublets) | ahead of DecontX, AmbiDose, scAR; level with SoupX and CellBender | section 1a |
@@ -533,6 +759,7 @@ against the papers before being cited.
 | Native signal kept, against scAR | far ahead (1 to 4% lost against 18 to 26%) | section 1a |
 | Speed | level with SoupX, faster than the other four on this dataset | section 1a |
 | Ambient removal with experimental ground truth (20k species mixture) | behind DecontX and the published CellBender (0.62 against 0.72 to 0.73); well ahead of SoupX run here (0.35) and published (0.42) | section 1c |
+| Ambient removal on held-out mixtures (hgmm 1k, 5k, 10k) | **behind DecontX by 19 points** (0.44 against 0.64) and SoupX (0.68); keeps the most (retain 0.992 against 0.984, 0.982); a correction change that recovered 7.5 points failed retain on 10k | section 1e |
 | Contamination estimate on held-out species mixtures | lowest error of Decant, SoupX and DecontX on 1k and 5k; behind DecontX on 10k (per-cell correlation 0.18 against 0.67), where all tools underestimate | section 1d |
 | Endogenous counts kept with experimental ground truth | level with SoupX on the species mixture (0.989 against 0.992), ahead of DecontX (0.983); best of those run on the Smart-seq2 negative control (0.998 against SoupX 0.989, DecontX 0.952) | section 1c |
 | Contamination not identifiable (single cell type) | Decant warns (DecontX returns 9-39% silently; SoupX failed on one set); the number Decant reports is still wrong | section 1d |

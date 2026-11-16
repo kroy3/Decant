@@ -105,14 +105,17 @@ sum(res$ambient_driven)
 
 ```r
 head(attr(res, "samples"), 3)
-#>   sample ambient_frac soup_umis norm_factor
-#> 1      1   0.05692409     49848   0.9663427
-#> 2      2   0.05808700     49966   1.0214589
-#> 3      3   0.04450122     50234   0.9746253
+#>   sample ambient_frac ambient_frac_imputed soup_umis norm_factor
+#> 1      1   0.05692409                FALSE     49848   0.9663427
+#> 2      2   0.05808700                FALSE     49966   1.0214589
+#> 3      3   0.04450122                FALSE     50234   0.9746253
 ```
 
 - `ambient_frac` is the estimated ambient fraction of the cell type in each
   sample, and `soup_umis` the number of UMIs the sample's soup rests on.
+- `ambient_frac_imputed` is `TRUE` for a sample whose own estimate was
+  implausible (above `max_rho`) and was replaced by the median of the others
+  (see 9.6).
 
 ## 9.4 From a Seurat object
 
@@ -142,21 +145,26 @@ subset(res, ambient_driven)
 | `max_ambient_frac` | `0.75` | Skip genes whose counts are mostly ambient; they are listed in `attr(res, "ambient_dominated")` |
 | `naive` | `TRUE` | Also run the standard test, to fill `naive_FDR` and `ambient_driven` |
 | `joint_rho` | `TRUE` | Refine each sample's ambient fraction on genes absent from all samples pooled. Leave it on: without it, the ambient fraction of a single cell type can be wildly wrong |
+| `max_rho` | `0.5` | A sample whose ambient fraction comes out above this takes the median of the other samples, with a warning |
 | `dispersion` | `"trended"` | NB dispersion in the fit. `"tagwise"` was the earlier default and is not calibrated on real data (9.6) |
 
 ## 9.6 Limits
 
-- **Calibration on real data.** On two real single-nucleus datasets
-  (GSE272082, Alzheimer's vs control; GSE190015, nine controls), condition
-  labels were shuffled between donors 24 times, so there was nothing to
-  find. In microglia and oligodendrocytes, `ambient_de()` reported a gene in
-  9 of the 96 tests, never more than 9 genes; naive edgeR in 4. Earlier
-  versions used `dispersion = "tagwise"` and reported genes in 82 of 96
-  tests, up to 574; rerun analyses made with them. To check any method on
-  your own data, shuffle your condition labels between samples and count
-  the hits.
-- On real data only calibration has been checked. That `ambient_de()`
-  removes ambient-driven hits is shown in simulation.
+- **`ambient_de()` is experimental.** With condition labels shuffled between
+  donors, so that there is nothing to find, on three real datasets (two brain,
+  one pancreas; 168 tests) it reported a gene in 20 tests, never more than 9
+  genes; naive edgeR in 8. Earlier versions did far worse (up to 2,300 genes)
+  and analyses made with them should be rerun. That it removes
+  ambient-driven hits a standard test reports is shown only in simulation; a
+  pre-registered real-data test was null, because the standard test found
+  none. Report its hits together with a standard pseudobulk test, and check
+  your own data the same way: shuffle the condition labels between samples
+  and count the hits.
+- If `ambient_de()` warns that a sample's ambient fraction is implausible,
+  that sample's pseudobulk looks too much like the soup to measure its
+  contamination (often a cell type close to the dominant one, or mislabelled
+  cells). Its value is replaced by the median of the others. If most samples
+  are flagged, the results for that cell type are unreliable.
 - With very few empty droplets per sample (a few hundred), the soup is
   uncertain and some leakage returns.
 - With three samples per group, power is lower than with six.
