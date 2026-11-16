@@ -30,6 +30,11 @@ MK <- list(beta = "INS", alpha = "GCG", delta = "SST",
            acinar = c("PRSS1", "CPA1", "CTRB2", "CELA3A"), ductal = c("KRT19", "CFTR"))
 MIN_CELLS <- 20
 
+## Optional argument: a tag for the output files, so that reruns with later
+## code do not overwrite the pre-registered results (t1d_leakage_*.csv).
+TAG <- commandArgs(trailingOnly = TRUE)[1]
+SFX <- if (is.na(TAG)) "" else paste0("_", TAG)
+
 ## ---------- truth: genes foreign to each tested type (Segerstolpe) ----------
 truth_sets <- function() {
   f <- file.path(SEG, "pancreas_refseq_rpkms_counts_3514sc.txt")
@@ -176,9 +181,9 @@ for (cn in names(contrasts)) for (t in TYPES) {
   }
 }
 res <- do.call(rbind, rows); G <- do.call(rbind, genes); S <- do.call(rbind, shuf)
-utils::write.csv(res, file.path(OUT, "t1d_leakage_summary.csv"), row.names = FALSE)
-utils::write.csv(G, file.path(OUT, "t1d_leakage_calls.csv"), row.names = FALSE)
-utils::write.csv(S, file.path(OUT, "t1d_leakage_shuffles.csv"), row.names = FALSE)
+utils::write.csv(res, file.path(OUT, paste0("t1d_leakage_summary", SFX, ".csv")), row.names = FALSE)
+utils::write.csv(G, file.path(OUT, paste0("t1d_leakage_calls", SFX, ".csv")), row.names = FALSE)
+utils::write.csv(S, file.path(OUT, paste0("t1d_leakage_shuffles", SFX, ".csv")), row.names = FALSE)
 options(width = 200)
 print(res)
 cat("\nShuffled labels (primary contrast): shuffles with a hit, of 24\n")

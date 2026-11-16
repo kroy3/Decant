@@ -14,6 +14,7 @@ ambient_de(
   naive = TRUE,
   robust = TRUE,
   joint_rho = TRUE,
+  max_rho = 0.5,
   soup_design = TRUE,
   lfc = 0,
   max_ambient_frac = 0.75,
@@ -52,6 +53,18 @@ when a few samples carry extreme counts.}
 absent from the cell type across ALL samples pooled. A single sample
 cannot tell a weakly expressed gene from an absent one, which biases its
 ambient fraction upward; the pooled test can.}
+
+\item{max_rho}{largest plausible ambient fraction for a sample. A single
+cell type's pseudobulk cannot always identify its own ambient fraction:
+when it resembles the soup, the estimate can come out near 1, the model
+then treats most of that sample's counts as soup, and every gene of the
+sample shifts together (on real pancreas data this gave over 1,000 false
+hits in some shuffled labellings). A sample above \code{max_rho} (before or
+after the joint refinement) takes the median of the plausible samples,
+with their between-sample variance added to its uncertainty, and a
+warning names it. With fewer than two plausible samples the function
+stops. The default, 0.5, is the plausibility limit of
+\code{\link[=estimate_rho_cluster]{estimate_rho_cluster()}}.}
 
 \item{soup_design}{shrink each sample's soup toward the design-fitted soup
 (see \code{\link[=soup_eb]{soup_eb()}}) instead of the overall mean.}

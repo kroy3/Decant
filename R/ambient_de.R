@@ -85,6 +85,17 @@ soup_eb <- function(empties, design = NULL) {
 #'   absent from the cell type across ALL samples pooled. A single sample
 #'   cannot tell a weakly expressed gene from an absent one, which biases its
 #'   ambient fraction upward; the pooled test can.
+#' @param max_rho largest plausible ambient fraction for a sample. A single
+#'   cell type's pseudobulk cannot always identify its own ambient fraction:
+#'   when it resembles the soup, the estimate can come out near 1, the model
+#'   then treats most of that sample's counts as soup, and every gene of the
+#'   sample shifts together (on real pancreas data this gave over 1,000 false
+#'   hits in some shuffled labellings). A sample above `max_rho` (before or
+#'   after the joint refinement) takes the median of the plausible samples,
+#'   with their between-sample variance added to its uncertainty, and a
+#'   warning names it. With fewer than two plausible samples the function
+#'   stops. The default, 0.5, is the plausibility limit of
+#'   [estimate_rho_cluster()].
 #' @param soup_design shrink each sample's soup toward the design-fitted soup
 #'   (see [soup_eb()]) instead of the overall mean.
 #' @param max_ambient_frac genes whose counts in this cell type are, on
@@ -117,6 +128,7 @@ soup_eb <- function(empties, design = NULL) {
 #' @export
 ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
                        soup = NULL, min_count = 10, naive = TRUE, robust = TRUE, joint_rho = TRUE,
+                       max_rho = 0.5,
                        soup_design = TRUE, lfc = 0, max_ambient_frac = 0.75,
                        huber_k = 2, robust_iter = 2, dispersion = c("trended", "tagwise"),
                        maxit = 50, tol = 1e-8) {
@@ -143,9 +155,24 @@ ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
   rho <- vapply(seq_len(S), function(s)
     as.numeric(estimate_rho_cluster(Y[, s, drop = FALSE], soup$soup[, s], clusters = 1L)), 1)
   rho_var <- rep(0, S)
+  ## an implausible start would also distort the pooled refinement of the
+  ## other samples, so the guard runs before and after it
+  g0 <- .guard_rho(rho, rho_var, max_rho); rho <- g0$rho; rho_var <- g0$var
   if (joint_rho) {
     jr <- .joint_rho(Y, soup$soup, rho)
-    rho <- jr$rho; rho_var <- jr$var
+    rho <- jr$rho
+    ## a sample imputed above keeps at least that uncertainty
+    rho_var <- ifelse(g0$imputed, pmax(jr$var, g0$var), jr$var)
+  }
+  g1 <- .guard_rho(rho, rho_var, max_rho); rho <- g1$rho; rho_var <- g1$var
+  imputed <- g0$imputed | g1$imputed
+  if (any(imputed)) {
+    nm <- colnames(Y) %||% as.character(seq_len(S))
+    warning(sum(imputed), " of ", S, " samples had an implausible ambient fraction (above max_rho = ",
+            max_rho, "): ", paste(nm[imputed], collapse = ", "),
+            ". They take the median of the other samples, with its spread added to the uncertainty.",
+            if (sum(imputed) > S / 2) " That is most samples: the ambient fraction is not identifiable for this cell type and the results are unreliable.",
+            call. = FALSE)
   }
   E <- sweep(soup$soup, 2, rho * T_s, "*")
   ## Var(E) = (rho T)^2 Var(soup) + (T soup)^2 Var(rho)
@@ -219,12 +246,30 @@ ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
   out <- out[order(out$PValue), ]
   attr(out, "ambient_dominated") <- rownames(Y)[dominated]
   attr(out, "samples") <- data.frame(sample = colnames(Y) %||% seq_len(S), ambient_frac = rho,
+                                     ambient_frac_imputed = imputed,
                                      soup_umis = soup$umis, norm_factor = nf,
                                      stringsAsFactors = FALSE)
   out
 }
 
 `%||%` <- function(a, b) if (is.null(a)) b else a
+
+## Per-sample ambient fractions above max_rho are not estimable from this
+## cell type: they take the median of the plausible samples, and the
+## between-sample variance of those is added to their variance (the imputed
+## value is a draw from that population, not a measurement).
+.guard_rho <- function(rho, var, max_rho) {
+  bad <- !is.finite(rho) | rho > max_rho
+  if (!any(bad)) return(list(rho = rho, var = var, imputed = bad))
+  if (sum(!bad) < 2)
+    stop("the ambient fraction is implausible (above max_rho = ", max_rho, ") in ", sum(bad), " of ",
+         length(rho), " samples, so it cannot be estimated for this cell type. Check the cell-type ",
+         "labels, or test a cell type that differs more from the soup.", call. = FALSE)
+  ok <- rho[!bad]
+  rho[bad] <- stats::median(ok)
+  var[bad] <- stats::var(ok) + mean(var[!bad])
+  list(rho = rho, var = var, imputed = bad)
+}
 
 ## Joint absent-gene refinement of per-sample rho. The absent set is the genes
 ## whose counts, pooled over all samples, are not significantly above the
