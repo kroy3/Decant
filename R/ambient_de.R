@@ -204,6 +204,11 @@ ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
     ## a real condition effect is fitted, not down-weighted.
     for (i in seq_len(robust_iter)) {
       w <- pmin(huber_k / pmax(abs(full$pearson), 1e-8), 1)
+      ## a residual is NaN where the fitted mean and its variance are both 0
+      ## (no evidence of an outlier: weight 1) and infinite where the variance
+      ## is 0 but a count is not; edgeR requires finite, positive weights
+      w[is.nan(w)] <- 1
+      w <- pmax(w, 1e-6)
       dge$weights <- w
       phi <- disp_of(edgeR::estimateDisp(dge, design))
       full <- .fit_ambient_nb(y, e, ve, N, design, phi, maxit, tol, w)

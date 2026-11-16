@@ -102,3 +102,17 @@ the README must not imply a real-data advantage.
   not appear among its neurons and so not in the truth set (conservative).
 - The reference itself carries trace ambient RNA (see above).
 - Microglia differ between regions for real; only foreign genes are scored.
+
+## Amendments
+
+**1 (before any result was seen).** The first run stopped in the test stage
+with an edgeR error ("weights must be finite positive values") before writing
+any result. The main tests ran (checked separately, outputs not inspected);
+the error came from `ambient_de`'s robust re-weighting in a relabeling: a
+Pearson residual is NaN where a fitted mean and its variance are both 0
+(weight NaN) and infinite where the variance is 0 but a count is not (weight
+0). `ambient_de` now gives a NaN residual weight 1 and floors weights at
+1e-6. This is a crash fix, not a change of method; the simulation gates and
+tests are rerun. The script now records an `ambient_de` error in a
+relabeling instead of stopping, and duplicate column names in the
+pseudobulk (each donor appears in both regions) are removed.

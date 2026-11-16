@@ -132,7 +132,7 @@ for (cn in names(contrasts)) for (t in TYPES) {
   ok <- vapply(DONORS, function(d) P[[d[["PFC"]]]]$n[t] >= MIN_CELLS && P[[d[[reg]]]]$n[t] >= MIN_CELLS, TRUE)
   dn <- names(DONORS)[ok]
   if (length(dn) < 3) { cat(cn, t, ": fewer than 3 donors qualify\n"); next }
-  libs <- c(sapply(DONORS[dn], `[[`, "PFC"), sapply(DONORS[dn], `[[`, reg))
+  libs <- unname(c(sapply(DONORS[dn], `[[`, "PFC"), sapply(DONORS[dn], `[[`, reg)))
   donor <- factor(rep(dn, 2)); region <- rep(c(0, 1), each = length(dn))
   design <- cbind(stats::model.matrix(~ donor), region = region)
   mat <- function(m) { x <- lapply(libs, function(l) P[[l]][[m]]); if (any(vapply(x, is.null, TRUE))) NULL else sapply(x, function(z) z[, t]) }
@@ -158,9 +158,11 @@ for (cn in names(contrasts)) for (t in TYPES) {
     sw <- c(FALSE, as.logical(bitwAnd(k, 2^(0:(nd - 2))) > 0))
     rj <- ifelse(rep(sw, 2), 1 - region, region)
     dj <- cbind(stats::model.matrix(~ donor), region = rj)
-    a <- suppressWarnings(ambient_de(Y, empties = E, design = dj, naive = FALSE))
+    a <- tryCatch(suppressWarnings(ambient_de(Y, empties = E, design = dj, naive = FALSE)),
+                  error = function(e) conditionMessage(e))
     shuf[[length(shuf) + 1]] <- data.frame(contrast = cn, cell_type = t, relabeling = k, donors_swapped = sum(sw),
-      ambient_de_hits = sum(a$FDR < 0.05), naive_hits = sum(edger_ql(Y, dj) < 0.05))
+      ambient_de_hits = if (is.character(a)) NA else sum(a$FDR < 0.05), naive_hits = sum(edger_ql(Y, dj) < 0.05),
+      error = if (is.character(a)) a else "")
   }
 }
 res <- do.call(rbind, rows); C <- do.call(rbind, calls); S <- do.call(rbind, shuf)
@@ -169,4 +171,5 @@ utils::write.csv(C, file.path(OUT, "region_leakage_calls.csv"), row.names = FALS
 utils::write.csv(S, file.path(OUT, "region_leakage_relabelings.csv"), row.names = FALSE)
 options(width = 200); print(res)
 cat("\nRelabelings with a hit:\n")
-print(stats::aggregate(cbind(ambient_de = ambient_de_hits > 0, naive = naive_hits > 0, n = 1) ~ contrast + cell_type, S, sum))
+print(stats::aggregate(cbind(ambient_de = ambient_de_hits > 0, naive = naive_hits > 0, n = 1) ~ contrast + cell_type, S, sum, na.action = na.pass))
+if (any(S$error != "")) { cat("\nambient_de errors in relabelings:\n"); print(S[S$error != "", c("contrast", "cell_type", "relabeling", "error")]) }
