@@ -59,8 +59,8 @@ cell type's pseudobulk cannot always identify its own ambient fraction:
 when it resembles the soup, the estimate can come out near 1, the model
 then treats most of that sample's counts as soup, and every gene of the
 sample shifts together (on real pancreas data this gave over 1,000 false
-hits in some shuffled labellings). A sample above \code{max_rho} (before or
-after the joint refinement) takes the median of the plausible samples,
+hits in some shuffled labellings). A sample above \code{max_rho} after the
+joint refinement takes the median of the plausible samples,
 with their between-sample variance added to its uncertainty, and a
 warning names it. With fewer than two plausible samples the function
 stops. The default, 0.5, is the plausibility limit of

@@ -90,8 +90,8 @@ soup_eb <- function(empties, design = NULL) {
 #'   when it resembles the soup, the estimate can come out near 1, the model
 #'   then treats most of that sample's counts as soup, and every gene of the
 #'   sample shifts together (on real pancreas data this gave over 1,000 false
-#'   hits in some shuffled labellings). A sample above `max_rho` (before or
-#'   after the joint refinement) takes the median of the plausible samples,
+#'   hits in some shuffled labellings). A sample above `max_rho` after the
+#'   joint refinement takes the median of the plausible samples,
 #'   with their between-sample variance added to its uncertainty, and a
 #'   warning names it. With fewer than two plausible samples the function
 #'   stops. The default, 0.5, is the plausibility limit of
@@ -155,17 +155,16 @@ ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
   rho <- vapply(seq_len(S), function(s)
     as.numeric(estimate_rho_cluster(Y[, s, drop = FALSE], soup$soup[, s], clusters = 1L)), 1)
   rho_var <- rep(0, S)
-  ## an implausible start would also distort the pooled refinement of the
-  ## other samples, so the guard runs before and after it
-  g0 <- .guard_rho(rho, rho_var, max_rho); rho <- g0$rho; rho_var <- g0$var
   if (joint_rho) {
     jr <- .joint_rho(Y, soup$soup, rho)
-    rho <- jr$rho
-    ## a sample imputed above keeps at least that uncertainty
-    rho_var <- ifelse(g0$imputed, pmax(jr$var, g0$var), jr$var)
+    rho <- jr$rho; rho_var <- jr$var
   }
+  ## The guard runs after the joint refinement only: that refinement
+  ## corrects many implausible single-sample starts by itself, and replacing
+  ## them before it changed its absent set and added false hits on held-out
+  ## data (GSE190015 oligodendrocytes: a shuffle with 76 hits, none without).
   g1 <- .guard_rho(rho, rho_var, max_rho); rho <- g1$rho; rho_var <- g1$var
-  imputed <- g0$imputed | g1$imputed
+  imputed <- g1$imputed
   if (any(imputed)) {
     nm <- colnames(Y) %||% as.character(seq_len(S))
     warning(sum(imputed), " of ", S, " samples had an implausible ambient fraction (above max_rho = ",
