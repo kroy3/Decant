@@ -90,3 +90,15 @@ Calibration: 24 shuffles of the condition labels among the 23 donors (seed 7),
 - Segerstolpe cells are whole cells (cytoplasmic RNA), these are nuclei;
   specificity of most marker genes carries over, but some genes may differ.
 - 23 donors; effects of T1D on exocrine tissue are real and unscored.
+
+## Amendments
+
+**1 (before any DE was computed).** Method 1 is changed from
+`ambient_de(naive = TRUE)` to a standalone standard pipeline: `filterByExpr`
+on the raw pseudobulk, TMM, `estimateDisp`, `glmQLFit`, `glmQLFTest`. The
+naive test inside `ambient_de()` only covers genes that pass `ambient_de`'s
+own filter, which skips genes whose counts are mostly ambient: exactly the
+genes most likely to leak. Using it would understate the leakage of the
+standard test. The correct-then-test methods use the same standalone
+pipeline. Genes that `ambient_de` declines to test as mostly ambient count as
+not called, and their number is reported.
