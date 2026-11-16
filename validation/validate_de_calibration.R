@@ -3,7 +3,8 @@
 ## Calibration of ambient_de() on REAL case/control single-nucleus data.
 ## Run from the repo root:
 ##   Rscript validation/validate_de_calibration.R [dataset] [config ...]
-## Configs: default, no_joint_rho, no_robust, neither (default: default no_joint_rho).
+## Configs: default, tagwise (dispersion before the fix), no_joint_rho,
+## no_robust, neither (default: default tagwise).
 ##
 ## Disease labels are shuffled between donors, so no gene can be truly DE
 ## between the shuffled groups, apart from what the remaining true donors in
@@ -26,9 +27,17 @@ DATASETS <- list(
   gse272082_pfc = list(gse = "GSE272082",
                        ctrl = c("NIH01", "NIH04", "NIH28", "UT04", "UT09"),
                        case = c("NIH10", "NIH13", "NIH16", "UT2105"),
-                       types = c("Microglia", "Oligodendrocyte"))
+                       types = c("Microglia", "Oligodendrocyte")),
+  ## Pure null: nine control donors of GSE190015 (occipital cortex, one
+  ## batch; Control3 to Control11 = TWCC-JC1 to JC9). No disease in either
+  ## arm, so every hit is a false positive. Only raw matrices are deposited;
+  ## cells are barcodes with >= 500 UMIs.
+  gse190015_ctrl = list(gse = "GSE190015",
+                        ctrl = paste0("TWCC-JC", 1:9, "-JC", 1:9, "-lib1"), case = character(0),
+                        filtered = FALSE, cell_min_umi = 500,
+                        types = c("Microglia", "Oligodendrocyte"))
 )
-CONFIGS <- list(default = list(), no_joint_rho = list(joint_rho = FALSE),
+CONFIGS <- list(default = list(), tagwise = list(dispersion = "tagwise"), no_joint_rho = list(joint_rho = FALSE),
                 no_robust = list(robust = FALSE), neither = list(robust = FALSE, joint_rho = FALSE))
 MARKERS <- list(Microglia = c("P2RY12", "CSF1R", "CX3CR1"), Oligodendrocyte = c("MBP", "PLP1", "MOBP"),
                 Astrocyte = c("GFAP", "AQP4", "SLC1A2"), OPC = c("PDGFRA", "VCAN"),
@@ -36,7 +45,7 @@ MARKERS <- list(Microglia = c("P2RY12", "CSF1R", "CX3CR1"), Oligodendrocyte = c(
 
 args <- commandArgs(trailingOnly = TRUE)
 ds <- if (length(args)) args[1] else "gse272082_pfc"
-cfgs <- if (length(args) > 1) args[-1] else c("default", "no_joint_rho")
+cfgs <- if (length(args) > 1) args[-1] else c("default", "tagwise")
 D <- DATASETS[[ds]]; if (is.null(D)) stop("unknown dataset ", ds)
 CACHE <- file.path("validation", "data", ds); dir.create(CACHE, recursive = TRUE, showWarnings = FALSE)
 OUT <- file.path("validation", "results"); dir.create(OUT, showWarnings = FALSE)
@@ -74,8 +83,12 @@ if (!file.exists(pbf)) {
   cells <- list(); empties <- list()
   for (s in samples) {
     raw <- read_h5_gex(geo_file(s, "raw"))
-    bc <- as.vector(h5read(geo_file(s, "filtered"), "matrix/barcodes")); H5close()
-    d <- split_droplets(raw, cells = bc)
+    if (isFALSE(D$filtered)) {
+      d <- split_droplets(raw, cell_min_umi = D$cell_min_umi)
+    } else {
+      bc <- as.vector(h5read(geo_file(s, "filtered"), "matrix/barcodes")); H5close()
+      d <- split_droplets(raw, cells = bc)
+    }
     colnames(d$cells) <- paste0(s, "_", colnames(d$cells))
     cells[[s]] <- d$cells; empties[[s]] <- d$empties
     cat(s, ": cells", ncol(d$cells), " empties", ncol(d$empties), "\n")
@@ -106,7 +119,7 @@ P <- readRDS(pbf)
 
 ## ---- shuffled-label calibration ----
 is_case <- samples %in% D$case
-combos <- utils::combn(length(samples), length(D$case))
+combos <- utils::combn(length(samples), if (length(D$case)) length(D$case) else length(samples) %/% 2)
 ov <- apply(combos, 2, function(i) sum(is_case[i]))
 set.seed(7); pick <- sample(which(ov <= 2), 24)
 rows <- list()
@@ -114,7 +127,7 @@ for (t in D$types) {
   Y <- P$pb[[t]]
   E <- lapply(P$empties, function(e) e[rownames(Y), , drop = FALSE])
   soup <- soup_eb(E)   # condition-blind soup, shared by all shuffles
-  for (k in cfgs) for (j in c(0, pick)) {
+  for (k in cfgs) for (j in c(if (any(is_case)) 0, pick)) {
     grp <- if (j == 0) is_case else seq_along(samples) %in% combos[, j]
     d <- cbind(1, as.numeric(grp))
     r <- suppressWarnings(do.call(ambient_de, c(list(Y, design = d, soup = soup), CONFIGS[[k]])))
@@ -134,4 +147,6 @@ summ <- do.call(rbind, lapply(split(sh, list(sh$cell_type, sh$config), drop = TR
   median_frac_p01 = round(stats::median(x$frac_p01), 3),
   naive_shuffles_with_hits = sum(x$naive_hits > 0), naive_median_frac_p01 = round(stats::median(x$naive_frac_p01), 3))))
 rownames(summ) <- NULL; print(summ)
-cat("\nTrue labels:\n"); print(res[res$labels == "true", c("cell_type", "config", "hits", "naive_hits", "frac_p01")])
+if (any(res$labels == "true")) {
+  cat("\nTrue labels:\n"); print(res[res$labels == "true", c("cell_type", "config", "hits", "naive_hits", "frac_p01")])
+}

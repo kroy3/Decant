@@ -100,6 +100,13 @@ soup_eb <- function(empties, design = NULL) {
 #'   [gate_ambient_de_cohort()]; smaller values over-trim clean data and
 #'   inflate false positives, larger ones let outliers through.
 #' @param robust_iter number of re-weighting rounds.
+#' @param dispersion NB dispersion used in the fit: `"trended"` (default), the
+#'   abundance trend, as edgeR's quasi-likelihood pipeline uses; or
+#'   `"tagwise"`, each gene's own shrunken estimate. The quasi-likelihood
+#'   F-test then estimates each gene's extra variance; with tagwise
+#'   dispersions that variance is absorbed twice and the test is liberal.
+#'   On real data with shuffled labels, `"tagwise"` (the earlier default)
+#'   reported hits in most shuffles (`validation/BENCHMARK.md`, section 3b).
 #' @param maxit,tol Fisher-scoring controls.
 #' @return data.frame per tested gene: logFC (native-expression log2 fold
 #'   change), F, PValue, FDR, ambient_frac (mean fraction of the gene's counts
@@ -111,7 +118,10 @@ soup_eb <- function(empties, design = NULL) {
 ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
                        soup = NULL, min_count = 10, naive = TRUE, robust = TRUE, joint_rho = TRUE,
                        soup_design = TRUE, lfc = 0, max_ambient_frac = 0.75,
-                       huber_k = 2, robust_iter = 2, maxit = 50, tol = 1e-8) {
+                       huber_k = 2, robust_iter = 2, dispersion = c("trended", "tagwise"),
+                       maxit = 50, tol = 1e-8) {
+  dispersion <- match.arg(dispersion)
+  disp_of <- function(d) d[[paste0(dispersion, ".dispersion")]]
   for (p in c("edgeR", "limma"))
     if (!requireNamespace(p, quietly = TRUE)) stop("ambient_de() needs the ", p, " package", call. = FALSE)
   Y <- as.matrix(counts); storage.mode(Y) <- "double"
@@ -153,7 +163,7 @@ ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
 
   ## ---- NB dispersion from the soup-removed counts ----
   dge <- edgeR::DGEList(round(native[keep, , drop = FALSE]), norm.factors = nf)
-  phi <- edgeR::estimateDisp(dge, design)$tagwise.dispersion
+  phi <- disp_of(edgeR::estimateDisp(dge, design))
 
   y <- Y[keep, , drop = FALSE]; e <- E[keep, , drop = FALSE]; ve <- VE[keep, , drop = FALSE]
   full <- .fit_ambient_nb(y, e, ve, N, design, phi, maxit, tol)
@@ -169,7 +179,7 @@ ambient_de <- function(counts, empties = NULL, design, coef = ncol(design),
     for (i in seq_len(robust_iter)) {
       w <- pmin(huber_k / pmax(abs(full$pearson), 1e-8), 1)
       dge$weights <- w
-      phi <- edgeR::estimateDisp(dge, design)$tagwise.dispersion
+      phi <- disp_of(edgeR::estimateDisp(dge, design))
       full <- .fit_ambient_nb(y, e, ve, N, design, phi, maxit, tol, w)
     }
   }

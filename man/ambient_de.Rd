@@ -19,6 +19,7 @@ ambient_de(
   max_ambient_frac = 0.75,
   huber_k = 2,
   robust_iter = 2,
+  dispersion = c("trended", "tagwise"),
   maxit = 50,
   tol = 1e-08
 )
@@ -71,6 +72,14 @@ default 2 kept null genes calibrated with and without outliers in
 inflate false positives, larger ones let outliers through.}
 
 \item{robust_iter}{number of re-weighting rounds.}
+
+\item{dispersion}{NB dispersion used in the fit: \code{"trended"} (default), the
+abundance trend, as edgeR's quasi-likelihood pipeline uses; or
+\code{"tagwise"}, each gene's own shrunken estimate. The quasi-likelihood
+F-test then estimates each gene's extra variance; with tagwise
+dispersions that variance is absorbed twice and the test is liberal.
+On real data with shuffled labels, \code{"tagwise"} (the earlier default)
+reported hits in most shuffles (\code{validation/BENCHMARK.md}, section 3b).}
 
 \item{maxit, tol}{Fisher-scoring controls.}
 }
