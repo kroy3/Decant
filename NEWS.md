@@ -1,5 +1,12 @@
 # Decant (development version)
 
+* **Known problem: `ambient_de()` is not calibrated on real data.** On a real
+  Alzheimer's study (GSE272082, 5 vs 4 donors) with disease labels shuffled
+  between donors, it reported genes in 40 of 48 tests, up to 574; naive
+  edgeR in 1. New script `validation/validate_de_calibration.R`; README,
+  user guide (9.6), `validation/BENCHMARK.md` (3b) and the scorecard now say
+  so. A fix is in progress.
+
 * **Contamination estimate no longer halved on real data.** Genes a cluster
   does not express scatter around rho by about 25-30% from gene to gene, far
   more than Poisson noise. `estimate_rho_cluster()` tested them against a

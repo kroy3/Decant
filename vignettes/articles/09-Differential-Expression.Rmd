@@ -141,16 +141,26 @@ subset(res, ambient_driven)
 | `lfc` | `0` | Test against a minimum fold change, for example `log2(1.1)` |
 | `max_ambient_frac` | `0.75` | Skip genes whose counts are mostly ambient; they are listed in `attr(res, "ambient_dominated")` |
 | `naive` | `TRUE` | Also run the standard test, to fill `naive_FDR` and `ambient_driven` |
+| `joint_rho` | `TRUE` | Refine each sample's ambient fraction on genes absent from all samples pooled. Leave it on: without it, the ambient fraction of a single cell type can be wildly wrong |
 
 ## 9.6 Limits
 
+- **`ambient_de()` reports false hits on real data.** On a real
+  Alzheimer's study (GSE272082, prefrontal cortex, 5 vs 4 donors), disease
+  labels were shuffled between donors 24 times, so there was nothing to
+  find. In microglia and oligodendrocytes, `ambient_de()` reported genes in
+  40 of the 48 tests (up to 574 genes); naive edgeR in 1. A fix is in
+  progress. Until then, do not report its hits as findings: use a standard
+  pseudobulk test, and treat `ambient_driven` only as a hint. To check any
+  method on your own data, shuffle your condition labels between samples
+  and count the hits.
 - With very few empty droplets per sample (a few hundred), the soup is
   uncertain and some leakage returns.
 - With three samples per group, power is lower than with six.
-- The evidence for `ambient_de()` is from simulations. Correcting counts
-  with a good tool and then testing performs similarly on the same
-  simulations; `ambient_de()` has the advantage when the design includes
-  covariates such as batch.
+- Apart from the check above, the evidence for `ambient_de()` is from
+  simulations. Correcting counts with a good tool and then testing performs
+  similarly on the same simulations; `ambient_de()` has the advantage when
+  the design includes covariates such as batch.
 
 ---
 
