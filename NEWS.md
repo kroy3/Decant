@@ -1,5 +1,18 @@
 # Decant (development version)
 
+* **`ambient_de()` guards against implausible ambient fractions.** A single
+  cell type's pseudobulk cannot always identify its own ambient fraction. On
+  GSE273597 (pancreas) six donors' ductal values came out at 0.86 to 0.96 and
+  shuffled labellings gave up to 2,300 false hits. A sample above the new
+  `max_rho` (0.5) now takes the median of the plausible samples, with their
+  spread added to its uncertainty, and `ambient_de` warns
+  (`attr(res, "samples")$ambient_frac_imputed`). Ductal shuffles: 4 of 24 with
+  a hit, at most 1 gene. GSE190015 and GSE272082 unchanged. The pancreas data
+  found the problem, so they do not validate the guard elsewhere.
+* **Pre-registered real-data test (`validation/BENCHMARK.md` 3c): null.** On
+  T1D vs non-diabetic pancreas, naive edgeR found no ambient-driven hits to
+  remove. `ambient_de` is now described as experimental in the README.
+
 * **`ambient_de()` is now calibrated on real data.** It fitted each gene with
   edgeR's tagwise NB dispersion and then ran a quasi-likelihood F-test, which
   estimates the gene's extra variance again: the variance was counted twice

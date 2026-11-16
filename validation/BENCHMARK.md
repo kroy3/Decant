@@ -443,7 +443,10 @@ by breaking the test: without it, each sample's ambient fraction comes from
 that sample's pseudobulk alone, which for a single cell type is not
 identifiable (0.78 to 0.83 for some donors against 0.02 to 0.06 for the
 others), most of their counts are treated as ambient, and the share of genes
-at p < 0.01 falls to 0.1 to 0.3%. It stays on.
+at p < 0.01 falls to 0.1 to 0.3%. It stays on. (Since the ambient-fraction
+guard of section 3c, `joint_rho = FALSE` replaces those values with the median
+of the other samples instead; one GSE272082 oligodendrocyte shuffle then gives
+91 hits.)
 
 The simulation gates pass with the trended dispersion, with power unchanged
 (`gate_ambient_de`: null false-positive rate 0.045 to 0.054, power 0.90 to
@@ -463,6 +466,63 @@ This dataset was first used for a pre-registered test of whether the genes
 type (from the ATAC side of the same nuclei). That test could not be run:
 naive edgeR found 0 genes in microglia and 3 in oligodendrocytes, so there
 was nothing to flag.
+
+## 3c. Pre-registered test on type 1 diabetes pancreas (GSE273597)
+
+Pre-registration: `preregistration/t1d_leakage.md` (committed before any DE,
+with two amendments recorded before any DE, each with its reason). Script:
+`validate_de_leakage_t1d.R`. Results: `results/t1d_leakage_*.csv` (as
+pre-registered) and `results/t1d_leakage_*_guard.csv` (rerun with the
+ambient-fraction guard, below).
+
+Design: whole-pancreas snRNA-seq, 11 non-diabetic vs 12 T1D donors
+(Melton et al. 2025); acinar, ductal and alpha pseudobulks. T1D destroys
+beta cells, and soup insulin varies 61-fold between libraries; insulin in
+acinar, alpha and ductal pseudobulks tracks it (Spearman 0.74 to 0.81). A
+gene called DE in a cell type that does not express it (>= 100-fold below
+another type in Segerstolpe Smart-seq2 islets) counts as an ambient-driven
+false positive.
+
+**Primary result: null.** Naive edgeR called no gene at all in acinar cells,
+foreign or not (pre-stated precondition: at least 5 foreign genes). Between
+donors, soup composition varies as much within each group as between them,
+so 11 vs 12 donors did not separate. Every method called 0 or 1 foreign
+genes in every test, including the contrast with long-standing T1D only
+(5 donors). These data do not show ambient-driven DE from a standard test,
+and so cannot show `ambient_de` removing it.
+
+**Calibration failed as pre-registered**, in ductal cells: in 5 of 24
+shuffled labellings `ambient_de` reported 1,106 to 2,300 genes (naive edgeR
+0), and 1,064 on the true labels. Cause: for 6 of 23 donors the ductal
+ambient fraction came out at 0.86 to 0.96 (others 0.02 to 0.16). In the five
+bad shuffles, setting the ambient term to zero, or replacing those six values
+with the median of the others, removed every hit; widening their variance
+100-fold, turning off the Huber weights or `joint_rho`, did not.
+
+**Guard** (`max_rho = 0.5`, the plausibility limit of
+`estimate_rho_cluster`): after the joint refinement, a sample above it takes
+the median of the plausible samples, with their between-sample variance
+added to its uncertainty; `ambient_de` warns and names it. A first version
+also replaced implausible single-sample start values before the joint
+refinement; on held-out GSE190015 oligodendrocytes that produced a shuffle
+with 76 hits (it fired on four samples the joint step corrects by itself),
+so it was removed.
+
+| cell type (24 shuffles each) | `ambient_de` as pre-registered | with the guard | naive edgeR |
+|---|---|---|---|
+| acinar | 1 shuffle with a hit, max 1 gene | 1, max 1 | 0 |
+| ductal | 5, max 2,300 | 4, max 1 | 0 |
+| alpha | 6, max 5 | 6, max 5 | 4, max 3 |
+
+With the guard, `ambient_de` reports 0 genes in ductal cells on the true
+labels (1,064 before). GSE190015 and GSE272082 are unchanged by it with
+default settings. Alpha cells still exceed the pre-stated limit of 5 shuffles
+with a hit (6), though never more than 5 genes; naive edgeR also has hits in 4
+of 24 there (17 donors, often fewer than 100 alpha cells each).
+
+What this does not show: the pancreas data were used to find the problem, so
+they do not show that the guard works on other data; and there is still no
+real dataset on which `ambient_de` beats a standard test.
 
 ## 4. What each tool does
 
@@ -525,7 +585,8 @@ against the papers before being cited.
 | Never adds counts | level with SoupX, DecontX, CellBender, AmbiDose; ahead of scAR (727k UMIs added) | section 1a |
 | Per-cell contamination estimate | ahead of SoupX (one value per channel); level with DecontX, CellBender, AmbiDose by design; accuracy of the per-cell values untested on real data | section 4 |
 | DE without leakage, power kept | level with Decant-correct-then-edgeR; slightly ahead of SoupX-then-edgeR (4 to 7 points of power); simulated only | section 3 |
-| DE calibration on real data (shuffled labels) | level with naive edgeR, slightly more liberal (hits in 9 of 96 tests against 4; at most 9 genes); one dataset held out. Before the dispersion fix, far behind (82 of 96) | section 3b |
+| DE calibration on real data (shuffled labels) | slightly more liberal than naive edgeR: hits in 20 of 168 shuffles against 8, at most 9 genes (three datasets, one held out). Before the dispersion fix and the ambient-fraction guard, far behind (up to 2,300 genes) | sections 3b, 3c |
+| DE: removes ambient-driven hits on real data | unknown: the pre-registered pancreas test was null (the standard test found none to remove) | section 3c |
 | DE with covariates in large cohorts | ahead of subtract-then-rank-test in simulation | `experiments/large_cohort_calibration/` |
 | Removal of ambient-compatible foreign counts, against DecontX | behind by 5 to 9 points on all three sets | section 1a |
 | Leaving counts that cannot be ambient (likely doublets) | ahead of DecontX, AmbiDose, scAR; level with SoupX and CellBender | section 1a |
