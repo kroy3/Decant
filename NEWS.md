@@ -1,5 +1,16 @@
 # Decant (development version)
 
+* **Ambient removal: held-out results, and a change that did not pass.** On
+  held-out human/mouse mixtures (hgmm 1k, 5k, 10k) Decant removes 0.444 of
+  ambient signal against DecontX 0.637 and SoupX 0.679, while keeping the
+  most (retain 0.992). On the 20k mixture the loss was traced to
+  `bayes_cell`'s cap, which keeps every single count of a gene with a tiny
+  ambient expectation. Correcting that test for the number of cells
+  (`cap_test = "cluster"`, opt-in) raised held-out removal to 0.519 but
+  dropped retain to 0.974 on the 10k mixture, so it is not the default
+  (`validation/BENCHMARK.md` 1e). The larger part of the held-out gap comes
+  from contamination estimates that are too low on those mixtures.
+
 * **`ambient_de()` guards against implausible ambient fractions.** A single
   cell type's pseudobulk cannot always identify its own ambient fraction. On
   GSE273597 (pancreas) six donors' ductal values came out at 0.86 to 0.96 and

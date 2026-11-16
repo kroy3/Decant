@@ -47,6 +47,10 @@
 #'   expected ambient count is below `cap_q` is set aside and kept, although
 #'   thousands of cells make some such counts expected; on the 20k species
 #'   mixture this kept most ambient counts of rarely contaminating genes.
+#'   "cluster" removes more but also keeps less of the cells' own rare
+#'   counts: on held-out mixtures removal 0.519 vs 0.444, retain 0.974 vs
+#'   0.986 on the 10k mixture (`validation/BENCHMARK.md`, section 1e), so
+#'   it is not the default.
 #' @param drop_zeros for sparse input, drop entries corrected to exactly 0.
 #'   FALSE keeps the input's sparsity pattern (explicit zeros).
 #' @return corrected counts, same class as `observed` (dense or dgCMatrix).

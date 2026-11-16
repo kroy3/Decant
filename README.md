@@ -42,13 +42,16 @@ numbers are the paper's own, not a run here.
 
 | | Decant | SoupX | DecontX | CellBender (published) |
 |---|---|---|---|---|
-| human/mouse mixture: retain | 0.989 | 0.992 | 0.983 | 0.996 |
-| human/mouse mixture: **removal** | **0.616** | 0.345 | **0.722** | 0.729 |
+| human/mouse mixture 20k: retain | 0.989 | 0.992 | 0.983 | 0.996 |
+| human/mouse mixture 20k: **removal** | **0.616** | 0.345 | **0.722** | 0.729 |
+| held-out mixtures 1k, 5k, 10k: retain (mean) | **0.992** | 0.982 | 0.984 | not run |
+| held-out mixtures 1k, 5k, 10k: **removal** (mean) | **0.444** | 0.679 | **0.637** | not run |
 | Smart-seq2, no ambient RNA: retain | 0.998 | 0.989 | 0.952 | 0.797 |
 
-Decant still removes about 10 points less ambient RNA than DecontX or
-CellBender on the mixture, and keeps slightly more of the cells' own counts
-than DecontX. It removes almost nothing where there is nothing to remove.
+**Decant removes less ambient RNA than DecontX: 10 points less on the 20k
+mixture and 19 points less on held-out mixtures**, where its contamination
+estimate is too low. It keeps more of the cells' own counts than DecontX and
+SoupX. It removes almost nothing where there is nothing to remove.
 Its contamination estimate now matches the cross-species truth (median 0.027
 against 0.029; before this release 0.013). That mixture was used to find the
 estimator's flaw; results on held-out mixtures are in

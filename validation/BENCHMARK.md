@@ -322,6 +322,72 @@ used to make any design decision**; they are the cleanest evidence above.
 **Memory.** `decant()` peaks near 9.5 GB on the 10k channel (10,699 cells,
 1.9 million empty droplets), about the same as before these changes.
 
+## 1e. Ambient removal on held-out mixtures, and a change that failed
+
+Script: `benchmark_removal_heldout.R` (the per-gene retain/removal scorer of
+section 1c, on the hgmm 1k, 5k and 10k mixtures; clusters by the same Seurat
+recipe as the 20k mixture). Results: `results/removal_heldout_current.csv`,
+`results/removal_heldout_cap_cluster.csv`. The 20k mixture is the
+development set: used below to diagnose, not to judge.
+
+**Held-out, current default (`bayes_cell`).** Decant removes the least and
+keeps the most:
+
+| mixture | Decant retain | Decant removal | DecontX retain | DecontX removal | SoupX retain | SoupX removal |
+|---|---|---|---|---|---|---|
+| 1k | 0.998 | 0.489 | 0.995 | 0.653 | 0.994 | 0.767 |
+| 5k | 0.993 | 0.464 | 0.988 | 0.656 | 0.988 | 0.609 |
+| 10k | 0.986 | 0.378 | 0.969 | 0.602 | 0.963 | 0.662 |
+| mean | 0.992 | **0.444** | 0.984 | **0.637** | 0.982 | **0.679** |
+
+**On held-out data the removal gap to DecontX is 19 points, not the 10 seen
+on the 20k mixture.**
+
+**Diagnosis (20k, development set).**
+
+| rule | rho | retain | removal |
+|---|---|---|---|
+| subtract | estimated / true | 0.997 / 0.996 | 0.048 / 0.049 |
+| redistribute | estimated / true | 0.994 / 0.994 | 0.067 / 0.069 |
+| bayes | estimated / true | 0.983 / 0.982 | 0.718 / 0.741 |
+| bayes_cell (default) | estimated / true | 0.989 / 0.988 | 0.616 / 0.639 |
+| bayes_cell, no cap | estimated / true | 0.983 / 0.982 | 0.718 / 0.741 |
+
+- Estimation costs about 2 points on the 20k mixture (per-cell rho is close
+  to the truth there: median 0.027 vs 0.029, Spearman 0.985).
+- Allocation costs about 10: `bayes_cell`'s cap. An entry whose count
+  exceeds the 99.9% Poisson quantile of its ambient expectation keeps all but
+  that expectation. For a gene whose expected ambient count per cell is below
+  0.001 the quantile is 0, so every single count is kept. Foreign genes with
+  1 or 2 counts had 0.14 to 0.18 removal, those with over 100 counts 0.83.
+- The cap is also what keeps real signal: without it retain falls from
+  0.989 to 0.983. The single counts it keeps of foreign genes and of the
+  cell's own rarely expressed genes look the same to a per-entry test.
+
+**The change tried** (`cap_test = "cluster"`): correct the cap's test for the
+number of cells of the cluster it is applied to (Bonferroni; no new
+constant). On the 20k mixture it gave retain 0.983, removal 0.717: it removes
+the cap's effect on both sides.
+
+| held-out | retain 1k / 5k / 10k | removal 1k / 5k / 10k | mean removal |
+|---|---|---|---|
+| current | 0.998 / 0.993 / 0.986 | 0.489 / 0.464 / 0.378 | 0.444 |
+| `cap_test = "cluster"` | 0.997 / 0.990 / **0.974** | 0.534 / 0.540 / 0.484 | 0.519 |
+| DecontX | 0.995 / 0.988 / 0.969 | 0.653 / 0.656 / 0.602 | 0.637 |
+
+**It fails the pre-stated criteria** (mean removal within 0.03 of DecontX:
+it is 0.118 behind; retain >= 0.985 on every mixture: 0.974 on 10k). The
+default is unchanged; `cap_test = "cluster"` stays available as a documented
+trade-off (more removal, less retained signal). The negative-control and
+PBMC checks were not run, as they could not change the decision.
+
+**What was learned.** On the held-out mixtures Decant's contamination
+estimate is low (mean 0.0105 vs truth 0.014 on 1k, 0.0295 vs 0.040 on 5k,
+0.021 vs 0.062 on 10k; section 1d), unlike on the 20k mixture. The removal
+gap there is mostly estimation, not allocation: the allocation fix recovered
+7.5 of 19 points. The next step is the estimator on these designs, not the
+correction rule.
+
 ## 2. Simulated data with ground truth
 
 `simulate_experiment()`, easy and stress settings, k-means clusters given to
@@ -594,6 +660,7 @@ against the papers before being cited.
 | Native signal kept, against scAR | far ahead (1 to 4% lost against 18 to 26%) | section 1a |
 | Speed | level with SoupX, faster than the other four on this dataset | section 1a |
 | Ambient removal with experimental ground truth (20k species mixture) | behind DecontX and the published CellBender (0.62 against 0.72 to 0.73); well ahead of SoupX run here (0.35) and published (0.42) | section 1c |
+| Ambient removal on held-out mixtures (hgmm 1k, 5k, 10k) | **behind DecontX by 19 points** (0.44 against 0.64) and SoupX (0.68); keeps the most (retain 0.992 against 0.984, 0.982); a correction change that recovered 7.5 points failed retain on 10k | section 1e |
 | Contamination estimate on held-out species mixtures | lowest error of Decant, SoupX and DecontX on 1k and 5k; behind DecontX on 10k (per-cell correlation 0.18 against 0.67), where all tools underestimate | section 1d |
 | Endogenous counts kept with experimental ground truth | level with SoupX on the species mixture (0.989 against 0.992), ahead of DecontX (0.983); best of those run on the Smart-seq2 negative control (0.998 against SoupX 0.989, DecontX 0.952) | section 1c |
 | Contamination not identifiable (single cell type) | Decant warns (DecontX returns 9-39% silently; SoupX failed on one set); the number Decant reports is still wrong | section 1d |

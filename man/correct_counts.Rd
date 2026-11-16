@@ -45,7 +45,11 @@ an entry is set aside only if a count that high would be unexpected
 among all those cells. With "entry", any single count of a gene whose
 expected ambient count is below \code{cap_q} is set aside and kept, although
 thousands of cells make some such counts expected; on the 20k species
-mixture this kept most ambient counts of rarely contaminating genes.}
+mixture this kept most ambient counts of rarely contaminating genes.
+"cluster" removes more but also keeps less of the cells' own rare
+counts: on held-out mixtures removal 0.519 vs 0.444, retain 0.974 vs
+0.986 on the 10k mixture (\code{validation/BENCHMARK.md}, section 1e), so
+it is not the default.}
 }
 \value{
 corrected counts, same class as \code{observed} (dense or dgCMatrix).
