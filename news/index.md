@@ -2,14 +2,20 @@
 
 ## Decant (development version)
 
-- **Known problem:
-  [`ambient_de()`](https://kroy3.github.io/Decant/reference/ambient_de.md)
-  is not calibrated on real data.** On a real Alzheimer’s study
-  (GSE272082, 5 vs 4 donors) with disease labels shuffled between
-  donors, it reported genes in 40 of 48 tests, up to 574; naive edgeR
-  in 1. New script `validation/validate_de_calibration.R`; README, user
-  guide (9.6), `validation/BENCHMARK.md` (3b) and the scorecard now say
-  so. A fix is in progress.
+- **[`ambient_de()`](https://kroy3.github.io/Decant/reference/ambient_de.md)
+  is now calibrated on real data.** It fitted each gene with edgeR’s
+  tagwise NB dispersion and then ran a quasi-likelihood F-test, which
+  estimates the gene’s extra variance again: the variance was counted
+  twice and the test was liberal. It now uses the trended dispersion, as
+  edgeR’s quasi-likelihood pipeline does (`dispersion = "trended"`;
+  `"tagwise"` restores the old behaviour). With condition labels
+  shuffled between donors on two real datasets, the old default reported
+  genes in 82 of 96 tests (up to 574 genes), the new one in 9 (at most 9
+  genes), naive edgeR in 4. GSE190015 (nine controls) was held out from
+  the diagnosis. The simulation gates still pass with unchanged power.
+  Re-run analyses made with earlier versions. `joint_rho`, first
+  suspected, was not the cause. New:
+  `validation/validate_de_calibration.R`, `validation/BENCHMARK.md` 3b.
 
 - **Contamination estimate no longer halved on real data.** Genes a
   cluster does not express scatter around rho by about 25-30% from gene

@@ -157,9 +157,9 @@ genes × samples.</li>
 <span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ambient_de.html">ambient_de</a></span><span class="op">(</span><span class="va">Y</span>, <span class="va">st</span><span class="op">$</span><span class="va">empties</span>, <span class="va">design</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">res</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"gene"</span>, <span class="st">"logFC"</span>, <span class="st">"FDR"</span>, <span class="st">"ambient_frac"</span>, <span class="st">"naive_FDR"</span>, <span class="st">"ambient_driven"</span><span class="op">)</span><span class="op">]</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;     gene    logFC          FDR ambient_frac    naive_FDR ambient_driven</span></span>
-<span><span class="co">#&gt; 117 g218 1.461907 1.134977e-07   0.02752255 3.990660e-07          FALSE</span></span>
-<span><span class="co">#&gt; 173 g309 1.225651 3.007643e-07   0.01134339 1.797587e-06          FALSE</span></span>
-<span><span class="co">#&gt; 189 g338 1.183622 4.262850e-06   0.01707194 9.899770e-06          FALSE</span></span></code></pre></div>
+<span><span class="co">#&gt; 117 g218 1.461912 1.129595e-07   0.02752255 3.990660e-07          FALSE</span></span>
+<span><span class="co">#&gt; 173 g309 1.226158 2.978136e-07   0.01134339 1.797587e-06          FALSE</span></span>
+<span><span class="co">#&gt; 189 g338 1.183623 4.248957e-06   0.01707194 9.899770e-06          FALSE</span></span></code></pre></div>
 <ul>
 <li>
 <code>design</code> is a standard model matrix with one row per
@@ -315,6 +315,12 @@ cohorts</td>
 samples pooled. Leave it on: without it, the ambient fraction of a
 single cell type can be wildly wrong</td>
 </tr>
+<tr class="odd">
+<td><code>dispersion</code></td>
+<td><code>"trended"</code></td>
+<td>NB dispersion in the fit. <code>"tagwise"</code> was the earlier
+default and is not calibrated on real data (9.6)</td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -323,24 +329,25 @@ single cell type can be wildly wrong</td>
 </h2>
 <ul>
 <li>
-<strong><code><a href="../reference/ambient_de.html">ambient_de()</a></code> reports false hits on real
-data.</strong> On a real Alzheimer’s study (GSE272082, prefrontal
-cortex, 5 vs 4 donors), disease labels were shuffled between donors 24
-times, so there was nothing to find. In microglia and oligodendrocytes,
-<code><a href="../reference/ambient_de.html">ambient_de()</a></code> reported genes in 40 of the 48 tests (up to
-574 genes); naive edgeR in 1. A fix is in progress. Until then, do not
-report its hits as findings: use a standard pseudobulk test, and treat
-<code>ambient_driven</code> only as a hint. To check any method on your
-own data, shuffle your condition labels between samples and count the
-hits.</li>
+<strong>Calibration on real data.</strong> On two real
+single-nucleus datasets (GSE272082, Alzheimer’s vs control; GSE190015,
+nine controls), condition labels were shuffled between donors 24 times,
+so there was nothing to find. In microglia and oligodendrocytes,
+<code><a href="../reference/ambient_de.html">ambient_de()</a></code> reported a gene in 9 of the 96 tests, never
+more than 9 genes; naive edgeR in 4. Earlier versions used
+<code>dispersion = "tagwise"</code> and reported genes in 82 of 96
+tests, up to 574; rerun analyses made with them. To check any method on
+your own data, shuffle your condition labels between samples and count
+the hits.</li>
+<li>On real data only calibration has been checked. That
+<code><a href="../reference/ambient_de.html">ambient_de()</a></code> removes ambient-driven hits is shown in
+simulation.</li>
 <li>With very few empty droplets per sample (a few hundred), the soup is
 uncertain and some leakage returns.</li>
 <li>With three samples per group, power is lower than with six.</li>
-<li>Apart from the check above, the evidence for
-<code><a href="../reference/ambient_de.html">ambient_de()</a></code> is from simulations. Correcting counts with a
-good tool and then testing performs similarly on the same simulations;
-<code><a href="../reference/ambient_de.html">ambient_de()</a></code> has the advantage when the design includes
-covariates such as batch.</li>
+<li>Correcting counts with a good tool and then testing performs
+similarly on the same simulations; <code><a href="../reference/ambient_de.html">ambient_de()</a></code> has the
+advantage when the design includes covariates such as batch.</li>
 </ul>
 <hr>
 <p><strong>Previous:</strong> <a href="08-Multi-Sample-Experiments.html">Chapter 8, Multi-Sample

@@ -20,9 +20,9 @@ diagnostics, chapter by chapter.
     counts and then test. Decant puts each sample’s measured ambient
     RNA, and its uncertainty, inside the negative binomial model:
     `mu = native expression + ambient`. It supports covariates and is
-    robust to outlier samples in large cohorts. **On real data its
-    current default is not calibrated** (it reports genes when there is
-    no effect); see [Limits](#limits) before using it.
+    robust to outlier samples in large cohorts. On two real datasets
+    with shuffled labels it reports false hits about as rarely as
+    standard edgeR (an earlier version did not; see [Limits](#limits)).
 2.  **Correction that keeps what cannot be ambient** (`bayes_cell`).
     Counts far above what ambient RNA could produce in a cell (doublets,
     rare expressers) keep their molecules; only the expected ambient
@@ -99,11 +99,20 @@ Decant’s `bayes` rule and then running edgeR was as good as
 `ambient_de`; `ambient_de` is the option that stays valid with
 covariates such as batch.
 
-**These are simulations, and they do not carry over to real data.** On a
-real Alzheimer’s study (GSE272082, 5 vs 4 donors), with disease labels
-shuffled between donors so that there is nothing to find, `ambient_de`
-with default settings reported genes in 40 of 48 shuffles (up to 574
-genes); naive edgeR did so in 1 of 48. The fix is in progress. Details:
+**Calibration on real data.** Two real single-nucleus datasets, with
+condition labels shuffled between donors so that there is nothing to
+find (24 shuffles each, microglia and oligodendrocytes):
+
+|  | GSE272082, AD vs control: shuffles with a hit (of 48) | GSE190015, nine controls: shuffles with a hit (of 48) | most hits in one shuffle |
+|----|----|----|----|
+| **`ambient_de`** | **4** | **5** | **9** |
+| naive edgeR | 1 | 3 | 1 |
+| `ambient_de` before this release | 40 | 42 | 574 |
+
+The earlier version paired each gene’s own NB dispersion with a
+quasi-likelihood test, which counts that gene’s extra variance twice; it
+now uses the trended dispersion, as edgeR does. GSE190015 was not used
+to find or fix the problem. Details:
 [`validation/BENCHMARK.md`](https://kroy3.github.io/Decant/validation/BENCHMARK.md),
 section 3b.
 
@@ -152,15 +161,14 @@ subset(res, ambient_driven)   # hits a standard pipeline reports that the soup e
   cannot be estimated from expression. Decant then warns and asks for
   `rho`; the number it reports in that case is not reliable.
 - Memory: about 9.5 GB for 11,000 cells and 1.9 million empty droplets.
-- **[`ambient_de()`](https://kroy3.github.io/Decant/reference/ambient_de.md)
-  is not calibrated on real data.** On shuffled labels it reports many
-  false hits (section 3b of
-  [`validation/BENCHMARK.md`](https://kroy3.github.io/Decant/validation/BENCHMARK.md)).
-  Until this is fixed, do not report its hits as findings; a standard
-  pseudobulk test is the conservative choice. Switching off `joint_rho`
-  removes the false hits only by over-subtracting and losing power, so
-  it is not a workaround. The other DE results are simulated, from a
-  simulator that follows the model’s own ambient mechanism.
+- On real data,
+  [`ambient_de()`](https://kroy3.github.io/Decant/reference/ambient_de.md)
+  has been checked for calibration only (two datasets, shuffled labels).
+  That it removes ambient-driven hits that a standard test reports is
+  shown in simulation, from a simulator that follows the model’s own
+  ambient mechanism; there is no real-data ground truth for it yet.
+  Versions before this release were not calibrated on real data; rerun
+  analyses made with them.
 - Empty droplets that over-represent genes the cells also express are
   not detected and make the contamination estimate too low.
 
