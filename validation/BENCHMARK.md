@@ -644,6 +644,51 @@ What this does not show: the pancreas data were used to find the problem, so
 they do not show that the guard works on other data; and there is still no
 real dataset on which `ambient_de` beats a standard test.
 
+## 3d. Pre-registered test: paired brain regions (GSE272082)
+
+Pre-registration: `preregistration/region_leakage.md` (committed before any
+DE; Amendment 1, a crash fix in `ambient_de`'s robust weights, made before
+any result was seen). Script: `validate_de_region_leakage.R`. Results:
+`results/region_leakage_*.csv`.
+
+Design: six donors with prefrontal cortex (PFC), entorhinal cortex (EC) and
+hippocampus (HIP); microglia (primary) and oligodendrocytes; `~ donor +
+region`. Truth: genes foreign to each type in Darmanis et al. 2015 (C1 single
+cells; microglia 1,435 genes including SNAP25, SYT1, GAD1; oligodendrocytes
+690, without canonical neuronal genes because the reference's
+oligodendrocytes carry neuronal RNA at about 10%). One donor's PFC had 9
+microglia, below the minimum of 20, so the microglia tests have 5 donors.
+
+**Primary result: null.** Microglia, HIP vs PFC: standard edgeR called no
+gene at all (precondition: at least 5 foreign genes), and neither did any
+other method.
+
+| test | standard edgeR: foreign / other | `ambient_de` | Decant, SoupX, DecontX then edgeR |
+|---|---|---|---|
+| microglia HIP vs PFC (primary) | 0 / 0 | 0 / 0 | 0 / 0 each |
+| microglia EC vs PFC | 0 / 0 | 0 / 0 | 0 / 0 each |
+| oligodendrocytes HIP vs PFC | 3 / 37 | 2 / 45 | 0 / 0, 0 / 0, 0 / 1 |
+| oligodendrocytes EC vs PFC | 0 / 0 | 0 / 0 | 0 / 0 each |
+
+Calibration, region labels swapped within donors:
+
+| test | `ambient_de`: relabelings with a hit (max genes) | standard edgeR (max genes) |
+|---|---|---|
+| microglia HIP | 0 of 15 | 0 of 15 |
+| microglia EC | **8 of 15** (1) | 0 of 15 |
+| oligodendrocytes HIP | 2 of 31 (1) | 3 of 31 (**107**) |
+| oligodendrocytes EC | 3 of 31 (2) | 2 of 31 (**393**) |
+
+- The precondition failed, so the test says nothing about whether
+  `ambient_de` removes ambient-driven hits. Region differences in the soup
+  did not make a standard test call genes foreign to microglia here.
+- Microglia EC vs PFC exceeds the pre-stated calibration limit (6 of 31,
+  i.e. about 3 of 15): `ambient_de` has a hit in 8 of 15 relabelings, one gene
+  each time.
+- Not pre-registered as an endpoint, but noted: in two oligodendrocyte
+  relabelings standard edgeR reported 107 and 393 genes; `ambient_de` never
+  more than 2.
+
 ## 4. What each tool does
 
 | | Decant | SoupX | DecontX | CellBender | scAR | AmbiDose |
@@ -706,7 +751,7 @@ against the papers before being cited.
 | Per-cell contamination estimate | ahead of SoupX (one value per channel); level with DecontX, CellBender, AmbiDose by design; accuracy of the per-cell values untested on real data | section 4 |
 | DE without leakage, power kept | level with Decant-correct-then-edgeR; slightly ahead of SoupX-then-edgeR (4 to 7 points of power); simulated only | section 3 |
 | DE calibration on real data (shuffled labels) | slightly more liberal than naive edgeR: hits in 20 of 168 shuffles against 8, at most 9 genes (three datasets, one held out). Before the dispersion fix and the ambient-fraction guard, far behind (up to 2,300 genes) | sections 3b, 3c |
-| DE: removes ambient-driven hits on real data | unknown: the pre-registered pancreas test was null (the standard test found none to remove) | section 3c |
+| DE: removes ambient-driven hits on real data | unknown: two pre-registered tests (pancreas, paired brain regions) were null, because the standard test found no ambient-driven hits to remove | sections 3c, 3d |
 | DE with covariates in large cohorts | ahead of subtract-then-rank-test in simulation | `experiments/large_cohort_calibration/` |
 | Removal of ambient-compatible foreign counts, against DecontX | behind by 5 to 9 points on all three sets | section 1a |
 | Leaving counts that cannot be ambient (likely doublets) | ahead of DecontX, AmbiDose, scAR; level with SoupX and CellBender | section 1a |

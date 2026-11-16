@@ -1,5 +1,14 @@
 # Decant (development version)
 
+* **Second pre-registered real-data DE test: null.** Paired brain regions
+  (GSE272082, hippocampus or entorhinal cortex vs prefrontal cortex, within
+  donors): standard edgeR called no gene foreign to microglia, so there was
+  nothing for `ambient_de` to remove (`validation/BENCHMARK.md` 3d). In
+  microglia EC vs PFC, `ambient_de` had a one-gene hit in 8 of 15 label
+  swaps, above the pre-stated limit.
+* `ambient_de()`: robust weights are kept finite and positive (a NaN or
+  infinite Pearson residual made edgeR stop on real data).
+
 * **Contamination estimate on the 10k mixture: diagnosed, not fixed.** The
   absent-gene fixed point collapses there (1 to 6 absent genes kept of
   5,000+) because its overdispersion term starts at zero and its low start

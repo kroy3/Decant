@@ -171,10 +171,10 @@ subset(res, ambient_driven)   # hits a standard pipeline reports that the soup e
   calibration only (three datasets, shuffled labels); before this release it
   failed in pancreas ductal cells. That it removes
   ambient-driven hits a standard test reports is shown only in simulation,
-  from a simulator that follows the model's own mechanism. A pre-registered
-  real-data test (pancreas, T1D vs control) could not show it: the standard
-  test found no ambient-driven hits to remove (`validation/BENCHMARK.md`,
-  3c). Until there is real-data evidence, report `ambient_de` hits together
+  from a simulator that follows the model's own mechanism. Two pre-registered
+  real-data tests (pancreas, T1D vs control; brain regions within donors)
+  could not show it: the standard test found no ambient-driven hits to
+  remove (`validation/BENCHMARK.md`, 3c and 3d). Until there is real-data evidence, report `ambient_de` hits together
   with a standard pseudobulk test. Analyses made with earlier versions
   should be rerun.
 - Empty droplets that over-represent genes the cells also express are not
