@@ -66,9 +66,9 @@ design <- model.matrix(~ cond, data = data.frame(cond = st$cond))
 res <- ambient_de(Y, st$empties, design)
 head(res[, c("gene", "logFC", "FDR", "ambient_frac", "naive_FDR", "ambient_driven")], 3)
 #>     gene    logFC          FDR ambient_frac    naive_FDR ambient_driven
-#> 117 g218 1.461907 1.134977e-07   0.02752255 3.990660e-07          FALSE
-#> 173 g309 1.225651 3.007643e-07   0.01134339 1.797587e-06          FALSE
-#> 189 g338 1.183622 4.262850e-06   0.01707194 9.899770e-06          FALSE
+#> 117 g218 1.461912 1.129595e-07   0.02752255 3.990660e-07          FALSE
+#> 173 g309 1.226158 2.978136e-07   0.01134339 1.797587e-06          FALSE
+#> 189 g338 1.183623 4.248957e-06   0.01707194 9.899770e-06          FALSE
 ```
 
 - `design` is a standard model matrix with one row per sample. The last
@@ -137,23 +137,25 @@ subset(res, ambient_driven)
 | `max_ambient_frac` | `0.75` | Skip genes whose counts are mostly ambient; they are listed in `attr(res, "ambient_dominated")` |
 | `naive` | `TRUE` | Also run the standard test, to fill `naive_FDR` and `ambient_driven` |
 | `joint_rho` | `TRUE` | Refine each sample's ambient fraction on genes absent from all samples pooled. Leave it on: without it, the ambient fraction of a single cell type can be wildly wrong |
+| `dispersion` | `"trended"` | NB dispersion in the fit. `"tagwise"` was the earlier default and is not calibrated on real data (9.6) |
 
 ## 9.6 Limits
 
-- **`ambient_de()` reports false hits on real data.** On a real
-  Alzheimer's study (GSE272082, prefrontal cortex, 5 vs 4 donors), disease
+- **Calibration on real data.** On two real single-nucleus datasets
+  (GSE272082, Alzheimer's vs control; GSE190015, nine controls), condition
   labels were shuffled between donors 24 times, so there was nothing to
-  find. In microglia and oligodendrocytes, `ambient_de()` reported genes in
-  40 of the 48 tests (up to 574 genes); naive edgeR in 1. A fix is in
-  progress. Until then, do not report its hits as findings: use a standard
-  pseudobulk test, and treat `ambient_driven` only as a hint. To check any
-  method on your own data, shuffle your condition labels between samples
-  and count the hits.
+  find. In microglia and oligodendrocytes, `ambient_de()` reported a gene in
+  9 of the 96 tests, never more than 9 genes; naive edgeR in 4. Earlier
+  versions used `dispersion = "tagwise"` and reported genes in 82 of 96
+  tests, up to 574; rerun analyses made with them. To check any method on
+  your own data, shuffle your condition labels between samples and count
+  the hits.
+- On real data only calibration has been checked. That `ambient_de()`
+  removes ambient-driven hits is shown in simulation.
 - With very few empty droplets per sample (a few hundred), the soup is
   uncertain and some leakage returns.
 - With three samples per group, power is lower than with six.
-- Apart from the check above, the evidence for `ambient_de()` is from
-  simulations. Correcting counts with a good tool and then testing performs
+- Correcting counts with a good tool and then testing performs
   similarly on the same simulations; `ambient_de()` has the advantage when
   the design includes covariates such as batch.
 
