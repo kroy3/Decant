@@ -4,7 +4,7 @@
 ## as benchmark_species_mixture.R) on the 10x hgmm 1k, 5k and 10k v3
 ## mixtures, which are held out from the design of Decant's correction.
 ## Run from the repo root:
-##   Rscript validation/benchmark_removal_heldout.R [tag] [decant correction]
+##   Rscript validation/benchmark_removal_heldout.R [tag] [decant correction] [cap_test]
 ## `tag` names the Decant variant in the output (default "current").
 ## SoupX and DecontX results are cached per dataset (they do not depend on
 ## Decant); delete validation/data/<dataset>/removal_comparators.rds to rerun.
@@ -24,6 +24,7 @@ eval(parse(text = src[grep("^seurat_clusters <- function", src):(grep("^run_tool
 args <- commandArgs(trailingOnly = TRUE)
 TAG <- if (length(args) >= 1) args[1] else "current"
 CORR <- if (length(args) >= 2) args[2] else "bayes_cell"
+CAPT <- if (length(args) >= 3) args[3] else NULL
 DATASETS <- c("hgmm_1k_v3", "hgmm_5k_v3", "hgmm_10k_v3")
 CACHE <- file.path("validation", "data"); OUT <- file.path("validation", "results")
 
@@ -84,13 +85,15 @@ for (ds in DATASETS) {
     cmp <- do.call(rbind, cmp); saveRDS(cmp, cf); cmp
   }
   t0 <- Sys.time()
-  res <- suppressWarnings(decant(x$cells, x$empties, clusters = x$clusters, correction = CORR))
+  res <- suppressWarnings(do.call(decant, c(list(x$cells, x$empties, clusters = x$clusters, correction = CORR),
+                                             if (!is.null(CAPT)) list(cap_test = CAPT))))
   secs <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
   cm <- res$corrected; dimnames(cm) <- dimnames(x$cells)
   stopifnot(all(cm <= x$cells))   # never adds counts
   sc <- scores(x$cells, cm, x$gene_sp, x$cell_sp)
   rows[[ds]] <- rbind(comp, data.frame(dataset = ds, method = paste0("Decant (", TAG, ")"),
-                                       retain = sc[["retain"]], removal = sc[["removal"]], seconds = secs, note = CORR))
+                                       retain = sc[["retain"]], removal = sc[["removal"]], seconds = secs,
+                                       note = paste(CORR, CAPT %||% "")))
   print(rows[[ds]], digits = 3, row.names = FALSE)
   rm(x, res, cm); invisible(gc())
 }

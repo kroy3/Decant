@@ -39,6 +39,14 @@
 #' @param cap_q for "bayes_cell": an entry is treated as not explainable by
 #'   ambient RNA when its count exceeds the `1 - cap_q` Poisson quantile of
 #'   its ambient expectation.
+#' @param cap_test for "bayes_cell": how the "not explainable by ambient"
+#'   test is applied. "entry" tests each entry on its own; "cluster" corrects
+#'   it for the number of cells of its cluster it is applied to (Bonferroni):
+#'   an entry is set aside only if a count that high would be unexpected
+#'   among all those cells. With "entry", any single count of a gene whose
+#'   expected ambient count is below `cap_q` is set aside and kept, although
+#'   thousands of cells make some such counts expected; on the 20k species
+#'   mixture this kept most ambient counts of rarely contaminating genes.
 #' @param drop_zeros for sparse input, drop entries corrected to exactly 0.
 #'   FALSE keeps the input's sparsity pattern (explicit zeros).
 #' @return corrected counts, same class as `observed` (dense or dgCMatrix).
@@ -48,8 +56,9 @@
 #' @export
 correct_counts <- function(observed, soup, rho,
                            method = c("subtract", "redistribute", "bayes", "bayes_cell"),
-                           clusters = NULL, max_iter = 50, drop_zeros = TRUE, cap_q = 1e-3) {
-  method <- match.arg(method)
+                           clusters = NULL, max_iter = 50, drop_zeros = TRUE, cap_q = 1e-3,
+                           cap_test = c("entry", "cluster")) {
+  method <- match.arg(method); cap_test <- match.arg(cap_test)
   observed <- .as_counts(observed, "observed")
   if (length(soup) != nrow(observed)) stop("length(soup) must equal nrow(observed)", call. = FALSE)
   if (length(rho) == 1L) rho <- rep(rho, ncol(observed))
@@ -67,7 +76,7 @@ correct_counts <- function(observed, soup, rho,
     },
     bayes_cell = {
       if (is.null(clusters)) stop("method = 'bayes_cell' needs `clusters`", call. = FALSE)
-      .corr_bayes_cell(observed, nz, soup, rho, T_c, clusters, cap_q)
+      .corr_bayes_cell(observed, nz, soup, rho, T_c, clusters, cap_q, cap_test)
     })
   ## the guarantee, enforced (not assumed) on every path
   v <- pmin(pmax(v, 0), nz$v)
@@ -150,12 +159,18 @@ estimate_rho <- function(observed, soup, low_expr_q = 0.5) {
 ## ambient alone: it keeps everything but lambda. The cluster's native profile
 ## is then estimated from the other entries only, against the ambient expected
 ## in those same cells, and applied to them as in "bayes".
-.corr_bayes_cell <- function(observed, nz, soup, rho, T_c, clusters, cap_q) {
+.corr_bayes_cell <- function(observed, nz, soup, rho, T_c, clusters, cap_q, cap_test = "entry") {
   ks <- sort(unique(clusters)); K <- length(ks); G <- nrow(observed)
   kj <- match(clusters, ks)[nz$j]
   amb_c <- rho * T_c
   lam <- amb_c[nz$j] * soup[nz$i]
-  high <- nz$v > stats::qpois(1 - cap_q, lam)
+  high <- if (cap_test == "entry") {
+    nz$v > stats::qpois(1 - cap_q, lam)
+  } else {
+    ## P(count >= observed | ambient only), times the cells it is tested in
+    n_k <- tabulate(match(clusters, ks), K)
+    stats::ppois(nz$v - 1, lam, lower.tail = FALSE) * n_k[kj] < cap_q
+  }
   gk <- function(w) {                       # sum w over entries, by (gene, cluster)
     m <- matrix(0, G, K)
     s <- rowsum(w, (kj - 1L) * G + nz$i, reorder = FALSE)
