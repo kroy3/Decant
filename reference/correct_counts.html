@@ -68,7 +68,8 @@
 <span>  clusters <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_iter <span class="op">=</span> <span class="fl">50</span>,</span>
 <span>  drop_zeros <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  cap_q <span class="op">=</span> <span class="fl">0.001</span></span>
+<span>  cap_q <span class="op">=</span> <span class="fl">0.001</span>,</span>
+<span>  cap_test <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"entry"</span>, <span class="st">"cluster"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -111,6 +112,21 @@ FALSE keeps the input's sparsity pattern (explicit zeros).</p></dd>
 <dd><p>for "bayes_cell": an entry is treated as not explainable by
 ambient RNA when its count exceeds the <code>1 - cap_q</code> Poisson quantile of
 its ambient expectation.</p></dd>
+
+
+<dt id="arg-cap-test">cap_test<a class="anchor" aria-label="anchor" href="#arg-cap-test"></a></dt>
+<dd><p>for "bayes_cell": how the "not explainable by ambient"
+test is applied. "entry" tests each entry on its own; "cluster" corrects
+it for the number of cells of its cluster it is applied to (Bonferroni):
+an entry is set aside only if a count that high would be unexpected
+among all those cells. With "entry", any single count of a gene whose
+expected ambient count is below <code>cap_q</code> is set aside and kept, although
+thousands of cells make some such counts expected; on the 20k species
+mixture this kept most ambient counts of rarely contaminating genes.
+"cluster" removes more but also keeps less of the cells' own rare
+counts: on held-out mixtures removal 0.519 vs 0.444, retain 0.974 vs
+0.986 on the 10k mixture (<code>validation/BENCHMARK.md</code>, section 1e), so
+it is not the default.</p></dd>
 
 </dl></div>
     <div class="section level2">

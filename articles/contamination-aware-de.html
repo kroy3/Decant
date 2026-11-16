@@ -170,19 +170,19 @@ contamination-aware test does not.</p>
 <p>The per-sample ambient fractions the test estimated:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">res</span>, <span class="st">"samples"</span><span class="op">)</span></span>
-<span><span class="co">#&gt;    sample ambient_frac soup_umis norm_factor</span></span>
-<span><span class="co">#&gt; 1       1   0.05692409     49848   0.9663427</span></span>
-<span><span class="co">#&gt; 2       2   0.05808700     49966   1.0214589</span></span>
-<span><span class="co">#&gt; 3       3   0.04450122     50234   0.9746253</span></span>
-<span><span class="co">#&gt; 4       4   0.03638540     49819   1.0010098</span></span>
-<span><span class="co">#&gt; 5       5   0.07354397     50063   1.0171324</span></span>
-<span><span class="co">#&gt; 6       6   0.03911962     50089   0.9802820</span></span>
-<span><span class="co">#&gt; 7       7   0.08613663     49997   1.0165556</span></span>
-<span><span class="co">#&gt; 8       8   0.09671726     50090   0.9952812</span></span>
-<span><span class="co">#&gt; 9       9   0.14179092     49851   0.9904109</span></span>
-<span><span class="co">#&gt; 10     10   0.09326746     49814   0.9953352</span></span>
-<span><span class="co">#&gt; 11     11   0.13162895     49671   1.0026041</span></span>
-<span><span class="co">#&gt; 12     12   0.11157845     50086   1.0414831</span></span></code></pre></div>
+<span><span class="co">#&gt;    sample ambient_frac ambient_frac_imputed soup_umis norm_factor</span></span>
+<span><span class="co">#&gt; 1       1   0.05692409                FALSE     49848   0.9663427</span></span>
+<span><span class="co">#&gt; 2       2   0.05808700                FALSE     49966   1.0214589</span></span>
+<span><span class="co">#&gt; 3       3   0.04450122                FALSE     50234   0.9746253</span></span>
+<span><span class="co">#&gt; 4       4   0.03638540                FALSE     49819   1.0010098</span></span>
+<span><span class="co">#&gt; 5       5   0.07354397                FALSE     50063   1.0171324</span></span>
+<span><span class="co">#&gt; 6       6   0.03911962                FALSE     50089   0.9802820</span></span>
+<span><span class="co">#&gt; 7       7   0.08613663                FALSE     49997   1.0165556</span></span>
+<span><span class="co">#&gt; 8       8   0.09671726                FALSE     50090   0.9952812</span></span>
+<span><span class="co">#&gt; 9       9   0.14179092                FALSE     49851   0.9904109</span></span>
+<span><span class="co">#&gt; 10     10   0.09326746                FALSE     49814   0.9953352</span></span>
+<span><span class="co">#&gt; 11     11   0.13162895                FALSE     49671   1.0026041</span></span>
+<span><span class="co">#&gt; 12     12   0.11157845                FALSE     50086   1.0414831</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="on-a-seurat-object">On a Seurat object<a class="anchor" aria-label="anchor" href="#on-a-seurat-object"></a>

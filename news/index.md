@@ -2,6 +2,56 @@
 
 ## Decant (development version)
 
+- **Second pre-registered real-data DE test: null.** Paired brain
+  regions (GSE272082, hippocampus or entorhinal cortex vs prefrontal
+  cortex, within donors): standard edgeR called no gene foreign to
+  microglia, so there was nothing for `ambient_de` to remove
+  (`validation/BENCHMARK.md` 3d). In microglia EC vs PFC, `ambient_de`
+  had a one-gene hit in 8 of 15 label swaps, above the pre-stated limit.
+
+- [`ambient_de()`](https://kroy3.github.io/Decant/reference/ambient_de.md):
+  robust weights are kept finite and positive (a NaN or infinite Pearson
+  residual made edgeR stop on real data).
+
+- **Contamination estimate on the 10k mixture: diagnosed, not fixed.**
+  The absent-gene fixed point collapses there (1 to 6 absent genes kept
+  of 5,000+) because its overdispersion term starts at zero and its low
+  start settles on the soup’s most abundant genes. A fallback start that
+  fixed the 10k mixture failed on held-out data (hgmm 5k median 43% low,
+  Spearman 0.49) and turned the negative control’s correct near-zero
+  into NA, so the estimator is unchanged (`validation/BENCHMARK.md` 1f).
+  `validate_species_mixture.R` now records a method that declines (rho
+  NA).
+
+- **Ambient removal: held-out results, and a change that did not pass.**
+  On held-out human/mouse mixtures (hgmm 1k, 5k, 10k) Decant removes
+  0.444 of ambient signal against DecontX 0.637 and SoupX 0.679, while
+  keeping the most (retain 0.992). On the 20k mixture the loss was
+  traced to `bayes_cell`’s cap, which keeps every single count of a gene
+  with a tiny ambient expectation. Correcting that test for the number
+  of cells (`cap_test = "cluster"`, opt-in) raised held-out removal to
+  0.519 but dropped retain to 0.974 on the 10k mixture, so it is not the
+  default (`validation/BENCHMARK.md` 1e). The larger part of the
+  held-out gap comes from contamination estimates that are too low on
+  those mixtures.
+
+- **[`ambient_de()`](https://kroy3.github.io/Decant/reference/ambient_de.md)
+  guards against implausible ambient fractions.** A single cell type’s
+  pseudobulk cannot always identify its own ambient fraction. On
+  GSE273597 (pancreas) six donors’ ductal values came out at 0.86 to
+  0.96 and shuffled labellings gave up to 2,300 false hits. A sample
+  above the new `max_rho` (0.5) now takes the median of the plausible
+  samples, with their spread added to its uncertainty, and `ambient_de`
+  warns (`attr(res, "samples")$ambient_frac_imputed`). Ductal shuffles:
+  4 of 24 with a hit, at most 1 gene. GSE190015 and GSE272082 unchanged.
+  The pancreas data found the problem, so they do not validate the guard
+  elsewhere.
+
+- **Pre-registered real-data test (`validation/BENCHMARK.md` 3c):
+  null.** On T1D vs non-diabetic pancreas, naive edgeR found no
+  ambient-driven hits to remove. `ambient_de` is now described as
+  experimental in the README.
+
 - **[`ambient_de()`](https://kroy3.github.io/Decant/reference/ambient_de.md)
   is now calibrated on real data.** It fitted each gene with edgeR’s
   tagwise NB dispersion and then ran a quasi-likelihood F-test, which

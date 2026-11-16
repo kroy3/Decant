@@ -13,6 +13,7 @@ decant(
   k = 8,
   rho = NULL,
   correction = c("bayes_cell", "bayes", "subtract", "redistribute"),
+  cap_test = c("entry", "cluster"),
   obs_unspliced = NULL,
   obs_spliced = NULL,
   empties_unspliced = NULL,
@@ -67,6 +68,12 @@ decant(
   types that do not express them, and leaves most of the counts that are
   too high in a cell to be ambient (likely doublets), which "bayes"
   removed.
+
+- cap_test:
+
+  for "bayes_cell": "entry" or "cluster", how the test that sets aside
+  counts too high to be ambient is applied; see
+  [`correct_counts()`](https://kroy3.github.io/Decant/reference/correct_counts.md).
 
 - obs_unspliced, obs_spliced:
 

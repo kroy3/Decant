@@ -13,7 +13,8 @@ correct_counts(
   clusters = NULL,
   max_iter = 50,
   drop_zeros = TRUE,
-  cap_q = 0.001
+  cap_q = 0.001,
+  cap_test = c("entry", "cluster")
 )
 ```
 
@@ -56,6 +57,21 @@ correct_counts(
   for "bayes_cell": an entry is treated as not explainable by ambient
   RNA when its count exceeds the `1 - cap_q` Poisson quantile of its
   ambient expectation.
+
+- cap_test:
+
+  for "bayes_cell": how the "not explainable by ambient" test is
+  applied. "entry" tests each entry on its own; "cluster" corrects it
+  for the number of cells of its cluster it is applied to (Bonferroni):
+  an entry is set aside only if a count that high would be unexpected
+  among all those cells. With "entry", any single count of a gene whose
+  expected ambient count is below `cap_q` is set aside and kept,
+  although thousands of cells make some such counts expected; on the 20k
+  species mixture this kept most ambient counts of rarely contaminating
+  genes. "cluster" removes more but also keeps less of the cells' own
+  rare counts: on held-out mixtures removal 0.519 vs 0.444, retain 0.974
+  vs 0.986 on the 10k mixture (`validation/BENCHMARK.md`, section 1e),
+  so it is not the default.
 
 ## Value
 

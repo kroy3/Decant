@@ -224,15 +224,19 @@ calls <code><a href="../reference/ambient_de.html">ambient_de()</a></code> prote
 </h3>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">res</span>, <span class="st">"samples"</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   sample ambient_frac soup_umis norm_factor</span></span>
-<span><span class="co">#&gt; 1      1   0.05692409     49848   0.9663427</span></span>
-<span><span class="co">#&gt; 2      2   0.05808700     49966   1.0214589</span></span>
-<span><span class="co">#&gt; 3      3   0.04450122     50234   0.9746253</span></span></code></pre></div>
+<span><span class="co">#&gt;   sample ambient_frac ambient_frac_imputed soup_umis norm_factor</span></span>
+<span><span class="co">#&gt; 1      1   0.05692409                FALSE     49848   0.9663427</span></span>
+<span><span class="co">#&gt; 2      2   0.05808700                FALSE     49966   1.0214589</span></span>
+<span><span class="co">#&gt; 3      3   0.04450122                FALSE     50234   0.9746253</span></span></code></pre></div>
 <ul>
 <li>
 <code>ambient_frac</code> is the estimated ambient fraction of the
 cell type in each sample, and <code>soup_umis</code> the number of UMIs
 the sample’s soup rests on.</li>
+<li>
+<code>ambient_frac_imputed</code> is <code>TRUE</code> for a sample
+whose own estimate was implausible (above <code>max_rho</code>) and was
+replaced by the median of the others (see 9.6).</li>
 </ul>
 </div>
 </div>
@@ -316,6 +320,12 @@ samples pooled. Leave it on: without it, the ambient fraction of a
 single cell type can be wildly wrong</td>
 </tr>
 <tr class="odd">
+<td><code>max_rho</code></td>
+<td><code>0.5</code></td>
+<td>A sample whose ambient fraction comes out above this takes the
+median of the other samples, with a warning</td>
+</tr>
+<tr class="even">
 <td><code>dispersion</code></td>
 <td><code>"trended"</code></td>
 <td>NB dispersion in the fit. <code>"tagwise"</code> was the earlier
@@ -329,19 +339,23 @@ default and is not calibrated on real data (9.6)</td>
 </h2>
 <ul>
 <li>
-<strong>Calibration on real data.</strong> On two real
-single-nucleus datasets (GSE272082, Alzheimer’s vs control; GSE190015,
-nine controls), condition labels were shuffled between donors 24 times,
-so there was nothing to find. In microglia and oligodendrocytes,
-<code><a href="../reference/ambient_de.html">ambient_de()</a></code> reported a gene in 9 of the 96 tests, never
-more than 9 genes; naive edgeR in 4. Earlier versions used
-<code>dispersion = "tagwise"</code> and reported genes in 82 of 96
-tests, up to 574; rerun analyses made with them. To check any method on
-your own data, shuffle your condition labels between samples and count
-the hits.</li>
-<li>On real data only calibration has been checked. That
-<code><a href="../reference/ambient_de.html">ambient_de()</a></code> removes ambient-driven hits is shown in
-simulation.</li>
+<strong><code><a href="../reference/ambient_de.html">ambient_de()</a></code> is experimental.</strong> With
+condition labels shuffled between donors, so that there is nothing to
+find, on three real datasets (two brain, one pancreas; 168 tests) it
+reported a gene in 20 tests, never more than 9 genes; naive edgeR in 8.
+Earlier versions did far worse (up to 2,300 genes) and analyses made
+with them should be rerun. That it removes ambient-driven hits a
+standard test reports is shown only in simulation; a pre-registered
+real-data test was null, because the standard test found none. Report
+its hits together with a standard pseudobulk test, and check your own
+data the same way: shuffle the condition labels between samples and
+count the hits.</li>
+<li>If <code><a href="../reference/ambient_de.html">ambient_de()</a></code> warns that a sample’s ambient fraction
+is implausible, that sample’s pseudobulk looks too much like the soup to
+measure its contamination (often a cell type close to the dominant one,
+or mislabelled cells). Its value is replaced by the median of the
+others. If most samples are flagged, the results for that cell type are
+unreliable.</li>
 <li>With very few empty droplets per sample (a few hundred), the soup is
 uncertain and some leakage returns.</li>
 <li>With three samples per group, power is lower than with six.</li>
