@@ -20,6 +20,7 @@ ambient_de(
   max_ambient_frac = 0.75,
   huber_k = 2,
   robust_iter = 2,
+  dispersion = c("trended", "tagwise"),
   maxit = 50,
   tol = 1e-08
 )
@@ -106,6 +107,16 @@ ambient_de(
 - robust_iter:
 
   number of re-weighting rounds.
+
+- dispersion:
+
+  NB dispersion used in the fit: `"trended"` (default), the abundance
+  trend, as edgeR's quasi-likelihood pipeline uses; or `"tagwise"`, each
+  gene's own shrunken estimate. The quasi-likelihood F-test then
+  estimates each gene's extra variance; with tagwise dispersions that
+  variance is absorbed twice and the test is liberal. On real data with
+  shuffled labels, `"tagwise"` (the earlier default) reported hits in
+  most shuffles (`validation/BENCHMARK.md`, section 3b).
 
 - maxit, tol:
 
