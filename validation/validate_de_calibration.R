@@ -98,9 +98,14 @@ if (!file.exists(pbf)) {
     cat(s, ": cells", ncol(d$cells), " empties", ncol(d$empties), "\n")
     rm(raw, d); invisible(gc(verbose = FALSE))
   }
-  X <- do.call(cbind, cells); rm(cells); invisible(gc(verbose = FALSE))
-  so <- Seurat::CreateSeuratObject(X, min.cells = 10)
-  so <- subset(so, nFeature_RNA >= 300)
+  ## the full matrix waits on disk while Seurat holds its own copy
+  X <- do.call(cbind, cells); rm(cells)
+  xf <- tempfile(fileext = ".rds"); saveRDS(X, xf, compress = FALSE)
+  ## same filters as CreateSeuratObject(min.cells = 10) then
+  ## subset(nFeature_RNA >= 300), without Seurat's intermediate copies
+  gk <- Matrix::rowSums(X > 0) >= 10
+  ck <- Matrix::colSums(X[gk, ] > 0) >= 300
+  so <- Seurat::CreateSeuratObject(X[gk, ck]); rm(X); invisible(gc(verbose = FALSE))
   so <- Seurat::NormalizeData(so, verbose = FALSE)
   so <- Seurat::FindVariableFeatures(so, nfeatures = 2000, verbose = FALSE)
   so <- Seurat::ScaleData(so, verbose = FALSE); so <- Seurat::RunPCA(so, npcs = 30, verbose = FALSE)
@@ -115,7 +120,8 @@ if (!file.exists(pbf)) {
   ct <- stats::setNames(lab[as.character(so$seurat_clusters)], colnames(so))
   print(table(sub("_.*", "", names(ct)), ct))
   ## pseudobulks use the typed cells (>= 300 genes)
-  rm(so); invisible(gc(verbose = FALSE))
+  rm(so, avg); invisible(gc(verbose = FALSE))
+  X <- readRDS(xf); unlink(xf)
   pb <- lapply(stats::setNames(D$types, D$types), function(t) sapply(samples, function(s) {
     cs <- names(ct)[ct == t & startsWith(names(ct), paste0(s, "_"))]
     Matrix::rowSums(X[, cs, drop = FALSE])
