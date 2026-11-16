@@ -1,5 +1,14 @@
 # Decant (development version)
 
+* **Contamination estimate on the 10k mixture: diagnosed, not fixed.** The
+  absent-gene fixed point collapses there (1 to 6 absent genes kept of
+  5,000+) because its overdispersion term starts at zero and its low start
+  settles on the soup's most abundant genes. A fallback start that fixed the
+  10k mixture failed on held-out data (hgmm 5k median 43% low, Spearman
+  0.49) and turned the negative control's correct near-zero into NA, so the
+  estimator is unchanged (`validation/BENCHMARK.md` 1f).
+  `validate_species_mixture.R` now records a method that declines (rho NA).
+
 * **Ambient removal: held-out results, and a change that did not pass.** On
   held-out human/mouse mixtures (hgmm 1k, 5k, 10k) Decant removes 0.444 of
   ambient signal against DecontX 0.637 and SoupX 0.679, while keeping the

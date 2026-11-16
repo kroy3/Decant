@@ -67,16 +67,21 @@ evaluate <- function(label, cells, empties, species, truth_rho = NULL, full = TR
     secs <- as.numeric(difftime(Sys.time(), t0, units = "secs"))
     if (is.null(r)) { rows[[m]] <- data.frame(test = label, method = m, status = "not installed"); next }
     if (!is.null(r$error)) { rows[[m]] <- data.frame(test = label, method = m, status = paste("error:", r$error)); next }
+    ## a method may decline (rho NA: not identifiable); that is recorded as
+    ## such, with no rho error, rather than scored
+    declined <- anyNA(as.numeric(r$rho))
     sc <- if (full) {
-      score_species_mix(cells, empties, species, r$corrected, r$rho, truth = truth)
+      score_species_mix(cells, empties, species, r$corrected, if (declined) NULL else r$rho, truth = truth)
+    } else if (declined) {
+      data.frame(n_cells = length(truth_rho), rho_true_mean = mean(truth_rho))
     } else {
       rr <- as.numeric(r$rho)
       data.frame(n_cells = length(truth_rho), rho_true_mean = mean(truth_rho),
                  rho_hat_mean = mean(rr), rho_bias = mean(rr) - mean(truth_rho),
                  rho_rmse = sqrt(mean((rr - truth_rho)^2)),
-                 rho_cor = if (stats::sd(rr) > 0) stats::cor(rr, truth_rho) else NA_real_)
+                 rho_cor = if (isTRUE(stats::sd(rr) > 0)) stats::cor(rr, truth_rho) else NA_real_)
     }
-    rows[[m]] <- cbind(data.frame(test = label, method = m, status = "ok",
+    rows[[m]] <- cbind(data.frame(test = label, method = m, status = if (declined) "declined: rho NA" else "ok",
                                   seconds = round(secs, 1), note = r$note), sc)
   }
   do.call(rbind, lapply(rows, function(x) { x[setdiff(ALLCOLS, names(x))] <- NA; x[ALLCOLS] }))

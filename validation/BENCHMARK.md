@@ -388,6 +388,60 @@ gap there is mostly estimation, not allocation: the allocation fix recovered
 7.5 of 19 points. The next step is the estimator on these designs, not the
 correction rule.
 
+## 1f. Contamination estimate on the 10k mixture: diagnosis, and a change that failed
+
+The 10k mixture is development data from here on; held-out data judge.
+
+**Diagnosis (hgmm 10k, Seurat clusters).** The absent-gene set collapses.
+Each cluster has 5,000 to 13,000 genes that are truly absent and well
+covered (the other species' genes), but the fixed point kept 1 to 6. Four of
+five clusters were flagged low-power and borrowed one value (0.027) from a
+104-cell cluster; truths 0.026 to 0.066, per-cell Spearman 0.66.
+
+- The overdispersion term is estimated from the current absent set. On the
+  first pass that set is empty, so it is 0 and the test is Poisson. Absent
+  genes scatter 2 to 4 times more than Poisson (log-ratio SD 0.43 to 0.76
+  against 0.21 to 0.30), so 62 to 77% of them were rejected and the spread
+  never became estimable.
+- The empty droplets do not match the cells' ambient profile: in the human
+  cluster the typical mouse gene sits at twice the true rho (median ratio
+  0.052 against 0.026); only the count-weighted average is right, because
+  the most abundant soup genes sit low.
+- The fixed point only rejects genes above the current rho, so it settles on
+  whichever self-consistent value is nearest its start. Started at the median
+  ratio of well-covered genes instead of the lowest decile, it found
+  6,000 to 13,000 absent genes and rho within 10% of each cluster's
+  count-weighted truth.
+
+**The change tried.** As the default, the high start failed `gate_rho`
+(about 0.68 whatever the truth in its stress setting: it pulls expressed
+genes into the absent set). Used only when the low start's absent set has
+collapsed, and accepted only if well covered and at most 0.5, it passed
+`gate_rho`; on the 10k mixture (development) median 0.036 vs truth 0.038,
+Spearman 0.98. With it, a result was also declared not identifiable (rho NA,
+counts not corrected) when most cells sit in clusters without usable
+evidence, instead of only when all do.
+
+| check | current | candidate | bar |
+|---|---|---|---|
+| hgmm 5k full, held out: median vs truth 0.0256 | 0.0129 (-50%) | 0.0145 (**-43%**) | within 25% |
+| hgmm 5k full, held out: per-cell Spearman | 0.35 | **0.49** | >= 0.6 |
+| hidden-species tests 1k / 5k / 10k (truth 0.004 / 0.018 / 0.054) | 0.135 / 0.221 / 0.239 | declined (NA) | an honest answer |
+| PBMC 4k median (SoupX 0.06 to 0.077) | 0.067 | 0.067 | |
+| 20k median, Spearman | 0.027, 0.985 | unchanged | no regression |
+| 1k full | 0.0105 | unchanged | no regression |
+| Smart-seq2 negative control (truth 0) | 0.0014 | **NA** | no regression |
+| `gate_rho` | pass | pass | pass |
+
+**It fails** (5k median and Spearman; the negative control's correct answer
+became NA). The estimator is unchanged. Two lessons: the mean and Pearson
+correlation of rho flatter an estimator (on 5k the candidate's mean was
+within 18% and Pearson 0.975, driven by a minority of heavily contaminated
+cells), so medians and rank correlations are the measures to report; and the
+"not identifiable" rule needs to tell a sample with no contamination from one
+whose contamination cannot be seen, which the share of low-power cells does
+not.
+
 ## 2. Simulated data with ground truth
 
 `simulate_experiment()`, easy and stress settings, k-means clusters given to
