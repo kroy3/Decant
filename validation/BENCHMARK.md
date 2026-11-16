@@ -353,7 +353,9 @@ See `results/differential_expression.csv`. Six control and six disease samples;
 disease samples carry more ambient RNA; 80 genes that are disease genes only
 in an abundant cell type can leak into the rare type being tested.
 
-Mean of 4 seeds. Every corrector gets the true cell-type labels. The Decant
+Mean of 4 seeds, run before `ambient_de` switched to the trended dispersion
+(section 3b); its gate (`gate_ambient_de`) gives similar numbers after the
+switch. Every corrector gets the true cell-type labels. The Decant
 correction arm uses the `bayes` rule; it has not been rerun with the current
 default, `bayes_cell`.
 
@@ -383,61 +385,78 @@ simulation the gain from modelling the ambient term inside the test, over a
 good correction, is within noise. SoupX needed its `soupQuantile = 0.5`
 fallback on every sample.
 
-## 3b. Calibration of `ambient_de` on real case/control data
+## 3b. Calibration of `ambient_de` on real data
 
 Script: `validate_de_calibration.R`; results:
-`results/de_calibration_gse272082_pfc.csv`.
+`results/de_calibration_gse272082_pfc.csv`,
+`results/de_calibration_gse190015_ctrl.csv`.
 
-Data: GSE272082 (sporadic early-onset Alzheimer's disease, 10x Multiome,
-gene expression used), prefrontal cortex, 5 control and 4 patient donors,
-about 31,600 nuclei, 340,000 to 620,000 empty droplets per sample. Cell types
-from a fixed recipe (Seurat clustering, clusters labelled by marker genes).
-Pseudobulk per donor for microglia (17 to 606 nuclei per donor) and
-oligodendrocytes (303 to 2,040).
+A calibrated test, given condition labels that carry no effect, reports a
+hit in few shuffles and about 1% of genes at p < 0.01. Labels were shuffled
+between donors 24 times (seed 7; the same shuffles for every method), and
+microglia and oligodendrocytes were tested by pseudobulk per donor. Cell
+types come from a fixed recipe (Seurat clustering, clusters labelled by
+marker genes).
 
-Disease labels were shuffled between donors 24 times (the same 24 shuffles
-for every method; at most 2 of the 4 true patients in the patient arm), so
-apart from what those donors carry there is no effect to find. A calibrated
-test reports a hit in few shuffles and about 1% of genes at p < 0.01.
+Data:
 
-| cell type | method | shuffles with a hit (of 24) | median hits | max hits | median share p < 0.01 |
+- **GSE272082** (sporadic early-onset Alzheimer's disease, 10x Multiome,
+  gene expression used), prefrontal cortex, 5 control and 4 patient donors,
+  about 31,600 nuclei, 340,000 to 620,000 empty droplets per sample. At most
+  2 of the 4 patients are in the shuffled patient arm, so these shuffles are
+  close to, but not exactly, null. This dataset was used to find and
+  diagnose the problem.
+- **GSE190015**, held out: nine control donors (occipital cortex, one
+  batch), about 69,000 nuclei (barcodes with >= 500 UMIs), shuffled 4 vs 5.
+  No disease in either arm: every hit is false. Not used until the fix was
+  made.
+
+| data | cell type | method | shuffles with a hit (of 24) | max hits | median share p < 0.01 |
 |---|---|---|---|---|---|
-| microglia | naive edgeR | 1 | 0 | 1 | 0.007 |
-| | `ambient_de`, default | 21 | 4 | 90 | 0.016 |
-| | `ambient_de`, `joint_rho = FALSE` | 0 | 0 | 0 | 0.003 |
-| oligodendrocytes | naive edgeR | 0 | 0 | 0 | 0.004 |
-| | `ambient_de`, default | 19 | 3 | 574 | 0.011 |
-| | `ambient_de`, `joint_rho = FALSE` | 0 | 0 | 0 | 0.001 |
+| GSE272082 | microglia | `ambient_de` | 2 | 9 | 0.009 |
+| | | `ambient_de`, tagwise (before the fix) | 21 | 90 | 0.016 |
+| | | naive edgeR | 1 | 1 | 0.007 |
+| | oligodendrocytes | `ambient_de` | 2 | 1 | 0.005 |
+| | | `ambient_de`, tagwise (before the fix) | 19 | 574 | 0.011 |
+| | | naive edgeR | 0 | 0 | 0.004 |
+| GSE190015 | microglia | `ambient_de` | 1 | 1 | 0.009 |
+| | | `ambient_de`, tagwise (before the fix) | 21 | 125 | 0.016 |
+| | | naive edgeR | 1 | 1 | 0.007 |
+| | oligodendrocytes | `ambient_de` | 4 | 1 | 0.007 |
+| | | `ambient_de`, tagwise (before the fix) | 21 | 176 | 0.014 |
+| | | naive edgeR | 2 | 1 | 0.006 |
 
-On the true labels, `ambient_de` (default) reported 20 genes in microglia
-and 292 in oligodendrocytes; naive edgeR 0 and 3. Against the
-shuffles, the true-label counts are not unusual, so **they cannot be read as
-disease effects.**
+**Cause.** `ambient_de` fitted each gene with edgeR's tagwise dispersion (the
+gene's own estimate, shrunk) and then applied a quasi-likelihood F-test,
+which estimates the gene's extra variance again from the residual deviance.
+The gene's own variance was absorbed twice, the residual variance came out
+too small, and the F-test was liberal. edgeR's quasi-likelihood pipeline
+uses the trended dispersion for this reason; `ambient_de` now does too
+(`dispersion = "trended"`). The diagnosis on GSE272082, microglia: with the
+ambient term set to zero, the tagwise version still reported hits in 22 of 24
+shuffles (so the ambient model was not the cause); with the trended
+dispersion, 2 of 24, with or without the ambient term. Turning off the Huber
+down-weighting made no difference.
 
-**With default settings, `ambient_de` is not calibrated on these data.** It
-reports hits in most shuffles; a few shuffles give hundreds. Naive edgeR is
-conservative. Switching off the Huber down-weighting (`robust = FALSE`) made
-no difference.
+`joint_rho` was suspected first. Turning it off also removes every hit, but
+by breaking the test: without it, each sample's ambient fraction comes from
+that sample's pseudobulk alone, which for a single cell type is not
+identifiable (0.78 to 0.83 for some donors against 0.02 to 0.06 for the
+others), most of their counts are treated as ambient, and the share of genes
+at p < 0.01 falls to 0.1 to 0.3%. It stays on.
 
-**Switching off `joint_rho` removes every hit, but it is not a fix.**
-Without it, each sample's ambient fraction comes from that sample's
-pseudobulk alone, which for a single cell type is not identifiable: for
-microglia it gave 0.83 (NIH16) and 0.22 (NIH10), for oligodendrocytes 0.78
-(NIH10) and 0.22 (NIH04), against 0.02 to 0.06 for the other samples. Most of
-those samples' counts are then treated as ambient, and the test loses power:
-the share of genes at p < 0.01 falls to 0.1 to 0.3%, below the 1% a
-calibrated test gives. `joint_rho` gives plausible values (0.02 to 0.065) but
-reports their standard errors from a Poisson model (0.0001 to 0.004), and
-picks its absent genes with a Poisson test. Whether the inflation comes from
-that understated uncertainty or from the test itself is being checked.
+The simulation gates pass with the trended dispersion, with power unchanged
+(`gate_ambient_de`: null false-positive rate 0.045 to 0.054, power 0.90 to
+0.975, no leaked gene; `gate_ambient_de_cohort` passes).
 
-**Until this is resolved, `ambient_de` hits on real data should not be
-reported as findings.** A standard pseudobulk test is the conservative
-choice; running the same shuffled-label check on your own data shows
-whether a method is calibrated there.
+On the true GSE272082 labels, `ambient_de` now reports 1 gene in microglia
+and 2 in oligodendrocytes (before the fix 20 and 292); naive edgeR 0 and 3.
 
-Limits of this check: one dataset, two cell types, 9 donors (so the shuffles
-are not pure nulls).
+What this does and does not show: `ambient_de` is now about as well
+calibrated as naive edgeR on real data, and slightly more liberal (9 against
+4 tests with a hit, of 96). It does not show that `ambient_de` removes
+ambient-driven hits on real data: on these donors naive edgeR found almost
+nothing to remove. That remains a simulation result.
 
 This dataset was first used for a pre-registered test of whether the genes
 `ambient_de` flags as ambient-driven have closed chromatin in the tested cell
@@ -506,7 +525,7 @@ against the papers before being cited.
 | Never adds counts | level with SoupX, DecontX, CellBender, AmbiDose; ahead of scAR (727k UMIs added) | section 1a |
 | Per-cell contamination estimate | ahead of SoupX (one value per channel); level with DecontX, CellBender, AmbiDose by design; accuracy of the per-cell values untested on real data | section 4 |
 | DE without leakage, power kept | level with Decant-correct-then-edgeR; slightly ahead of SoupX-then-edgeR (4 to 7 points of power); simulated only | section 3 |
-| DE calibration on real data (shuffled labels) | **behind naive edgeR**: default `ambient_de` reports hits in 40 of 48 shuffles, naive edgeR in 1; one dataset | section 3b |
+| DE calibration on real data (shuffled labels) | level with naive edgeR, slightly more liberal (hits in 9 of 96 tests against 4; at most 9 genes); one dataset held out. Before the dispersion fix, far behind (82 of 96) | section 3b |
 | DE with covariates in large cohorts | ahead of subtract-then-rank-test in simulation | `experiments/large_cohort_calibration/` |
 | Removal of ambient-compatible foreign counts, against DecontX | behind by 5 to 9 points on all three sets | section 1a |
 | Leaving counts that cannot be ambient (likely doublets) | ahead of DecontX, AmbiDose, scAR; level with SoupX and CellBender | section 1a |

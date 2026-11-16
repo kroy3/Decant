@@ -109,7 +109,7 @@ over-correction.
 | 5 | Allelic / genotype-aware rho | PASS. Near-ground-truth rho in pooled designs. (Gate contrast is soft, 0.015 vs 0.017 RMSE; the absolute accuracy is the real point.) | ON when allelic data present |
 | 4 | Structured-soup lysis diagnostic | PASS as QC only, with an oracle basis. It is a diagnostic readout, never a corrector (that use was falsified). | ON as diagnostic |
 | 2 | Decontamination-aware DE, v1 (ambient load as a log-scale covariate) | FAIL. 90% false positives on ambient-trap genes, 16% on null genes. | OFF, superseded |
-| 2 | **Contamination-aware DE, v2** (`ambient_de()`, `DecantDE()`) | **PASS** (`gate_ambient_de`). 0 leaked genes called in every case, against 17-57 for standard edgeR pseudobulk; null false-positive rate 0.048-0.056; power kept, including on genes truly DE in both cell types. **On real data with shuffled labels it is not calibrated by default** (hits in 40 of 48 shuffles; `BENCHMARK.md` 3b). | ON |
+| 2 | **Contamination-aware DE, v2** (`ambient_de()`, `DecantDE()`) | **PASS** (`gate_ambient_de`). 0 leaked genes called in every case, against 17-57 for standard edgeR pseudobulk; null false-positive rate 0.048-0.056; power kept, including on genes truly DE in both cell types. On real data with shuffled labels (two datasets, 96 tests): hits in 9, naive edgeR in 4; before the trended-dispersion fix, 82 (`BENCHMARK.md` 3b). | ON |
 
 ## Contamination-aware differential expression
 
