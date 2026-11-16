@@ -410,7 +410,7 @@ test reports a hit in few shuffles and about 1% of genes at p < 0.01.
 | | `ambient_de`, `joint_rho = FALSE` | 0 | 0 | 0 | 0.001 |
 
 On the true labels, `ambient_de` (default) reported 20 genes in microglia
-and 293 in oligodendrocytes; naive edgeR 0 and 3. Against the
+and 292 in oligodendrocytes; naive edgeR 0 and 3. Against the
 shuffles, the true-label counts are not unusual, so **they cannot be read as
 disease effects.**
 
