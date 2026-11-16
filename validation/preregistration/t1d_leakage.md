@@ -102,3 +102,14 @@ genes most likely to leak. Using it would understate the leakage of the
 standard test. The correct-then-test methods use the same standalone
 pipeline. Genes that `ambient_de` declines to test as mostly ambient count as
 not called, and their number is reported.
+
+**2 (before any DE was computed).** The truth rule "detected in < 5% of T
+cells" is dropped; a gene is foreign to T if some other type has >= 100 CPM
+and T has <= 1/100 of it. Reason, from the reference alone: the Segerstolpe
+cells are not free of ambient RNA. INS is detected in 95% of its acinar
+cells, at 44 CPM against 145,643 in beta cells (3,300-fold lower); GCG in 88%
+of acinar cells at 1/2,700 of alpha. Smart-seq2 picks up traces of the
+hormone RNA in islet preparations, so the detection rule removed exactly the
+abundant genes most likely to leak. The 100-fold rule is unaffected by such
+traces. The statement above that the reference has "essentially no ambient
+RNA" is wrong; it has little.

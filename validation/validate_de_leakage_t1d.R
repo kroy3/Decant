@@ -50,7 +50,7 @@ truth_sets <- function() {
   lapply(stats::setNames(TYPES, TYPES), function(t) {
     oth <- setdiff(big, t)
     mo <- apply(cpm[, oth, drop = FALSE], 1, max)
-    rownames(cpm)[mo >= 100 & cpm[, t] <= mo / 100 & det[, t] < 0.05]
+    rownames(cpm)[mo >= 100 & cpm[, t] <= mo / 100]   # Amendment 2: no detection rule
   })
 }
 
