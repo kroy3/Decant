@@ -53,6 +53,7 @@ names(res)
 | `rho` | Estimated contamination fraction of each cell |
 | `rho_diagnostics` | One row per cluster: its rho and how well it was determined |
 | `soup_mismatch` | `TRUE` if much of the soup is in genes no cell contains ([Chapter 11](https://kroy3.github.io/Decant/articles/11-Diagnostics-and-Troubleshooting.md)) |
+| `rho_unidentifiable` | `TRUE` if contamination could not be estimated from the data; supply `rho` ([Chapter 11.4](https://kroy3.github.io/Decant/articles/11-Diagnostics-and-Troubleshooting.md)) |
 | `ambient` | The soup profile, genes × samples |
 | `clusters` | The cluster labels used |
 | `modules` | The steps that ran |
@@ -77,8 +78,11 @@ res$rho_diagnostics[, c("cluster", "n_cells", "rho", "n_absent_genes", "absent_s
 - `absent_soup_frac`: the share of the soup those genes cover. The
   larger it is, the better rho is determined. Cluster 6 relies on only
   5.6% of the soup and is the least certain.
-- `low_power`: `TRUE` when the evidence is too thin. Such a cluster
-  borrows its rho from the other clusters, and Decant prints a warning.
+- `low_power`: `TRUE` when the evidence is too thin, or when the
+  cluster’s estimate was implausible (above 0.5). Such a cluster borrows
+  its rho from the other clusters, and Decant prints a warning.
+- Two further columns, not shown here: `dispersion` (how widely absent
+  genes scatter around rho, from gene to gene) and `implausible`.
 
 ## 5.5 Sparse input
 

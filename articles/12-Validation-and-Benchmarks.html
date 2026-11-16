@@ -177,8 +177,8 @@ range from 0 to 1, and higher is better.</p>
 <tbody>
 <tr class="odd">
 <td><strong>Decant</strong></td>
-<td>0.991</td>
-<td>0.415</td>
+<td>0.989</td>
+<td>0.616</td>
 </tr>
 <tr class="even">
 <td>SoupX</td>
@@ -197,17 +197,66 @@ range from 0 to 1, and higher is better.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Reading the result.</strong> Decant keeps the cells’ own
-signal as well as SoupX and removes more ambient RNA than SoupX. It
-removes clearly <strong>less</strong> than DecontX and CellBender. The
-reason is known: its contamination estimate is about half the true level
-on this dataset (median 0.013 against 0.029), although it ranks cells
-correctly (rank correlation 0.81). If removing as much ambient RNA as
-possible matters more to you than preserving every endogenous count,
-DecontX performed better here.</p>
+<p><strong>Reading the result.</strong> Decant removes clearly more
+ambient RNA than SoupX, and about 10 points <strong>less</strong> than
+DecontX and CellBender, while keeping slightly more of the cells’ own
+signal than DecontX. Its contamination estimate matches the truth from
+cross-species reads: median 0.027 against 0.029, rank correlation
+0.985.</p>
+<p>In version 0.4.0 the estimate was about half the truth here (0.013)
+and Decant removed only 0.415. The cause, absent genes scattering around
+rho more than a Poisson test allows, is described in <a href="07-Estimation-and-Correction.html">Chapter 7.2</a>. This mixture
+was used to find that cause, so section 12.3 tests the fix on further
+mixtures.</p>
 </div>
 <div class="section level2">
-<h2 id="ground-truth-negative-control">12.3 Ground truth: negative control<a class="anchor" aria-label="anchor" href="#ground-truth-negative-control"></a>
+<h2 id="ground-truth-further-mixtures">12.3 Ground truth: further mixtures<a class="anchor" aria-label="anchor" href="#ground-truth-further-mixtures"></a>
+</h2>
+<p>Three more 10x human/mouse mixtures (1k, 5k and 10k cells). Mean
+contamination estimate against the truth:</p>
+<table class="table">
+<thead><tr class="header">
+<th>Dataset</th>
+<th>True</th>
+<th>Decant</th>
+<th>DecontX</th>
+<th>SoupX</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>1k</td>
+<td>0.014</td>
+<td>0.011</td>
+<td>0.011</td>
+<td>0.010</td>
+</tr>
+<tr class="even">
+<td>5k</td>
+<td>0.040</td>
+<td>0.030</td>
+<td>0.027</td>
+<td>0.016</td>
+</tr>
+<tr class="odd">
+<td>10k</td>
+<td>0.062</td>
+<td>0.021</td>
+<td>0.026</td>
+<td>0.010</td>
+</tr>
+</tbody>
+</table>
+<p>Decant has the lowest error on 1k and 5k. <strong>On 10k it
+fails</strong>: most clusters have too few absent genes, and its
+per-cell values barely follow the truth (correlation 0.18, DecontX
+0.67). All tools underestimate there.</p>
+<p>When only one species is kept, each sample is a single cell line,
+whose soup looks like the cells. Contamination then cannot be estimated
+from expression; Decant warns (<a href="11-Diagnostics-and-Troubleshooting.html">Chapter 11.4</a>) while
+DecontX returns a number without comment.</p>
+</div>
+<div class="section level2">
+<h2 id="ground-truth-negative-control">12.4 Ground truth: negative control<a class="anchor" aria-label="anchor" href="#ground-truth-negative-control"></a>
 </h2>
 <p>Smart-seq2 data (human islets, E-MTAB-5061) have no ambient RNA,
 because each cell is sorted into its own well. The ideal correction
@@ -242,7 +291,7 @@ this control tests only that a tool does not over-correct. Together with
 12.2 it shows that Decant is <strong>conservative</strong>.</p>
 </div>
 <div class="section level2">
-<h2 id="real-data-without-ground-truth-pbmc">12.4 Real data without ground truth: PBMC<a class="anchor" aria-label="anchor" href="#real-data-without-ground-truth-pbmc"></a>
+<h2 id="real-data-without-ground-truth-pbmc">12.5 Real data without ground truth: PBMC<a class="anchor" aria-label="anchor" href="#real-data-without-ground-truth-pbmc"></a>
 </h2>
 <p>On the 10x PBMC 4k dataset, marker genes found in cell types that do
 not express them were used as a proxy for contamination.</p>
@@ -317,7 +366,7 @@ not express them were used as a proxy for contamination.</p>
 designed for a GPU.</p>
 </div>
 <div class="section level2">
-<h2 id="reproducing-the-benchmarks">12.5 Reproducing the benchmarks<a class="anchor" aria-label="anchor" href="#reproducing-the-benchmarks"></a>
+<h2 id="reproducing-the-benchmarks">12.6 Reproducing the benchmarks<a class="anchor" aria-label="anchor" href="#reproducing-the-benchmarks"></a>
 </h2>
 <p>All scripts are in the <code>validation/</code> folder of the
 repository and are run from the repository root.</p>
@@ -341,11 +390,11 @@ repository and are run from the repository root.</p>
 </tr>
 <tr class="odd">
 <td><code>benchmark_negative_control.R</code></td>
-<td>Smart-seq2 negative control (12.3)</td>
+<td>Smart-seq2 negative control (12.4)</td>
 </tr>
 <tr class="even">
 <td><code>benchmark_pbmc_six_tools.R</code></td>
-<td>Six tools on PBMC data (12.4)</td>
+<td>Six tools on PBMC data (12.5)</td>
 </tr>
 <tr class="odd">
 <td><code>benchmark_soupx.R</code></td>
@@ -362,7 +411,8 @@ repository and are run from the repository root.</p>
 </tr>
 <tr class="even">
 <td><code>validate_species_mixture.R</code></td>
-<td>Contamination against cross-species truth on further mixtures</td>
+<td>Contamination against cross-species truth on further mixtures
+(12.3)</td>
 </tr>
 <tr class="odd">
 <td><code>validate_genotype_mixture.R</code></td>

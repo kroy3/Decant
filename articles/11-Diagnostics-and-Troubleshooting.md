@@ -3,7 +3,7 @@
 Decant reports when its estimate is uncertain. This chapter explains
 each message and what to do about it.
 
-## 11.1 Three checks after every run
+## 11.1 Four checks after every run
 
 ``` r
 
@@ -18,6 +18,8 @@ res$soup_mismatch
 #> [1] FALSE
 any(res$rho_diagnostics$low_power)
 #> [1] FALSE
+res$rho_unidentifiable
+#> [1] FALSE
 ```
 
 1.  **Is rho plausible?** Single-cell data typically show 0.02 to 0.10
@@ -26,6 +28,7 @@ any(res$rho_diagnostics$low_power)
 2.  **`soup_mismatch`** should be `FALSE`.
 3.  **`low_power`** should be `FALSE` for all clusters, or at least for
     the large ones.
+4.  **`rho_unidentifiable`** must be `FALSE`. If it is `TRUE`, see 11.4.
 
 ## 11.2 Warning: soup/cell mismatch
 
@@ -49,13 +52,15 @@ still looks too low, supply an independent estimate with `rho = ...`
 
 ## 11.3 Warning: low-power clusters
 
-> *N cluster(s) have almost no genes that are cleanly absent, so rho is
-> weakly identified there and likely OVERestimated.*
+> *N cluster(s) have almost no genes that are cleanly absent or an
+> implausible rho above 0.5 (M), so rho is weakly identified there; they
+> borrow rho from the other clusters.*
 
 **Meaning.** In these clusters almost every gene in the soup is also
-expressed, so there is little evidence about the soup alone. This
-happens with very small clusters and with cell types whose expression
-resembles the soup.
+expressed, so there is little evidence about the soup alone, or the
+estimate came out above 0.5, which would mean the cells are mostly soup.
+This happens with very small clusters and with cell types whose
+expression resembles the soup.
 
 **What Decant does.** It gives these clusters the rho of the other
 clusters, weighted by their evidence (`borrowed = TRUE` in
@@ -64,7 +69,39 @@ clusters, weighted by their evidence (`borrowed = TRUE` in
 **What to do.** Merge very small clusters, or cluster at a lower
 resolution, and run again.
 
-## 11.4 Common errors
+## 11.4 Warning: contamination not identifiable
+
+> *rho could not be identified: no cluster has genes that are cleanly
+> absent, or most cells are in clusters whose estimate is implausibly
+> high (\> 0.5). … The estimate is NOT reliable and correction may
+> remove real signal. Supply `rho` from an independent source.*
+
+**Meaning.** Contamination is estimated from genes that a cluster does
+not express. If the soup looks like the cells themselves, for example in
+a sample of a single cell type or cell line, there are no such genes and
+the contamination cannot be measured from expression. This is a limit of
+every expression-based method, not only Decant’s. On a mouse cell line
+with 0.4% true contamination, DecontX reported 35% without a warning.
+
+**What Decant does.** It reports the problem (`res$rho_unidentifiable`
+is `TRUE`, and printing the result shows a warning) but still returns a
+correction, which should not be trusted.
+
+**What to do.** Supply the contamination yourself:
+
+``` r
+
+# Requires your own data
+res <- decant(cells, empties, clusters = clusters, rho = 0.02)
+```
+
+- Good sources for `rho` are a genotype-based estimate when donors are
+  pooled ([Chapter
+  10.2](https://kroy3.github.io/Decant/articles/10-Splice-Aware-and-Genotype-Modules.md)),
+  a species-mixing control run alongside the experiment, or a value
+  measured on comparable data from the same lab and protocol.
+
+## 11.5 Common errors
 
 | Message | Cause | Fix |
 |----|----|----|
@@ -74,7 +111,7 @@ resolution, and run again.
 | `need at least 2 cells` | Too few cells | Check the cell filtering |
 | [`RunDecant()`](https://kroy3.github.io/Decant/reference/RunDecant.md) refuses the object | The assay holds normalised or SCTransformed values | Use the assay with raw UMI counts (`assay = "RNA"`) |
 
-## 11.5 Frequently asked questions
+## 11.6 Frequently asked questions
 
 **Do I need the raw matrix?** It is strongly recommended, because the
 empty droplets measure the soup. With filtered data only, you can

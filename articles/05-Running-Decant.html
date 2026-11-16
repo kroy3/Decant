@@ -217,14 +217,20 @@ estimation</td>
 (<a href="11-Diagnostics-and-Troubleshooting.html">Chapter 11</a>)</td>
 </tr>
 <tr class="odd">
+<td><code>rho_unidentifiable</code></td>
+<td>
+<code>TRUE</code> if contamination could not be estimated from the
+data; supply <code>rho</code> (<a href="11-Diagnostics-and-Troubleshooting.html">Chapter 11.4</a>)</td>
+</tr>
+<tr class="even">
 <td><code>ambient</code></td>
 <td>The soup profile, genes × samples</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>clusters</code></td>
 <td>The cluster labels used</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>modules</code></td>
 <td>The steps that ran</td>
 </tr>
@@ -255,8 +261,12 @@ cover. The larger it is, the better rho is determined. Cluster 6 relies
 on only 5.6% of the soup and is the least certain.</li>
 <li>
 <code>low_power</code>: <code>TRUE</code> when the evidence is too
-thin. Such a cluster borrows its rho from the other clusters, and Decant
-prints a warning.</li>
+thin, or when the cluster’s estimate was implausible (above 0.5). Such a
+cluster borrows its rho from the other clusters, and Decant prints a
+warning.</li>
+<li>Two further columns, not shown here: <code>dispersion</code> (how
+widely absent genes scatter around rho, from gene to gene) and
+<code>implausible</code>.</li>
 </ul>
 </div>
 <div class="section level2">

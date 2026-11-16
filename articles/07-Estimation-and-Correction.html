@@ -157,17 +157,38 @@ called <strong>absent</strong>.</li>
 <li>Re-estimate rho from the absent genes only: the ratio of their
 observed counts to their expected soup counts.</li>
 </ol>
-<p>Three safeguards make the estimate reliable on real data:</p>
+<p>Five safeguards make the estimate reliable on real data:</p>
 <ul>
-<li>A gene enters the absent set only if enough ambient counts are
-expected for it (<code>min_expected = 5</code>). Without this, thousands
-of rarely detected genes look absent simply for lack of counts, and rho
-is overestimated.</li>
-<li>Each cell’s rho is pulled towards its cluster’s rho, more strongly
-for cells with few counts. Small cells therefore do not get extreme
-values.</li>
-<li>A cluster without enough absent genes (<code>low_power</code>)
-borrows rho from the other clusters instead of guessing.</li>
+<li>
+<strong>Gene-to-gene spread is allowed for.</strong> In real data,
+absent genes do not sit exactly on the line <code>rho × soup</code>:
+they scatter around it by about 25-30%, because soup and capture differ
+slightly from gene to gene. Step 1 therefore uses a negative binomial
+test whose extra spread is measured from the lowest absent genes, which
+expressed genes can never reach. A plain Poisson test would reject the
+absent genes that fall above the line and keep those below, and the
+estimate would settle at about half the true value. With no extra spread
+the test is the Poisson test.</li>
+<li>
+<strong>Enough expected counts.</strong> A gene enters the absent
+set only if enough ambient counts are expected for it
+(<code>min_expected = 5</code>). Without this, thousands of rarely
+detected genes look absent simply for lack of counts, and rho is
+overestimated.</li>
+<li>
+<strong>Per-cell shrinkage.</strong> Each cell’s rho is pulled
+towards its cluster’s rho, more strongly for cells with few counts.
+Small cells therefore do not get extreme values.</li>
+<li>
+<strong>Weak clusters borrow.</strong> A cluster without enough
+absent genes (<code>low_power</code>) borrows rho from the other
+clusters instead of guessing.</li>
+<li>
+<strong>Implausible values are not trusted.</strong> A cluster whose
+estimate exceeds 0.5 (<code>implausible</code>) would be mostly soup,
+which happens when the soup looks like the cluster’s own expression. It
+borrows rho too. If most cells are in such clusters, rho cannot be
+estimated from the data at all, and <code><a href="../reference/decant.html">decant()</a></code> warns (<a href="11-Diagnostics-and-Troubleshooting.html">Chapter 11.4</a>).</li>
 </ul>
 </div>
 <div class="section level2">
@@ -275,7 +296,21 @@ expressed</td>
 <td><code><a href="../reference/estimate_rho_cluster.html">estimate_rho_cluster()</a></code></td>
 <td><code>floor_rho</code></td>
 <td><code>0.005</code></td>
-<td>Smallest contamination considered possible</td>
+<td>Smallest contamination considered possible; also the lowest starting
+value</td>
+</tr>
+<tr class="even">
+<td><code><a href="../reference/estimate_rho_cluster.html">estimate_rho_cluster()</a></code></td>
+<td><code>max_rho</code></td>
+<td><code>0.5</code></td>
+<td>Largest contamination treated as identifiable</td>
+</tr>
+<tr class="odd">
+<td><code><a href="../reference/estimate_rho_cluster.html">estimate_rho_cluster()</a></code></td>
+<td><code>overdispersed</code></td>
+<td><code>TRUE</code></td>
+<td>Allow for gene-to-gene spread of absent genes; <code>FALSE</code>
+gives the earlier Poisson test</td>
 </tr>
 <tr class="even">
 <td><code><a href="../reference/correct_counts.html">correct_counts()</a></code></td>

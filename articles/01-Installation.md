@@ -60,7 +60,7 @@ Genomics data this is the `raw_feature_bc_matrix` folder written by Cell
 Ranger, next to `filtered_feature_bc_matrix`. If you only kept the
 filtered matrix, you can still use Decant with an approximate soup (see
 [Chapter
-11.5](https://kroy3.github.io/Decant/articles/11-Diagnostics-and-Troubleshooting.md)),
+11.6](https://kroy3.github.io/Decant/articles/11-Diagnostics-and-Troubleshooting.md)),
 but the result is less reliable.
 
 ------------------------------------------------------------------------

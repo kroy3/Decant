@@ -86,7 +86,7 @@
 <p>Decant reports when its estimate is uncertain. This chapter explains
 each message and what to do about it.</p>
 <div class="section level2">
-<h2 id="three-checks-after-every-run">11.1 Three checks after every run<a class="anchor" aria-label="anchor" href="#three-checks-after-every-run"></a>
+<h2 id="four-checks-after-every-run">11.1 Four checks after every run<a class="anchor" aria-label="anchor" href="#four-checks-after-every-run"></a>
 </h2>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/kroy3/Decant" class="external-link">Decant</a></span><span class="op">)</span></span>
@@ -99,6 +99,8 @@ each message and what to do about it.</p>
 <span><span class="va">res</span><span class="op">$</span><span class="va">soup_mismatch</span></span>
 <span><span class="co">#&gt; [1] FALSE</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/any.html" class="external-link">any</a></span><span class="op">(</span><span class="va">res</span><span class="op">$</span><span class="va">rho_diagnostics</span><span class="op">$</span><span class="va">low_power</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] FALSE</span></span>
+<span><span class="va">res</span><span class="op">$</span><span class="va">rho_unidentifiable</span></span>
 <span><span class="co">#&gt; [1] FALSE</span></span></code></pre></div>
 <ol style="list-style-type: decimal">
 <li>
@@ -111,6 +113,9 @@ this range deserves a closer look.</li>
 <li>
 <strong><code>low_power</code></strong> should be <code>FALSE</code>
 for all clusters, or at least for the large ones.</li>
+<li>
+<strong><code>rho_unidentifiable</code></strong> must be
+<code>FALSE</code>. If it is <code>TRUE</code>, see 11.4.</li>
 </ol>
 </div>
 <div class="section level2">
@@ -137,13 +142,15 @@ cells. - If rho still looks too low, supply an independent estimate with
 <h2 id="warning-low-power-clusters">11.3 Warning: low-power clusters<a class="anchor" aria-label="anchor" href="#warning-low-power-clusters"></a>
 </h2>
 <blockquote>
-<p><em>N cluster(s) have almost no genes that are cleanly absent, so rho
-is weakly identified there and likely OVERestimated.</em></p>
+<p><em>N cluster(s) have almost no genes that are cleanly absent or an
+implausible rho above 0.5 (M), so rho is weakly identified there; they
+borrow rho from the other clusters.</em></p>
 </blockquote>
 <p><strong>Meaning.</strong> In these clusters almost every gene in the
 soup is also expressed, so there is little evidence about the soup
-alone. This happens with very small clusters and with cell types whose
-expression resembles the soup.</p>
+alone, or the estimate came out above 0.5, which would mean the cells
+are mostly soup. This happens with very small clusters and with cell
+types whose expression resembles the soup.</p>
 <p><strong>What Decant does.</strong> It gives these clusters the rho of
 the other clusters, weighted by their evidence
 (<code>borrowed = TRUE</code> in <code>res$rho_diagnostics</code>).</p>
@@ -151,7 +158,39 @@ the other clusters, weighted by their evidence
 a lower resolution, and run again.</p>
 </div>
 <div class="section level2">
-<h2 id="common-errors">11.4 Common errors<a class="anchor" aria-label="anchor" href="#common-errors"></a>
+<h2 id="warning-contamination-not-identifiable">11.4 Warning: contamination not identifiable<a class="anchor" aria-label="anchor" href="#warning-contamination-not-identifiable"></a>
+</h2>
+<blockquote>
+<p><em>rho could not be identified: no cluster has genes that are
+cleanly absent, or most cells are in clusters whose estimate is
+implausibly high (&gt; 0.5). … The estimate is NOT reliable and
+correction may remove real signal. Supply <code>rho</code> from an
+independent source.</em></p>
+</blockquote>
+<p><strong>Meaning.</strong> Contamination is estimated from genes that
+a cluster does not express. If the soup looks like the cells themselves,
+for example in a sample of a single cell type or cell line, there are no
+such genes and the contamination cannot be measured from expression.
+This is a limit of every expression-based method, not only Decant’s. On
+a mouse cell line with 0.4% true contamination, DecontX reported 35%
+without a warning.</p>
+<p><strong>What Decant does.</strong> It reports the problem
+(<code>res$rho_unidentifiable</code> is <code>TRUE</code>, and printing
+the result shows a warning) but still returns a correction, which should
+not be trusted.</p>
+<p><strong>What to do.</strong> Supply the contamination yourself:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Requires your own data</span></span>
+<span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/decant.html">decant</a></span><span class="op">(</span><span class="va">cells</span>, <span class="va">empties</span>, clusters <span class="op">=</span> <span class="va">clusters</span>, rho <span class="op">=</span> <span class="fl">0.02</span><span class="op">)</span></span></code></pre></div>
+<ul>
+<li>Good sources for <code>rho</code> are a genotype-based estimate when
+donors are pooled (<a href="10-Splice-Aware-and-Genotype-Modules.html">Chapter 10.2</a>), a
+species-mixing control run alongside the experiment, or a value measured
+on comparable data from the same lab and protocol.</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="common-errors">11.5 Common errors<a class="anchor" aria-label="anchor" href="#common-errors"></a>
 </h2>
 <table class="table">
 <colgroup>
@@ -196,13 +235,13 @@ matrix</td>
 </table>
 </div>
 <div class="section level2">
-<h2 id="frequently-asked-questions">11.5 Frequently asked questions<a class="anchor" aria-label="anchor" href="#frequently-asked-questions"></a>
+<h2 id="frequently-asked-questions">11.6 Frequently asked questions<a class="anchor" aria-label="anchor" href="#frequently-asked-questions"></a>
 </h2>
 <p><strong>Do I need the raw matrix?</strong> It is strongly
 recommended, because the empty droplets measure the soup. With filtered
 data only, you can approximate the soup by the pooled expression of all
 cells, as SoupX does in the same situation:</p>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">pooled</span> <span class="op">&lt;-</span> <span class="fu">Matrix</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/Matrix/man/Matrix.html" class="external-link">Matrix</a></span><span class="op">(</span><span class="fu">Matrix</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/Matrix/man/colSums-methods.html" class="external-link">rowSums</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">observed</span><span class="op">)</span>, ncol <span class="op">=</span> <span class="fl">1</span>, sparse <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>                         dimnames <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">observed</span><span class="op">)</span>, <span class="st">"pooled"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">res_pooled</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/decant.html">decant</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">observed</span>, <span class="va">pooled</span>, clusters <span class="op">=</span> <span class="va">sim</span><span class="op">$</span><span class="va">labels</span><span class="op">)</span></span></code></pre></div>

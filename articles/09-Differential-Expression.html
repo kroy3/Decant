@@ -308,6 +308,13 @@ cohorts</td>
 <code>ambient_driven</code>
 </td>
 </tr>
+<tr class="even">
+<td><code>joint_rho</code></td>
+<td><code>TRUE</code></td>
+<td>Refine each sample’s ambient fraction on genes absent from all
+samples pooled. Leave it on: without it, the ambient fraction of a
+single cell type can be wildly wrong</td>
+</tr>
 </tbody>
 </table>
 </div>
@@ -315,13 +322,25 @@ cohorts</td>
 <h2 id="limits">9.6 Limits<a class="anchor" aria-label="anchor" href="#limits"></a>
 </h2>
 <ul>
+<li>
+<strong><code><a href="../reference/ambient_de.html">ambient_de()</a></code> reports false hits on real
+data.</strong> On a real Alzheimer’s study (GSE272082, prefrontal
+cortex, 5 vs 4 donors), disease labels were shuffled between donors 24
+times, so there was nothing to find. In microglia and oligodendrocytes,
+<code><a href="../reference/ambient_de.html">ambient_de()</a></code> reported genes in 40 of the 48 tests (up to
+574 genes); naive edgeR in 1. A fix is in progress. Until then, do not
+report its hits as findings: use a standard pseudobulk test, and treat
+<code>ambient_driven</code> only as a hint. To check any method on your
+own data, shuffle your condition labels between samples and count the
+hits.</li>
 <li>With very few empty droplets per sample (a few hundred), the soup is
 uncertain and some leakage returns.</li>
 <li>With three samples per group, power is lower than with six.</li>
-<li>The evidence for <code><a href="../reference/ambient_de.html">ambient_de()</a></code> is from simulations.
-Correcting counts with a good tool and then testing performs similarly
-on the same simulations; <code><a href="../reference/ambient_de.html">ambient_de()</a></code> has the advantage
-when the design includes covariates such as batch.</li>
+<li>Apart from the check above, the evidence for
+<code><a href="../reference/ambient_de.html">ambient_de()</a></code> is from simulations. Correcting counts with a
+good tool and then testing performs similarly on the same simulations;
+<code><a href="../reference/ambient_de.html">ambient_de()</a></code> has the advantage when the design includes
+covariates such as batch.</li>
 </ul>
 <hr>
 <p><strong>Previous:</strong> <a href="08-Multi-Sample-Experiments.html">Chapter 8, Multi-Sample
