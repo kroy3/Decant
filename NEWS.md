@@ -1,5 +1,14 @@
 # Decant (development version)
 
+* **New opt-in correction `correction = "bayes_absent"`, judged on fresh
+  data: removes the most, fails two pre-stated criteria.** On three 10x
+  mixtures never used for design it removes 0.885 of ambient signal (DecontX
+  0.761, SoupX 0.614, default `bayes_cell` 0.566). But its mean retain is
+  0.9837 vs DecontX 0.9847, and on PBMC 4k it removes more counts too high
+  to be ambient (likely doublets), so it is not the default. The negative
+  control (0.998), native markers and the simulation gate pass
+  (`validation/BENCHMARK.md` 1g, `validation/check_bayes_absent.R`).
+
 * **Second pre-registered real-data DE test: null.** Paired brain regions
   (GSE272082, hippocampus or entorhinal cortex vs prefrontal cortex, within
   donors): standard edgeR called no gene foreign to microglia, so there was

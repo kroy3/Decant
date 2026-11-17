@@ -442,6 +442,39 @@ cells), so medians and rank correlations are the measures to report; and the
 whose contamination cannot be seen, which the share of low-power cells does
 not.
 
+## 1g. `correction = "bayes_absent"`: judged on fresh mixtures
+
+Scripts: `benchmark_removal_heldout.R` (`DECANT_HELDOUT=fresh`) and
+`check_bayes_absent.R`. Results: `results/removal_heldout_fresh_*.csv`,
+`results/bayes_absent_checks_*.csv`. The algorithm was frozen (commit
+38a9dc4) and the criteria fixed before hgmm_6k, hgmm_12k and
+10k_hgmm_3p_nextgem_Chromium_X were downloaded. None of the three was used
+for any design decision.
+
+| fresh mixture | bayes_absent retain / removal | bayes_cell (default) | DecontX | SoupX |
+|---|---|---|---|---|
+| hgmm_6k | 0.982 / 0.892 | 0.989 / 0.597 | 0.984 / 0.800 | 0.973 / 0.842 |
+| hgmm_12k | 0.985 / 0.872 | 0.989 / 0.453 | 0.983 / 0.680 | 0.986 / 0.522 |
+| 10k nextgem X | 0.984 / 0.891 | 0.989 / 0.648 | 0.986 / 0.804 | 0.990 / 0.477 |
+| mean | 0.9837 / **0.885** | 0.9894 / 0.566 | **0.9847** / 0.761 | 0.9829 / 0.614 |
+
+| pre-stated criterion | result |
+|---|---|
+| mean removal >= DecontX | **pass** (0.885 vs 0.761; best on every mixture) |
+| mean retain >= DecontX | **fail** (0.9837 vs 0.9847) |
+| Smart-seq2 negative control retain >= 0.99 | pass (0.998, same as bayes_cell) |
+| PBMC native markers no worse than bayes_cell | pass (1.3 / 4.7 / 2.1% lost, unchanged) |
+| PBMC counts that cannot be ambient no worse than bayes_cell | **fail**: removed 17 / 33 / 60% (Ig / monocyte / NK) vs 13 / 16 / 32% |
+| simulation gate, counts never added | pass (mean L1 0.0627 vs 0.0631; 0 fabricated) |
+
+**It fails two criteria, so the default stays `bayes_cell`.** `bayes_absent`
+ships as opt-in for analyses that need the most ambient RNA removed. Its
+costs are about 0.5 points less retain than the default and more likely
+doublets removed. Suspected cause of the doublet loss (not tested): it always
+uses the cluster-level cap test (`cap_test = "cluster"`), which protects fewer
+single high counts than the per-entry test. Testing a per-entry variant needs
+new held-out data, since all six 10x human/mouse mixtures are now used.
+
 ## 2. Simulated data with ground truth
 
 `simulate_experiment()`, easy and stress settings, k-means clusters given to
