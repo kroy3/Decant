@@ -219,7 +219,7 @@ estimate_rho <- function(observed, soup, low_expr_q = 0.5) {
     ## every entry is "high", and the few entries left would look ambient
     X_all <- gk(nz$v)
     for (k in seq_len(K))
-      native[, k] <- native[, k] * (1 - .absence_posterior(X_all[, k], soup, amb_k[k], soup_umis))
+      native[, k] <- native[, k] * (1 - as.numeric(.absence_posterior(X_all[, k], soup, amb_k[k], soup_umis)))
   }
   ## native rate per native UMI, among the same cells: their native depth is
   ## the cluster's minus that of the cells set aside for this gene
@@ -271,9 +271,24 @@ estimate_rho <- function(observed, soup, low_expr_q = 0.5) {
     }, numeric(length(x)))
     mx <- apply(L, 1, max); mx + log(rowSums(exp(L - mx)))
   }
-  ## start: genes not significantly above their ambient expectation
-  wA <- as.numeric(stats::ppois(x - 1, e, lower.tail = FALSE) > 0.01 & e > 0)
   cnt <- if (is.null(M)) rep(Inf, length(x)) else cc
+  ## start from the two modes of the log ratios themselves (two-means on
+  ## well-covered genes), not from a test against the ambient expectation:
+  ## when ambient genes sit well above it (rho too low, or plain scatter with
+  ## large counts) such a test rejects most of them, the expressed component
+  ## starts as a blend of both groups, and EM does not recover (hgmm 10k).
+  lr_all <- log(pmax(x, 0.5) / pmax(e, 1e-300))
+  cov <- e > 0 & x >= min_count & cnt >= min_count
+  if (sum(cov) < 20) cov <- e > 0 & x >= 1
+  ctr <- stats::quantile(lr_all[cov], c(0.1, 0.9), names = FALSE)
+  for (i in 1:50) {
+    lowg <- abs(lr_all[cov] - ctr[1]) <= abs(lr_all[cov] - ctr[2])
+    if (!any(lowg) || all(lowg)) break
+    nc <- c(mean(lr_all[cov][lowg]), mean(lr_all[cov][!lowg]))
+    if (max(abs(nc - ctr)) < 1e-6) break
+    ctr <- nc
+  }
+  wA <- as.numeric(e > 0 & lr_all < mean(ctr))
   moments <- function(wt, use) {
     u <- use & wt > 1e-6 & e > 0
     if (sum(wt[u]) < 5) return(NULL)
@@ -296,7 +311,15 @@ estimate_rho <- function(observed, soup, low_expr_q = 0.5) {
     if (max(abs(new - wA)) < 1e-4) { wA <- new; break }
     wA <- new
   }
-  w[ok] <- wA
+  ## The posterior is used only when the two groups are well apart: at least
+  ## two standard deviations each between the component means. In a small or
+  ## heavily contaminated cluster (expressed genes only a few times above
+  ## ambient) they overlap and no classification is reliable; the cluster then
+  ## keeps the plain rule (w = 0).
+  sep_ok <- !is.null(pB) && (pB[["m"]] - pA[["m"]]) >= 2 * (pA[["s"]] + pB[["s"]])
+  if (sep_ok) w[ok] <- wA
+  attr(w, "fit") <- c(m_A = pA[["m"]], s_A = pA[["s"]], m_B = if (is.null(pB)) NA else pB[["m"]],
+                      s_B = if (is.null(pB)) NA else pB[["s"]], used = sep_ok)
   w
 }
 
