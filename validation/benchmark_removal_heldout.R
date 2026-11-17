@@ -61,11 +61,15 @@ read_kind <- function(ds, which) {
   dd <- list.dirs(dest); has <- vapply(dd, function(x) any(grepl("^matrix.mtx", list.files(x))), TRUE)
   ms <- lapply(sort(dd[has]), read_10x_counts)
   if (length(ms) == 1) return(ms[[1]])
+  ## same barcodes in every genome's matrix: reindex columns through the
+  ## triplet form (a sparse sub-assignment over ~700k barcodes exhausts memory)
   bc <- Reduce(union, lapply(ms, colnames))
   do.call(rbind, lapply(ms, function(m) {
-    out <- Matrix::sparseMatrix(i = integer(0), j = integer(0), x = numeric(0), dims = c(nrow(m), length(bc)),
-                                dimnames = list(rownames(m), bc))
-    out[, colnames(m)] <- m; out }))
+    if (identical(colnames(m), bc)) return(m)
+    t <- methods::as(m, "TsparseMatrix")
+    Matrix::sparseMatrix(i = t@i + 1L, j = match(colnames(m), bc)[t@j + 1L], x = t@x,
+                         dims = c(nrow(m), length(bc)), dimnames = list(rownames(m), bc))
+  }))
 }
 
 ## per-gene retain/removal, per species, averaged over species (as the paper)
