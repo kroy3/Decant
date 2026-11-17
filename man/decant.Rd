@@ -11,7 +11,7 @@ decant(
   clusters = NULL,
   k = 8,
   rho = NULL,
-  correction = c("bayes_cell", "bayes", "subtract", "redistribute"),
+  correction = c("bayes_cell", "bayes", "subtract", "redistribute", "bayes_absent"),
   cap_test = c("entry", "cluster"),
   obs_unspliced = NULL,
   obs_spliced = NULL,
