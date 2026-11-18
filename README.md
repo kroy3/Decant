@@ -57,6 +57,16 @@ against 0.029; before this release 0.013). That mixture was used to find the
 estimator's flaw; results on held-out mixtures are in
 [`validation/BENCHMARK.md`](validation/BENCHMARK.md), sections 1c and 1d.
 
+**Opt-in alternative: `correction = "bayes_absent"`.** It decides, gene by
+gene and cluster by cluster, whether a gene is expressed at all, and removes
+all counts of genes that are not. On two 10x mixtures never used in its
+design (pre-registered), it removed 0.891 of ambient signal against DecontX's
+0.655 and the default's 0.531. The cost is retain: 0.9918 against DecontX's
+0.9920 and the default's 0.9945. That missed the pre-stated bar, so it is not
+the default (`validation/BENCHMARK.md`, sections 1g and 1h). Use it when
+removing ambient RNA matters more than the last fraction of a point of
+native signal.
+
 ### Correction: six tools on real 10x PBMC 4k data
 
 Same cells, soup and clusters for every tool. "Ambient-compatible" foreign

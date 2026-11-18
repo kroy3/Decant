@@ -1,5 +1,12 @@
 # Decant (development version)
 
+* **`bayes_absent` now uses `cap_test = "hybrid"` and no longer removes
+  doublet-level counts (PBMC identical to `bayes_cell`).** Judged on two
+  unused 10x mixtures under a pre-registration: removal 0.891 against
+  DecontX 0.655, retain 0.99183 against 0.99201. The retain criterion fails
+  by 0.02 points, so it stays opt-in; the default is unchanged
+  (`validation/BENCHMARK.md` 1h).
+
 * **New opt-in correction `correction = "bayes_absent"`, judged on fresh
   data: removes the most, fails two pre-stated criteria.** On three 10x
   mixtures never used for design it removes 0.885 of ambient signal (DecontX
