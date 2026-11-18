@@ -472,8 +472,50 @@ ships as opt-in for analyses that need the most ambient RNA removed. Its
 costs are about 0.5 points less retain than the default and more likely
 doublets removed. Suspected cause of the doublet loss (not tested): it always
 uses the cluster-level cap test (`cap_test = "cluster"`), which protects fewer
-single high counts than the per-entry test. Testing a per-entry variant needs
-new held-out data, since all six 10x human/mouse mixtures are now used.
+single high counts than the per-entry test. (Correction: three 10x human/mouse
+mixtures were still unused at this point; see 1h. The numbers in this section
+are for the version frozen at 38a9dc4, before the hybrid cap.)
+
+## 1h. `bayes_absent` with the hybrid cap: judged on the unused mixtures
+
+Pre-registration: `preregistration/bayes_absent_hybrid.md`, committed with the
+frozen code (db6f672) before hgmm_1k, hgmm_1k_v2 and hgmm_100 were downloaded.
+
+The change was developed on data already seen (the hgmm v3 mixtures and PBMC
+4k). The PBMC doublet-level loss came entirely from the per-cluster cap test.
+`cap_test = "hybrid"` also sets aside entries that pass the per-entry test
+with at least 5 UMIs. On seen data, removal was the same and PBMC identical to
+`bayes_cell`; retain was unchanged, and was predicted to fail again.
+
+hgmm_1k and hgmm_1k_v2 are distinct libraries (5 shared barcodes of about
+1,000), so both are primary. hgmm_100 is reported but not scored.
+
+| unused mixture | bayes_absent retain / removal | bayes_cell (default) | DecontX | SoupX |
+|---|---|---|---|---|
+| hgmm_1k | 0.9934 / 0.899 | 0.9961 / 0.487 | 0.9933 / 0.674 | 0.9918 / 0.634 |
+| hgmm_1k_v2 | 0.9903 / 0.882 | 0.9930 / 0.575 | 0.9907 / 0.635 | 0.9945 / 0.423 |
+| **mean (primary)** | 0.99183 / **0.891** | **0.99452** / 0.531 | 0.99201 / 0.655 | 0.99314 / 0.529 |
+| hgmm_100 (not scored) | 0.9982 / 0.813 | 0.9990 / 0.347 | 0.9981 / 0.583 | failed (no markers) |
+
+| pre-stated criterion | result |
+|---|---|
+| 1. mean removal >= DecontX | **pass** (0.891 vs 0.655; best on every mixture) |
+| 2. mean retain >= DecontX | **fail** (0.99183 vs 0.99201, 0.02 points) |
+| 3. Smart-seq2 negative control retain >= 0.99 | pass (0.998) |
+| 4. gate: no counts added, L1 within 0.002 of bayes_cell | pass (0.0628 vs 0.0631; 0 added) |
+| 5. PBMC non-ambient counts no worse than bayes_cell (regression check, not held out) | pass (12.7 / 16.1 / 32.1%, identical) |
+
+**Criterion 2 fails, as predicted, so `bayes_absent` stays opt-in and the
+default stays `bayes_cell`.** The doublet problem of 1g is fixed. The
+remaining cost is retain: on six fresh or unused mixtures it keeps
+0.2 to 0.7 points less of the cells' own counts than the default, and about
+as much as DecontX (behind by 0.1 and 0.02 points in the two tests), while
+removing 0.89 of ambient signal against DecontX's 0.66 to 0.76. Part of that
+retain loss is within-species ambient RNA, which this scorer cannot tell from
+native counts (on hgmm 10k, half of the native-species genes called absent
+in a cluster were 3-fold enriched in another cluster of the same species).
+That is a property of the scorer, stated here, not a pass. No 10x human/mouse
+mixture is left unused, so nothing further is tuned on these.
 
 ## 2. Simulated data with ground truth
 
