@@ -26,7 +26,7 @@
 #'   removes 88 to 95% of marker counts that ambient RNA could explain in cell
 #'   types that do not express them, and leaves most of the counts that are
 #'   too high in a cell to be ambient (likely doublets), which "bayes" removed.
-#' @param cap_test for "bayes_cell": "entry" or "cluster", how the test that
+#' @param cap_test for "bayes_cell": "entry", "cluster" or "hybrid", how the test that
 #'   sets aside counts too high to be ambient is applied; see
 #'   [correct_counts()].
 #' @param obs_unspliced,obs_spliced genes x cells layers; if both given with
@@ -45,7 +45,7 @@
 #' @export
 decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
                    rho = NULL, correction = c("bayes_cell", "bayes", "subtract", "redistribute", "bayes_absent"),
-                   cap_test = c("entry", "cluster"),
+                   cap_test = c("entry", "cluster", "hybrid"),
                    obs_unspliced = NULL, obs_spliced = NULL,
                    empties_unspliced = NULL, empties_spliced = NULL,
                    allelic = NULL, basis = NULL, verbose = FALSE) {

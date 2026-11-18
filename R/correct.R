@@ -37,8 +37,9 @@
 ##                   (ambient-only genes scatter around the expectation;
 ##                   expressed genes lie far above it). An absent gene's
 ##                   native rate is zero, so all its counts are removed.
-##                   Counts too high in one cell to be ambient anywhere in
-##                   the cluster are still set aside (cap_test = "cluster").
+##                   Counts too high to be ambient are still set aside
+##                   (cap_test = "hybrid": too high anywhere in the cluster,
+##                   or too high in the cell itself and at least 5 UMIs).
 ## Which rule is the default is decided by gate_correction(), not by taste.
 
 #' Remove ambient counts from each cell (mass-conserving).
@@ -70,7 +71,10 @@
 #'   "cluster" removes more but also keeps less of the cells' own rare
 #'   counts: on held-out mixtures removal 0.519 vs 0.444, retain 0.974 vs
 #'   0.986 on the 10k mixture (`validation/BENCHMARK.md`, section 1e), so
-#'   it is not the default.
+#'   it is not the default. "hybrid" (used by "bayes_absent") sets an entry
+#'   aside if it passes the "cluster" test, or the "entry" test with at
+#'   least 5 UMIs: a single UMI against a tiny expectation is weak evidence
+#'   on its own, but five are not, so doublet-level counts stay protected.
 #' @param drop_zeros for sparse input, drop entries corrected to exactly 0.
 #'   FALSE keeps the input's sparsity pattern (explicit zeros).
 #' @return corrected counts, same class as `observed` (dense or dgCMatrix).
@@ -81,7 +85,7 @@
 correct_counts <- function(observed, soup, rho,
                            method = c("subtract", "redistribute", "bayes", "bayes_cell", "bayes_absent"),
                            clusters = NULL, max_iter = 50, drop_zeros = TRUE, cap_q = 1e-3,
-                           cap_test = c("entry", "cluster"), soup_umis = NULL) {
+                           cap_test = c("entry", "cluster", "hybrid"), soup_umis = NULL) {
   method <- match.arg(method); cap_test <- match.arg(cap_test)
   observed <- .as_counts(observed, "observed")
   if (length(soup) != nrow(observed)) stop("length(soup) must equal nrow(observed)", call. = FALSE)
@@ -104,7 +108,7 @@ correct_counts <- function(observed, soup, rho,
     },
     bayes_absent = {
       if (is.null(clusters)) stop("method = 'bayes_absent' needs `clusters`", call. = FALSE)
-      .corr_bayes_cell(observed, nz, soup, rho, T_c, clusters, cap_q, "cluster",
+      .corr_bayes_cell(observed, nz, soup, rho, T_c, clusters, cap_q, "hybrid",
                        absent = TRUE, soup_umis = soup_umis)
     })
   ## the guarantee, enforced (not assumed) on every path
@@ -194,13 +198,14 @@ estimate_rho <- function(observed, soup, low_expr_q = 0.5) {
   kj <- match(clusters, ks)[nz$j]
   amb_c <- rho * T_c
   lam <- amb_c[nz$j] * soup[nz$i]
-  high <- if (cap_test == "entry") {
-    nz$v > stats::qpois(1 - cap_q, lam)
-  } else {
+  entry_high <- function() nz$v > stats::qpois(1 - cap_q, lam)
+  cluster_high <- function() {
     ## P(count >= observed | ambient only), times the cells it is tested in
     n_k <- tabulate(match(clusters, ks), K)
     stats::ppois(nz$v - 1, lam, lower.tail = FALSE) * n_k[kj] < cap_q
   }
+  high <- switch(cap_test, entry = entry_high(), cluster = cluster_high(),
+                 hybrid = cluster_high() | (nz$v >= 5 & entry_high()))
   gk <- function(w) {                       # sum w over entries, by (gene, cluster)
     m <- matrix(0, G, K)
     s <- rowsum(w, (kj - 1L) * G + nz$i, reorder = FALSE)

@@ -31,10 +31,15 @@ CAPT <- if (length(args) >= 3) args[3] else NULL
 ## DECANT_HELDOUT=fresh to run them. They are the judge of bayes_absent.
 SETS <- list(
   v3 = c("hgmm_1k_v3", "hgmm_5k_v3", "hgmm_10k_v3"),
-  fresh = c("hgmm_6k", "hgmm_12k", "10k_hgmm_3p_nextgem_Chromium_X"))
+  fresh = c("hgmm_6k", "hgmm_12k", "10k_hgmm_3p_nextgem_Chromium_X"),
+  ## unused until the hybrid cap was frozen (preregistration/bayes_absent_hybrid.md)
+  unused = c("hgmm_1k", "hgmm_1k_v2", "hgmm_100"))
 URLS <- c(hgmm_6k = "https://cf.10xgenomics.com/samples/cell-exp/2.1.0/hgmm_6k/hgmm_6k_%s_gene_bc_matrices.tar.gz",
           hgmm_12k = "https://cf.10xgenomics.com/samples/cell-exp/2.1.0/hgmm_12k/hgmm_12k_%s_gene_bc_matrices.tar.gz",
-          `10k_hgmm_3p_nextgem_Chromium_X` = "https://cf.10xgenomics.com/samples/cell-exp/6.1.0/10k_hgmm_3p_nextgem_Chromium_X/10k_hgmm_3p_nextgem_Chromium_X_%s_feature_bc_matrix.tar.gz")
+          `10k_hgmm_3p_nextgem_Chromium_X` = "https://cf.10xgenomics.com/samples/cell-exp/6.1.0/10k_hgmm_3p_nextgem_Chromium_X/10k_hgmm_3p_nextgem_Chromium_X_%s_feature_bc_matrix.tar.gz",
+          hgmm_1k = "https://cf.10xgenomics.com/samples/cell-exp/2.1.0/hgmm_1k/hgmm_1k_%s_gene_bc_matrices.tar.gz",
+          hgmm_100 = "https://cf.10xgenomics.com/samples/cell-exp/2.1.0/hgmm_100/hgmm_100_%s_gene_bc_matrices.tar.gz",
+          hgmm_1k_v2 = "https://cf.10xgenomics.com/samples/cell-exp/3.0.0/hgmm_1k_v2/hgmm_1k_v2_%s_feature_bc_matrix.tar.gz")
 SET <- Sys.getenv("DECANT_HELDOUT", "v3")
 DATASETS <- SETS[[SET]]
 CACHE <- file.path("validation", "data"); OUT <- file.path("validation", "results")

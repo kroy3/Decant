@@ -12,7 +12,7 @@ decant(
   k = 8,
   rho = NULL,
   correction = c("bayes_cell", "bayes", "subtract", "redistribute", "bayes_absent"),
-  cap_test = c("entry", "cluster"),
+  cap_test = c("entry", "cluster", "hybrid"),
   obs_unspliced = NULL,
   obs_spliced = NULL,
   empties_unspliced = NULL,
@@ -46,7 +46,7 @@ removes 88 to 95\% of marker counts that ambient RNA could explain in cell
 types that do not express them, and leaves most of the counts that are
 too high in a cell to be ambient (likely doublets), which "bayes" removed.}
 
-\item{cap_test}{for "bayes_cell": "entry" or "cluster", how the test that
+\item{cap_test}{for "bayes_cell": "entry", "cluster" or "hybrid", how the test that
 sets aside counts too high to be ambient is applied; see
 \code{\link[=correct_counts]{correct_counts()}}.}
 
