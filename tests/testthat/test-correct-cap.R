@@ -51,3 +51,25 @@ test_that("bayes_absent removes a gene a cluster does not express and keeps one 
   ab2 <- correct_counts(X2, empt_soup, rho, method = "bayes_absent", clusters = cl, soup_umis = M)
   expect_gt(ab2[250, 1], 55)
 })
+
+test_that("cap_test = 'hybrid' removes rare singletons but keeps moderate single-cell excesses", {
+  set.seed(3)
+  G <- 20; N <- 10000
+  soup <- c(2.5e-5, 0.2, rep((1 - 0.2 - 2.5e-5) / (G - 2), G - 2))
+  X <- matrix(stats::rpois(G * N, 20), G, N)
+  X[1, ] <- 0; X[1, 1:4] <- 1                        # rare-gene ambient singletons
+  rho <- rep(0.05, N); cl <- rep("a", N)
+  lam2 <- rho * colSums(X) * soup[2]                   # gene 2: about 4 ambient counts per cell
+  X[2, ] <- stats::rpois(N, lam2)
+  lam2 <- rho * colSums(X) * soup[2]
+  x7 <- stats::qpois(1 - 1e-3, lam2[7]) + 1            # too high for this cell, not for 10000 cells
+  X[2, 7] <- x7; lam2 <- rho * colSums(X) * soup[2]
+  stopifnot(x7 >= 5, x7 > stats::qpois(1 - 1e-3, lam2[7]),
+            stats::ppois(x7 - 1, lam2[7], lower.tail = FALSE) * N >= 1e-3)
+  h <- correct_counts(X, soup, rho, method = "bayes_cell", clusters = cl, cap_test = "hybrid")
+  k <- correct_counts(X, soup, rho, method = "bayes_cell", clusters = cl, cap_test = "cluster")
+  expect_true(all(h[1, 1:4] < 0.01))                   # singletons: ambient, as with "cluster"
+  expect_equal(h[2, 7], x7 - lam2[7], tolerance = 1e-8) # kept but its ambient expectation
+  expect_lt(k[2, 7], h[2, 7])                          # "cluster" removes more of it
+  expect_true(all(h <= X + 1e-12) && all(h >= 0))
+})

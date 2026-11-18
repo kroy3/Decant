@@ -13,7 +13,7 @@ correct_counts(
   max_iter = 50,
   drop_zeros = TRUE,
   cap_q = 0.001,
-  cap_test = c("entry", "cluster"),
+  cap_test = c("entry", "cluster", "hybrid"),
   soup_umis = NULL
 )
 }
@@ -50,7 +50,10 @@ mixture this kept most ambient counts of rarely contaminating genes.
 "cluster" removes more but also keeps less of the cells' own rare
 counts: on held-out mixtures removal 0.519 vs 0.444, retain 0.974 vs
 0.986 on the 10k mixture (\code{validation/BENCHMARK.md}, section 1e), so
-it is not the default.}
+it is not the default. "hybrid" (used by "bayes_absent") sets an entry
+aside if it passes the "cluster" test, or the "entry" test with at
+least 5 UMIs: a single UMI against a tiny expectation is weak evidence
+on its own, but five are not, so doublet-level counts stay protected.}
 
 \item{soup_umis}{for "bayes_absent": total UMIs the soup profile was
 estimated from. If given, the absence test compares each gene's count
