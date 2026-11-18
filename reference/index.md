@@ -18,6 +18,9 @@
 - [`ambient_structured()`](https://kroy3.github.io/Decant/reference/ambient_structured.md)
   : Structured soup profile (lysis diagnostic).
 
+- [`chirp()`](https://kroy3.github.io/Decant/reference/chirp.md) :
+  Ambient-aware ligand-receptor inference between clusters ("chirp").
+
 - [`cluster_basis()`](https://kroy3.github.io/Decant/reference/cluster_basis.md)
   : Derive a program basis (cluster mean profiles) from the observed
   cells.

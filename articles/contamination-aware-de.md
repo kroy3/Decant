@@ -175,7 +175,7 @@ sessionInfo()
 #> [13] rmarkdown_2.32    grid_4.6.2        evaluate_1.0.5    jquerylib_0.1.4  
 #> [17] fastmap_1.2.0     yaml_2.3.12       lifecycle_1.0.5   compiler_4.6.2   
 #> [21] fs_2.1.0          limma_3.68.5      edgeR_4.10.7      lattice_0.23-1   
-#> [25] systemfonts_1.3.2 digest_0.6.39     R6_2.6.1          splines_4.6.2    
+#> [25] systemfonts_1.3.3 digest_0.6.39     R6_2.6.1          splines_4.6.2    
 #> [29] Matrix_1.7-6      bslib_0.12.0      tools_4.6.2       pkgdown_2.2.1    
 #> [33] cachem_1.1.0      desc_1.4.3
 ```
