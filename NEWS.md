@@ -16,6 +16,19 @@
   control (0.998), native markers and the simulation gate pass
   (`validation/BENCHMARK.md` 1g, `validation/check_bayes_absent.R`).
 
+* **New, experimental: `chirp()`, ambient-aware ligand-receptor calls.** A
+  ligand made by the cell type that dominates the soup is detected in every
+  cluster, so a detection rule (>= 10% of cells) reports every cluster as a
+  sender. `chirp()` calls a gene in a cluster only when its count is
+  significantly above `margin` times the ambient count expected there, and
+  scores pairs on the excess. Simulated ground truth only (2 seeds, rho
+  0.05-0.3): the detection rule called 600-950 absent pairs, `chirp()` none,
+  and it found every pair expressed at >= 20 per 10k. It misses most pairs at
+  5-20 per 10k. With rho at 2/3 of its value it still made no false calls; at
+  1/2 it made up to 100. Since the contamination estimate is known to run
+  low on some real data (1f below), check `ambient_share_ligand` before
+  trusting a call. Not yet tested on real data.
+
 * **Second pre-registered real-data DE test: null.** Paired brain regions
   (GSE272082, hippocampus or entorhinal cortex vs prefrontal cortex, within
   donors): standard edgeR called no gene foreign to microglia, so there was
