@@ -18,7 +18,10 @@
   false calls; at 1/2 it made up to 100. Since the contamination
   estimate is known to run low on some real data (1f below), check
   `ambient_share_ligand` before trusting a call. Not yet tested on real
-  data.
+  data. Correcting counts with `bayes_cell` and then applying the
+  detection rule left 70-388 of those false calls on the same
+  simulations; `subtract` left all of them, since its fractional counts
+  still count as detected.
 
 - **Second pre-registered real-data DE test: null.** Paired brain
   regions (GSE272082, hippocampus or entorhinal cortex vs prefrontal

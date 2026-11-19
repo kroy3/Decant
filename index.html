@@ -85,6 +85,8 @@
 <li>
 <strong>Never adds counts.</strong> Corrected counts are bounded by the observed counts, checked on every run.</li>
 <li>
+<strong>Ambient-aware ligand-receptor calls</strong> (<code><a href="reference/chirp.html">chirp()</a></code>). A ligand made by the cell type that dominates the soup is detected in every cluster, so the usual detection rule makes every cluster look like a sender. <code><a href="reference/chirp.html">chirp()</a></code> calls a gene in a cluster only when its count is well above what ambient RNA would put there, and scores pairs on the excess. <strong>Status: experimental, simulation only</strong> (see <a href="#limits">Limits</a>).</li>
+<li>
 <strong>Every default is gated.</strong> Each component must pass a falsification test against ground truth in CI. Components that failed are kept off and documented.</li>
 </ol>
 </div>
@@ -362,6 +364,8 @@
 <li>Memory: about 9.5 GB for 11,000 cells and 1.9 million empty droplets.</li>
 <li>
 <strong><code><a href="reference/ambient_de.html">ambient_de()</a></code> is experimental.</strong> On real data it has been checked for calibration only (three datasets, shuffled labels); before this release it failed in pancreas ductal cells. That it removes ambient-driven hits a standard test reports is shown only in simulation, from a simulator that follows the model’s own mechanism. Two pre-registered real-data tests (pancreas, T1D vs control; brain regions within donors) could not show it: the standard test found no ambient-driven hits to remove (<code>validation/BENCHMARK.md</code>, 3c and 3d). Until there is real-data evidence, report <code>ambient_de</code> hits together with a standard pseudobulk test. Analyses made with earlier versions should be rerun.</li>
+<li>
+<strong><code><a href="reference/chirp.html">chirp()</a></code> is experimental and untested on real data.</strong> On simulated data it made no false sender calls where the 10% detection rule made 608-944 and correcting with <code>bayes_cell</code> first still left 70-388. The simulator matches its model, CellChat and CellPhoneDB were not run, and it misses most pairs expressed at 5-20 per 10k. It relies on <code>rho</code>; with <code>rho</code> at half its true value it made up to 100 false calls.</li>
 <li>Empty droplets that over-represent genes the cells also express are not detected and make the contamination estimate too low.</li>
 </ul>
 <p>The full scorecard, design notes and history are in <a href="validation/SCORECARD.html"><code>validation/SCORECARD.md</code></a>; changes are in <a href="NEWS.html"><code>NEWS.md</code></a>.</p>
