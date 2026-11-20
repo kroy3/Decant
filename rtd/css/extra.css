@@ -1,0 +1,13 @@
+/* black on white, Arial, as the pkgdown site */
+body, .rst-content, .wy-nav-content, h1, h2, h3, h4, .wy-side-nav-search > a {
+  font-family: Arial, Helvetica, sans-serif;
+  color: #000;
+}
+.wy-nav-content { background: #fff; max-width: 960px; }
+.wy-side-nav-search, .wy-nav-top { background: #000; }
+.rst-content a, .rst-content a:visited { color: #000; text-decoration: underline; }
+.rst-content table { font-size: 0.95em; }
+/* the theme keeps table cells on one line; wrap them so wide tables fit */
+.rst-content table.docutils td, .rst-content table.docutils th,
+.wy-table-responsive table td, .wy-table-responsive table th { white-space: normal; }
+.rst-content code, .rst-content tt { color: #000; }
