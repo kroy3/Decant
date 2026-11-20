@@ -12,6 +12,8 @@ can make differential expression report the soup instead of biology. Decant
 measures the soup from your own empty droplets, estimates how much of each
 cell is ambient, and removes it.
 
+[![Documentation Status](https://readthedocs.org/projects/decant/badge/?version=latest)](https://decant.readthedocs.io/en/latest/)
+
 Source code: [github.com/kroy3/Decant](https://github.com/kroy3/Decant) ·
 Changes: [NEWS](https://github.com/kroy3/Decant/blob/main/NEWS.md) ·
 Issues: [GitHub issues](https://github.com/kroy3/Decant/issues)
