@@ -1,12 +1,15 @@
 # Decant
 
+[![Documentation Status](https://readthedocs.org/projects/decant/badge/?version=latest)](https://decant.readthedocs.io/en/latest/)
+
 Ambient RNA decontamination for single-cell and single-nucleus RNA-seq, with a
 differential expression test that models ambient RNA instead of subtracting
 it. No other ambient RNA tool we found offers one.
 
-**Documentation:** the [User Guide](https://github.com/kroy3/Decant/wiki)
-covers installation, the Seurat workflow, multi-sample data, differential
-expression and diagnostics, chapter by chapter.
+**Documentation:** [decant.readthedocs.io](https://decant.readthedocs.io/en/latest/).
+The user guide covers installation, the Seurat workflow, multi-sample data,
+differential expression and diagnostics, chapter by chapter (also on the
+[GitHub wiki](https://github.com/kroy3/Decant/wiki)).
 
 ## What is new
 
@@ -221,7 +224,8 @@ devtools::test()                              # unit tests
 Rscript scripts/run_falsification_gates.R     # falsification gates (also run in CI)
 Rscript scripts/check_user_guide.R            # run every example in the user guide
 Rscript scripts/build_user_guide.R            # copy wiki/ into the website articles
-# the GitHub wiki is updated from wiki/ by .github/workflows/wiki.yaml
+# the GitHub wiki is updated from wiki/ by .github/workflows/wiki.yaml;
+# Read the Docs rebuilds from main (.readthedocs.yaml, mkdocs.yml, rtd/)
 ```
 
 ## License
