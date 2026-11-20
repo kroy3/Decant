@@ -1,0 +1,33 @@
+site_name: Decant
+site_description: Ambient RNA decontamination and contamination-aware differential expression for scRNA-seq and snRNA-seq
+repo_url: https://github.com/kroy3/Decant
+edit_uri: ""
+docs_dir: rtd
+theme:
+  name: readthedocs
+  navigation_depth: 2
+extra_css:
+  - css/extra.css
+markdown_extensions:
+  - tables
+  - toc:
+      permalink: true
+  - admonition
+nav:
+  - Home: index.md
+  - User Guide:
+      - Preface: guide/Home.md
+      - 1. Installation: guide/01-Installation.md
+      - 2. Key Concepts: guide/02-Key-Concepts.md
+      - 3. Quick Start: guide/03-Quick-Start.md
+      - 4. Preparing Your Data: guide/04-Preparing-Your-Data.md
+      - 5. Running Decant: guide/05-Running-Decant.md
+      - 6. Seurat Integration: guide/06-Seurat-Integration.md
+      - 7. Estimation and Correction: guide/07-Estimation-and-Correction.md
+      - 8. Multi-Sample Experiments: guide/08-Multi-Sample-Experiments.md
+      - 9. Differential Expression: guide/09-Differential-Expression.md
+      - 10. Splice-Aware and Genotype Modules: guide/10-Splice-Aware-and-Genotype-Modules.md
+      - 11. Diagnostics and Troubleshooting: guide/11-Diagnostics-and-Troubleshooting.md
+      - 12. Validation and Benchmarks: guide/12-Validation-and-Benchmarks.md
+      - 13. Function Reference: guide/13-Function-Reference.md
+      - 14. Cell-Cell Communication: guide/14-Cell-Cell-Communication.md

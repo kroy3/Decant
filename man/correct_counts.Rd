@@ -8,12 +8,13 @@ correct_counts(
   observed,
   soup,
   rho,
-  method = c("subtract", "redistribute", "bayes", "bayes_cell"),
+  method = c("subtract", "redistribute", "bayes", "bayes_cell", "bayes_absent"),
   clusters = NULL,
   max_iter = 50,
   drop_zeros = TRUE,
   cap_q = 0.001,
-  cap_test = c("entry", "cluster")
+  cap_test = c("entry", "cluster", "hybrid"),
+  soup_umis = NULL
 )
 }
 \arguments{
@@ -24,8 +25,8 @@ for per-sample soups use \code{\link[=decant]{decant()}}).}
 
 \item{rho}{length-cells contamination fractions.}
 
-\item{method}{one of "subtract", "redistribute", "bayes", "bayes_cell"
-(see Details).}
+\item{method}{one of "subtract", "redistribute", "bayes", "bayes_cell",
+"bayes_absent" (see Details).}
 
 \item{clusters}{cluster labels, required for the two bayes methods.}
 
@@ -49,7 +50,16 @@ mixture this kept most ambient counts of rarely contaminating genes.
 "cluster" removes more but also keeps less of the cells' own rare
 counts: on held-out mixtures removal 0.519 vs 0.444, retain 0.974 vs
 0.986 on the 10k mixture (\code{validation/BENCHMARK.md}, section 1e), so
-it is not the default.}
+it is not the default. "hybrid" (used by "bayes_absent") sets an entry
+aside if it passes the "cluster" test, or the "entry" test with at
+least 5 UMIs: a single UMI against a tiny expectation is weak evidence
+on its own, but five are not, so doublet-level counts stay protected.}
+
+\item{soup_umis}{for "bayes_absent": total UMIs the soup profile was
+estimated from. If given, the absence test compares each gene's count
+in a cluster with its count in the empty droplets (a binomial given
+their total), which carries the soup's own sampling noise; otherwise
+the soup is taken as known.}
 }
 \value{
 corrected counts, same class as \code{observed} (dense or dgCMatrix).

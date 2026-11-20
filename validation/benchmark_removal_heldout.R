@@ -25,7 +25,23 @@ args <- commandArgs(trailingOnly = TRUE)
 TAG <- if (length(args) >= 1) args[1] else "current"
 CORR <- if (length(args) >= 2) args[2] else "bayes_cell"
 CAPT <- if (length(args) >= 3) args[3] else NULL
-DATASETS <- c("hgmm_1k_v3", "hgmm_5k_v3", "hgmm_10k_v3")
+## Two sets. "v3": hgmm 1k, 5k, 10k v3 (seen while bayes_absent was designed:
+## 10k was diagnosed, 1k and 5k results were looked at). "fresh": three 10x
+## mixtures never used for any design decision, with other chemistries; set
+## DECANT_HELDOUT=fresh to run them. They are the judge of bayes_absent.
+SETS <- list(
+  v3 = c("hgmm_1k_v3", "hgmm_5k_v3", "hgmm_10k_v3"),
+  fresh = c("hgmm_6k", "hgmm_12k", "10k_hgmm_3p_nextgem_Chromium_X"),
+  ## unused until the hybrid cap was frozen (preregistration/bayes_absent_hybrid.md)
+  unused = c("hgmm_1k", "hgmm_1k_v2", "hgmm_100"))
+URLS <- c(hgmm_6k = "https://cf.10xgenomics.com/samples/cell-exp/2.1.0/hgmm_6k/hgmm_6k_%s_gene_bc_matrices.tar.gz",
+          hgmm_12k = "https://cf.10xgenomics.com/samples/cell-exp/2.1.0/hgmm_12k/hgmm_12k_%s_gene_bc_matrices.tar.gz",
+          `10k_hgmm_3p_nextgem_Chromium_X` = "https://cf.10xgenomics.com/samples/cell-exp/6.1.0/10k_hgmm_3p_nextgem_Chromium_X/10k_hgmm_3p_nextgem_Chromium_X_%s_feature_bc_matrix.tar.gz",
+          hgmm_1k = "https://cf.10xgenomics.com/samples/cell-exp/2.1.0/hgmm_1k/hgmm_1k_%s_gene_bc_matrices.tar.gz",
+          hgmm_100 = "https://cf.10xgenomics.com/samples/cell-exp/2.1.0/hgmm_100/hgmm_100_%s_gene_bc_matrices.tar.gz",
+          hgmm_1k_v2 = "https://cf.10xgenomics.com/samples/cell-exp/3.0.0/hgmm_1k_v2/hgmm_1k_v2_%s_feature_bc_matrix.tar.gz")
+SET <- Sys.getenv("DECANT_HELDOUT", "v3")
+DATASETS <- SETS[[SET]]
 CACHE <- file.path("validation", "data"); OUT <- file.path("validation", "results")
 
 mtx_dir <- function(ds, which) {
@@ -36,6 +52,29 @@ mtx_dir <- function(ds, which) {
     d <- list.dirs(file.path(CACHE, ds, which)); d <- d[grepl("feature_bc_matrix$", d)][1]
   }
   d
+}
+## counts of one matrix kind ("raw" or "filtered") for any dataset. Cell
+## Ranger 2 writes one matrix per genome (same barcodes); they are stacked.
+read_kind <- function(ds, which) {
+  if (!ds %in% names(URLS)) return(read_10x_counts(mtx_dir(ds, which)))
+  dest <- file.path(CACHE, ds, which)
+  if (!dir.exists(dest)) {
+    tgz <- file.path(CACHE, paste0(ds, "_", which, ".tar.gz"))
+    if (!file.exists(tgz)) utils::download.file(sprintf(URLS[[ds]], which), tgz, mode = "wb", quiet = TRUE)
+    dir.create(dest, recursive = TRUE, showWarnings = FALSE); utils::untar(tgz, exdir = dest)
+  }
+  dd <- list.dirs(dest); has <- vapply(dd, function(x) any(grepl("^matrix.mtx", list.files(x))), TRUE)
+  ms <- lapply(sort(dd[has]), read_10x_counts)
+  if (length(ms) == 1) return(ms[[1]])
+  ## same barcodes in every genome's matrix: reindex columns through the
+  ## triplet form (a sparse sub-assignment over ~700k barcodes exhausts memory)
+  bc <- Reduce(union, lapply(ms, colnames))
+  do.call(rbind, lapply(ms, function(m) {
+    if (identical(colnames(m), bc)) return(m)
+    t <- methods::as(m, "TsparseMatrix")
+    Matrix::sparseMatrix(i = t@i + 1L, j = match(colnames(m), bc)[t@j + 1L], x = t@x,
+                         dims = c(nrow(m), length(bc)), dimnames = list(rownames(m), bc))
+  }))
 }
 
 ## per-gene retain/removal, per species, averaged over species (as the paper)
@@ -54,7 +93,8 @@ scores <- function(cells, corrected, gene_sp, cell_sp) {
 inputs <- function(ds) {
   f <- file.path(CACHE, ds, "removal_inputs.rds")
   if (file.exists(f)) return(readRDS(f))
-  raw <- read_10x_counts(mtx_dir(ds, "raw")); filt <- read_10x_counts(mtx_dir(ds, "filtered"))
+  dir.create(file.path(CACHE, ds), recursive = TRUE, showWarnings = FALSE)
+  raw <- read_kind(ds, "raw"); filt <- read_kind(ds, "filtered")
   d <- split_droplets(raw, cells = colnames(filt)); rm(raw, filt); invisible(gc())
   gsp <- gene_species(rownames(d$cells))
   tr <- species_mix_truth(d$cells, d$empties, gsp)
@@ -104,6 +144,6 @@ for (ds in DATASETS) {
   rm(x, res, cm); invisible(gc())
 }
 out <- do.call(rbind, rows)
-utils::write.csv(out, file.path(OUT, sprintf("removal_heldout_%s.csv", TAG)), row.names = FALSE)
+utils::write.csv(out, file.path(OUT, sprintf("removal_heldout%s_%s.csv", if (SET == "v3") "" else paste0("_", SET), TAG)), row.names = FALSE)
 cat("\nMean over held-out mixtures:\n")
 print(stats::aggregate(cbind(retain, removal) ~ method, out, mean), digits = 3, row.names = FALSE)

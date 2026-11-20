@@ -26,7 +26,7 @@
 #'   removes 88 to 95% of marker counts that ambient RNA could explain in cell
 #'   types that do not express them, and leaves most of the counts that are
 #'   too high in a cell to be ambient (likely doublets), which "bayes" removed.
-#' @param cap_test for "bayes_cell": "entry" or "cluster", how the test that
+#' @param cap_test for "bayes_cell": "entry", "cluster" or "hybrid", how the test that
 #'   sets aside counts too high to be ambient is applied; see
 #'   [correct_counts()].
 #' @param obs_unspliced,obs_spliced genes x cells layers; if both given with
@@ -44,8 +44,8 @@
 #'   $ambient (genes x samples), $clusters, $lysis (if basis), $modules.
 #' @export
 decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
-                   rho = NULL, correction = c("bayes_cell", "bayes", "subtract", "redistribute"),
-                   cap_test = c("entry", "cluster"),
+                   rho = NULL, correction = c("bayes_cell", "bayes", "subtract", "redistribute", "bayes_absent"),
+                   cap_test = c("entry", "cluster", "hybrid"),
                    obs_unspliced = NULL, obs_spliced = NULL,
                    empties_unspliced = NULL, empties_spliced = NULL,
                    allelic = NULL, basis = NULL, verbose = FALSE) {
@@ -68,17 +68,19 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
       stop("`sample_of` does not map onto `empties`", call. = FALSE)
     pp <- pool_soup(empties)
     soup_by_sample <- pp$pooled
+    soup_umis <- vapply(empties, function(e) sum(.col_sums(e)), 1)
     modules <- c(modules, "hierarchical_ambient")
   } else {
     empties <- .as_counts(empties, "empties")
     if (nrow(empties) != G) stop("empties needs nrow(obs_total) genes", call. = FALSE)
     soup_by_sample <- matrix(ambient_global(empties), ncol = 1)
+    soup_umis <- sum(.col_sums(empties))
     sample_idx <- rep(1L, N)
   }
   rownames(soup_by_sample) <- rownames(obs_total)
 
   ## ---- clusters (needed by the rho estimator and bayes correction) ----
-  need_clusters <- (is.null(rho) && is.null(allelic)) || correction %in% c("bayes", "bayes_cell")
+  need_clusters <- (is.null(rho) && is.null(allelic)) || correction %in% c("bayes", "bayes_cell", "bayes_absent")
   if (is.null(clusters) && need_clusters) {
     clusters <- quick_labels(obs_total, k = k)
     modules <- c(modules, "kmeans_clusters")
@@ -158,7 +160,7 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
   } else if (ncol(soup_by_sample) == 1L) {
     out$corrected <- correct_counts(obs_total, soup_by_sample[, 1], rho,
                                     method = correction, clusters = clusters,
-                                    drop_zeros = FALSE, cap_test = cap_test)
+                                    drop_zeros = FALSE, cap_test = cap_test, soup_umis = soup_umis[1])
     modules <- c(modules, paste0("correction_", correction))
   } else {
     ## per-sample soup: correct each sample's cells with that sample's soup
@@ -170,7 +172,7 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
                                              soup_by_sample[, s], rho[idx],
                                              method = correction,
                                              clusters = clusters[idx],
-                                             drop_zeros = FALSE, cap_test = cap_test)
+                                             drop_zeros = FALSE, cap_test = cap_test, soup_umis = soup_umis[s])
     }
     modules <- c(modules, paste0("correction_", correction))
   }
