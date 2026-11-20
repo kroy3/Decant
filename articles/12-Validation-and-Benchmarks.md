@@ -58,18 +58,18 @@ ambient. Decant, SoupX and DecontX were run on identical inputs and
 scored with the two metrics of Cargnelli et al. (2026). Both scores
 range from 0 to 1, and higher is better.
 
-|                        | Endogenous retained | Ambient removed |
-|------------------------|---------------------|-----------------|
-| **Decant**             | 0.989               | 0.616           |
-| SoupX                  | 0.992               | 0.345           |
-| DecontX                | 0.983               | 0.722           |
-| CellBender (published) | 0.996               | 0.729           |
+|  | Endogenous retained | Ambient removed |
+|----|----|----|
+| **Decant** (`bayes_cell`, the default before `bayes_absent`) | 0.989 | 0.616 |
+| SoupX | 0.992 | 0.345 |
+| DecontX | 0.983 | 0.722 |
+| CellBender (published) | 0.996 | 0.729 |
 
-**Reading the result.** Decant removes clearly more ambient RNA than
-SoupX, and about 10 points **less** than DecontX and CellBender, while
-keeping slightly more of the cells’ own signal than DecontX. Its
-contamination estimate matches the truth from cross-species reads:
-median 0.027 against 0.029, rank correlation 0.985.
+**Reading the result.** With `bayes_cell`, Decant removes clearly more
+ambient RNA than SoupX, and about 10 points **less** than DecontX and
+CellBender, while keeping slightly more of the cells’ own signal than
+DecontX. Its contamination estimate matches the truth from cross-species
+reads: median 0.027 against 0.029, rank correlation 0.985.
 
 In version 0.4.0 the estimate was about half the truth here (0.013) and
 Decant removed only 0.415. The cause, absent genes scattering around rho
@@ -99,6 +99,38 @@ soup looks like the cells. Contamination then cannot be estimated from
 expression; Decant warns ([Chapter
 11.4](https://kroy3.github.io/Decant/articles/11-Diagnostics-and-Troubleshooting.md))
 while DecontX returns a number without comment.
+
+## 12.3b The default rule, `bayes_absent`, on unused mixtures
+
+`bayes_cell` removes each gene’s expected ambient count, but ambient
+levels scatter from gene to gene, so a gene a cluster does not express
+keeps the excess. `bayes_absent` first decides whether the cluster
+expresses the gene at all ([Chapter
+7.3](https://kroy3.github.io/Decant/articles/07-Estimation-and-Correction.md)).
+It was judged on two 10x mixtures (hgmm 1k from Cell Ranger 2 and 3)
+that were downloaded only after the method was frozen and the pass
+criteria were committed:
+
+| Mean of 2 unused mixtures           | Endogenous retained | Ambient removed |
+|-------------------------------------|---------------------|-----------------|
+| **Decant `bayes_absent` (default)** | 0.9918              | **0.891**       |
+| Decant `bayes_cell`                 | **0.9945**          | 0.531           |
+| DecontX                             | 0.9920              | 0.655           |
+| SoupX                               | 0.9931              | 0.529           |
+
+It removes the most of every tool run here. It missed one pre-stated
+criterion: it keeps 0.02 points less than DecontX. It was made the
+default by the maintainer’s decision anyway, and the record says so. Its
+costs, in numbers:
+
+- On the hardest mixture seen (hgmm 10k) it keeps 2.5 points less than
+  `bayes_cell` (0.961 against 0.986).
+- On real blood data (PBMC 4k) its gene-level call never applied (the
+  clusters share most genes) and its output matched `bayes_cell`. Its
+  gain is shown only where clusters differ sharply.
+
+Use `correction = "bayes_cell"` if keeping every native count matters
+most.
 
 ## 12.4 Ground truth: negative control
 

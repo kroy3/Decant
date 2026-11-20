@@ -13,7 +13,7 @@ sim <- simulate_experiment(seed = 1)
 res <- decant(sim$observed, sim$empty, clusters = sim$labels)
 res
 #> <decant> 600 genes x 1200 cells
-#>   modules : cluster_rho, correction_bayes_cell
+#>   modules : cluster_rho, correction_bayes_absent
 #>   rho     : median 0.199 (10%-90%: 0.117-0.305)
 ```
 
@@ -31,7 +31,7 @@ res
 | `clusters` | `NULL` | Cluster labels; if missing, k-means with `k` clusters is run |
 | `k` | `8` | Number of k-means clusters when `clusters` is missing |
 | `rho` | `NULL` | Your own contamination fraction, one value or one per cell; skips estimation |
-| `correction` | `"bayes_cell"` | Correction rule ([Chapter 7](https://kroy3.github.io/Decant/articles/07-Estimation-and-Correction.md)) |
+| `correction` | `"bayes_absent"` | Correction rule ([Chapter 7](https://kroy3.github.io/Decant/articles/07-Estimation-and-Correction.md)) |
 | `sample_of` | `NULL` | Sample of each cell, when `empties` is a list |
 | `obs_unspliced`, `obs_spliced`, `empties_unspliced`, `empties_spliced` | `NULL` | Velocity layers ([Chapter 10](https://kroy3.github.io/Decant/articles/10-Splice-Aware-and-Genotype-Modules.md)) |
 | `allelic` | `NULL` | Genotype data for contamination estimation ([Chapter 10](https://kroy3.github.io/Decant/articles/10-Splice-Aware-and-Genotype-Modules.md)) |
@@ -107,14 +107,14 @@ class(res_sp$corrected)
 
 res_fixed <- decant(sim$observed, sim$empty, rho = 0.2, clusters = sim$labels)
 res_fixed$modules
-#> [1] "user_rho"              "correction_bayes_cell"
+#> [1] "user_rho"                "correction_bayes_absent"
 ```
 
 - `rho = 0.2` applies 20% contamination to every cell and skips the
   estimation step. You can also pass one value per cell.
 - Use this when you have an independent estimate, for example from
-  genotypes or from a species-mixing control. The `bayes_cell` rule
-  still needs `clusters`.
+  genotypes or from a species-mixing control. The default rule still
+  needs `clusters`.
 
 ## 5.7 Without clusters
 
@@ -122,7 +122,8 @@ res_fixed$modules
 
 res_k <- decant(sim$observed, sim$empty)
 res_k$modules
-#> [1] "kmeans_clusters"       "cluster_rho"           "correction_bayes_cell"
+#> [1] "kmeans_clusters"         "cluster_rho"            
+#> [3] "correction_bayes_absent"
 ```
 
 - Without `clusters`, Decant clusters the cells itself with k-means

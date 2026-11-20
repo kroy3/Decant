@@ -36,6 +36,11 @@ the full documentation.
 | [`soup_eb()`](https://kroy3.github.io/Decant/reference/soup_eb.md) | Per-sample soups shrunk by empirical Bayes, used by [`ambient_de()`](https://kroy3.github.io/Decant/reference/ambient_de.md) |  |
 | [`de_naive()`](https://kroy3.github.io/Decant/reference/de_naive.md), [`de_ambient_aware()`](https://kroy3.github.io/Decant/reference/de_ambient_aware.md), [`decant_de_experimental()`](https://kroy3.github.io/Decant/reference/decant_de_experimental.md) | Earlier approaches; [`decant_de_experimental()`](https://kroy3.github.io/Decant/reference/decant_de_experimental.md) failed its gate and is kept only for reproducibility |  |
 
+[`chirp()`](https://kroy3.github.io/Decant/reference/chirp.md) \|
+Ambient-awareligand-receptor calls between clusters (experimental) \|
+[14](https://kroy3.github.io/Decant/articles/14-Cell-Cell-Communication.md)
+\|
+
 ## 13.4 Simulation
 
 | Function | Simulates |
@@ -62,5 +67,5 @@ the full documentation.
 
 **Previous:** [Chapter 12, Validation and
 Benchmarks](https://kroy3.github.io/Decant/articles/12-Validation-and-Benchmarks.md)
-\| **Back to:**
-[Preface](https://kroy3.github.io/Decant/articles/00-Preface.md)
+\| **Next:** [Chapter 14, Cell-Cell
+Communication](https://kroy3.github.io/Decant/articles/14-Cell-Cell-Communication.md)

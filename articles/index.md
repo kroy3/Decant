@@ -30,6 +30,8 @@
   Benchmarks](https://kroy3.github.io/Decant/articles/12-Validation-and-Benchmarks.md):
 - [Chapter 13. Function
   Reference](https://kroy3.github.io/Decant/articles/13-Function-Reference.md):
+- [Chapter 14. Cell-Cell
+  Communication](https://kroy3.github.io/Decant/articles/14-Cell-Cell-Communication.md):
 
 ### Workflows
 

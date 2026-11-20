@@ -1,0 +1,107 @@
+# Chapter 14. Cell-Cell Communication
+
+> **Status: experimental.**
+> [`chirp()`](https://kroy3.github.io/Decant/reference/chirp.md) has
+> been tested on simulated data only. Report its calls together with a
+> standard tool such as CellChat.
+
+## 14.1 The problem
+
+Ligand-receptor tools ask whether a ligand is expressed in a sender
+cluster and its receptor in a receiver cluster. Most decide “expressed”
+by detection, for example the gene seen in at least 10% of a cluster’s
+cells.
+
+Ambient RNA breaks this. If the cell type that dominates the soup makes
+a ligand, that ligand is found at low level in every droplet, and every
+cluster looks like a sender. Correcting the counts first helps but does
+not fully fix it: corrected counts are often small but above zero, so
+the gene still counts as detected.
+
+## 14.2 What chirp() does
+
+For each gene and cluster,
+[`chirp()`](https://kroy3.github.io/Decant/reference/chirp.md) compares
+the observed count with the count ambient RNA is expected to add there:
+
+    expected ambient[g, k]  =  sum over cells c in k of  rho[c] × total[c] × soup[g]
+
+A gene is called in a cluster only if its count is significantly above
+`margin` × that expectation (Poisson test, false discovery rate
+controlled across genes and clusters). A pair’s score is the geometric
+mean of the ligand’s and receptor’s **native** expression: observed
+minus expected ambient, per 10,000 of the cluster’s own UMIs.
+
+## 14.3 Running it
+
+``` r
+
+fit <- decant(counts, empties, clusters = clusters)
+
+pairs <- data.frame(ligand   = c("TGFB1", "CXCL12"),
+                    receptor = c("TGFBR1+TGFBR2", "CXCR4"))
+
+res <- chirp(counts, pairs, fit = fit)
+res[res$call, ]
+```
+
+`counts` must be the **raw** counts, not corrected ones:
+[`chirp()`](https://kroy3.github.io/Decant/reference/chirp.md) removes
+ambient RNA itself. A subunit complex is written with `+`; it is scored
+by its weakest subunit and called only if every subunit is called.
+Without a
+[`decant()`](https://kroy3.github.io/Decant/reference/decant.md) fit,
+pass `soup`, `rho` and `clusters` directly; for several samples pass a
+genes × samples `soup` and `sample_of`.
+
+## 14.4 Reading the output
+
+One row per pair × sender × receiver.
+
+| Column | Meaning |
+|----|----|
+| `call` | Ligand natively expressed in the sender and receptor in the receiver |
+| `score` | Geometric mean of native expression, per 10k |
+| `naive_call`, `naive_score` | The same from raw counts with the 10% detection rule, for comparison |
+| `ambient_share_ligand` | Share of the ligand’s counts in the sender that ambient RNA explains |
+| `p_ligand`, `p_receptor` | Adjusted p-values of the two calls |
+
+Rows with `naive_call = TRUE` and `call = FALSE` are links that ambient
+RNA alone would have produced. A call whose `ambient_share_ligand` is
+above about 0.6 depends heavily on `rho` being right; treat it with
+caution.
+
+## 14.5 Evidence and limits
+
+On simulated data (2 seeds, contamination 0.05 to 0.3, soup dominated by
+one cell type), counting false links between clusters that do not make
+the ligand or receptor:
+
+| Method | False links | Strong true links found |
+|----|----|----|
+| 10% detection rule, raw counts | 608-944 | all |
+| `subtract` correction, then detection | 608-944 | all |
+| `bayes_cell` correction, then detection | 70-388 | all |
+| [`chirp()`](https://kroy3.github.io/Decant/reference/chirp.md) | 0 | all |
+
+Limits:
+
+- **Simulation only.** The simulator’s ambient counts follow the model
+  [`chirp()`](https://kroy3.github.io/Decant/reference/chirp.md) tests
+  against; real data will do worse. CellChat and CellPhoneDB, with their
+  own filters, were not run.
+- **Weak links are missed.** Pairs whose weaker side is expressed at 5
+  to 20 per 10k were found 12 to 36% of the time.
+- **It depends on `rho`.** The default `margin = 2` gave no false calls
+  with `rho` at two thirds of its true value, but up to 100 at half.
+  Decant’s estimate has run low on some held-out data ([Chapter
+  12](https://kroy3.github.io/Decant/articles/12-Validation-and-Benchmarks.md)).
+- It tests whether the RNA is there, not whether signalling happens, and
+  it has no cluster-specificity test.
+
+------------------------------------------------------------------------
+
+**Previous:** [Chapter 13, Function
+Reference](https://kroy3.github.io/Decant/articles/13-Function-Reference.md)
+\| **Back to:**
+[Preface](https://kroy3.github.io/Decant/articles/00-Preface.md)

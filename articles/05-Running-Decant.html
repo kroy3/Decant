@@ -48,6 +48,7 @@
     <li><a class="dropdown-item" href="../articles/11-Diagnostics-and-Troubleshooting.html">Chapter 11. Diagnostics and Troubleshooting</a></li>
     <li><a class="dropdown-item" href="../articles/12-Validation-and-Benchmarks.html">Chapter 12. Validation and Benchmarks</a></li>
     <li><a class="dropdown-item" href="../articles/13-Function-Reference.html">Chapter 13. Function Reference</a></li>
+    <li><a class="dropdown-item" href="../articles/14-Cell-Cell-Communication.html">Chapter 14. Cell-Cell Communication</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Workflows</h6></li>
     <li><a class="dropdown-item" href="../articles/contamination-aware-de.html">Contamination-aware differential expression</a></li>
@@ -94,7 +95,7 @@ estimates each cell’s contamination, and removes it.</p>
 <span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/decant.html">decant</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">observed</span>, <span class="va">sim</span><span class="op">$</span><span class="va">empty</span>, clusters <span class="op">=</span> <span class="va">sim</span><span class="op">$</span><span class="va">labels</span><span class="op">)</span></span>
 <span><span class="va">res</span></span>
 <span><span class="co">#&gt; &lt;decant&gt; 600 genes x 1200 cells</span></span>
-<span><span class="co">#&gt;   modules : cluster_rho, correction_bayes_cell</span></span>
+<span><span class="co">#&gt;   modules : cluster_rho, correction_bayes_absent</span></span>
 <span><span class="co">#&gt;   rho     : median 0.199 (10%-90%: 0.117-0.305)</span></span></code></pre></div>
 <ul>
 <li>First argument: the cell counts, genes × cells.</li>
@@ -150,7 +151,7 @@ estimation</td>
 </tr>
 <tr class="even">
 <td><code>correction</code></td>
-<td><code>"bayes_cell"</code></td>
+<td><code>"bayes_absent"</code></td>
 <td>Correction rule (<a href="07-Estimation-and-Correction.html">Chapter
 7</a>)</td>
 </tr>
@@ -292,14 +293,14 @@ building a dense genes × cells matrix.</li>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res_fixed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/decant.html">decant</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">observed</span>, <span class="va">sim</span><span class="op">$</span><span class="va">empty</span>, rho <span class="op">=</span> <span class="fl">0.2</span>, clusters <span class="op">=</span> <span class="va">sim</span><span class="op">$</span><span class="va">labels</span><span class="op">)</span></span>
 <span><span class="va">res_fixed</span><span class="op">$</span><span class="va">modules</span></span>
-<span><span class="co">#&gt; [1] "user_rho"              "correction_bayes_cell"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "user_rho"                "correction_bayes_absent"</span></span></code></pre></div>
 <ul>
 <li>
 <code>rho = 0.2</code> applies 20% contamination to every cell and
 skips the estimation step. You can also pass one value per cell.</li>
 <li>Use this when you have an independent estimate, for example from
-genotypes or from a species-mixing control. The <code>bayes_cell</code>
-rule still needs <code>clusters</code>.</li>
+genotypes or from a species-mixing control. The default rule still needs
+<code>clusters</code>.</li>
 </ul>
 </div>
 <div class="section level2">
@@ -308,7 +309,8 @@ rule still needs <code>clusters</code>.</li>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">res_k</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/decant.html">decant</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">observed</span>, <span class="va">sim</span><span class="op">$</span><span class="va">empty</span><span class="op">)</span></span>
 <span><span class="va">res_k</span><span class="op">$</span><span class="va">modules</span></span>
-<span><span class="co">#&gt; [1] "kmeans_clusters"       "cluster_rho"           "correction_bayes_cell"</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] "kmeans_clusters"         "cluster_rho"            </span></span>
+<span><span class="co">#&gt; [3] "correction_bayes_absent"</span></span></code></pre></div>
 <ul>
 <li>Without <code>clusters</code>, Decant clusters the cells itself with
 k-means (<code>kmeans_clusters</code> in <code>modules</code>). Supply

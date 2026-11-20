@@ -48,6 +48,7 @@
     <li><a class="dropdown-item" href="../articles/11-Diagnostics-and-Troubleshooting.html">Chapter 11. Diagnostics and Troubleshooting</a></li>
     <li><a class="dropdown-item" href="../articles/12-Validation-and-Benchmarks.html">Chapter 12. Validation and Benchmarks</a></li>
     <li><a class="dropdown-item" href="../articles/13-Function-Reference.html">Chapter 13. Function Reference</a></li>
+    <li><a class="dropdown-item" href="../articles/14-Cell-Cell-Communication.html">Chapter 14. Cell-Cell Communication</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Workflows</h6></li>
     <li><a class="dropdown-item" href="../articles/contamination-aware-de.html">Contamination-aware differential expression</a></li>
@@ -119,7 +120,7 @@ contamination) and <code>sim$labels</code> (the cell types).</li>
 <code class="sourceCode R"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/decant.html">decant</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">observed</span>, <span class="va">sim</span><span class="op">$</span><span class="va">empty</span>, clusters <span class="op">=</span> <span class="va">sim</span><span class="op">$</span><span class="va">labels</span><span class="op">)</span></span>
 <span><span class="va">res</span></span>
 <span><span class="co">#&gt; &lt;decant&gt; 600 genes x 1200 cells</span></span>
-<span><span class="co">#&gt;   modules : cluster_rho, correction_bayes_cell</span></span>
+<span><span class="co">#&gt;   modules : cluster_rho, correction_bayes_absent</span></span>
 <span><span class="co">#&gt;   rho     : median 0.199 (10%-90%: 0.117-0.305)</span></span></code></pre></div>
 <ul>
 <li>
@@ -159,7 +160,7 @@ correctly.</li>
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/score_correction.html">score_correction</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">observed</span>, <span class="va">sim</span><span class="op">$</span><span class="va">observed</span>, <span class="va">sim</span><span class="op">$</span><span class="va">truth</span><span class="op">)</span><span class="op">$</span><span class="va">l1_error</span></span>
 <span><span class="co">#&gt; [1] 0.2451949</span></span>
 <span><span class="fu"><a href="../reference/score_correction.html">score_correction</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">observed</span>, <span class="va">res</span><span class="op">$</span><span class="va">corrected</span>, <span class="va">sim</span><span class="op">$</span><span class="va">truth</span><span class="op">)</span><span class="op">$</span><span class="va">l1_error</span></span>
-<span><span class="co">#&gt; [1] 0.04877535</span></span></code></pre></div>
+<span><span class="co">#&gt; [1] 0.04837206</span></span></code></pre></div>
 <ul>
 <li>
 <code><a href="../reference/score_correction.html">score_correction()</a></code> compares a matrix with the clean
@@ -167,7 +168,7 @@ truth. Its <code>l1_error</code> adds up every count that is wrong,
 whether contamination left behind or real signal removed, as a fraction
 of the true total.</li>
 <li>Without correction (first line) 24.5% of counts are wrong. After
-Decant the error falls to 4.9%.</li>
+Decant the error falls to 4.8%.</li>
 </ul>
 </div>
 <div class="section level2">

@@ -48,6 +48,7 @@
     <li><a class="dropdown-item" href="../articles/11-Diagnostics-and-Troubleshooting.html">Chapter 11. Diagnostics and Troubleshooting</a></li>
     <li><a class="dropdown-item" href="../articles/12-Validation-and-Benchmarks.html">Chapter 12. Validation and Benchmarks</a></li>
     <li><a class="dropdown-item" href="../articles/13-Function-Reference.html">Chapter 13. Function Reference</a></li>
+    <li><a class="dropdown-item" href="../articles/14-Cell-Cell-Communication.html">Chapter 14. Cell-Cell Communication</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><h6 class="dropdown-header" data-toc-skip>Workflows</h6></li>
     <li><a class="dropdown-item" href="../articles/contamination-aware-de.html">Contamination-aware differential expression</a></li>
@@ -169,6 +170,11 @@ ambient. Decant, SoupX and DecontX were run on identical inputs and
 scored with the two metrics of Cargnelli et al. (2026). Both scores
 range from 0 to 1, and higher is better.</p>
 <table class="table">
+<colgroup>
+<col width="33%">
+<col width="33%">
+<col width="33%">
+</colgroup>
 <thead><tr class="header">
 <th></th>
 <th>Endogenous retained</th>
@@ -176,7 +182,9 @@ range from 0 to 1, and higher is better.</p>
 </tr></thead>
 <tbody>
 <tr class="odd">
-<td><strong>Decant</strong></td>
+<td>
+<strong>Decant</strong> (<code>bayes_cell</code>, the default before
+<code>bayes_absent</code>)</td>
 <td>0.989</td>
 <td>0.616</td>
 </tr>
@@ -197,12 +205,12 @@ range from 0 to 1, and higher is better.</p>
 </tr>
 </tbody>
 </table>
-<p><strong>Reading the result.</strong> Decant removes clearly more
-ambient RNA than SoupX, and about 10 points <strong>less</strong> than
-DecontX and CellBender, while keeping slightly more of the cells’ own
-signal than DecontX. Its contamination estimate matches the truth from
-cross-species reads: median 0.027 against 0.029, rank correlation
-0.985.</p>
+<p><strong>Reading the result.</strong> With <code>bayes_cell</code>,
+Decant removes clearly more ambient RNA than SoupX, and about 10 points
+<strong>less</strong> than DecontX and CellBender, while keeping
+slightly more of the cells’ own signal than DecontX. Its contamination
+estimate matches the truth from cross-species reads: median 0.027
+against 0.029, rank correlation 0.985.</p>
 <p>In version 0.4.0 the estimate was about half the truth here (0.013)
 and Decant removed only 0.415. The cause, absent genes scattering around
 rho more than a Poisson test allows, is described in <a href="07-Estimation-and-Correction.html">Chapter 7.2</a>. This mixture
@@ -254,6 +262,62 @@ per-cell values barely follow the truth (correlation 0.18, DecontX
 whose soup looks like the cells. Contamination then cannot be estimated
 from expression; Decant warns (<a href="11-Diagnostics-and-Troubleshooting.html">Chapter 11.4</a>) while
 DecontX returns a number without comment.</p>
+</div>
+<div class="section level2">
+<h2 id="b-the-default-rule-bayes_absent-on-unused-mixtures">12.3b The default rule, <code>bayes_absent</code>, on unused
+mixtures<a class="anchor" aria-label="anchor" href="#b-the-default-rule-bayes_absent-on-unused-mixtures"></a>
+</h2>
+<p><code>bayes_cell</code> removes each gene’s expected ambient count,
+but ambient levels scatter from gene to gene, so a gene a cluster does
+not express keeps the excess. <code>bayes_absent</code> first decides
+whether the cluster expresses the gene at all (<a href="07-Estimation-and-Correction.html">Chapter 7.3</a>). It was judged
+on two 10x mixtures (hgmm 1k from Cell Ranger 2 and 3) that were
+downloaded only after the method was frozen and the pass criteria were
+committed:</p>
+<table class="table">
+<thead><tr class="header">
+<th>Mean of 2 unused mixtures</th>
+<th>Endogenous retained</th>
+<th>Ambient removed</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><strong>Decant <code>bayes_absent</code> (default)</strong></td>
+<td>0.9918</td>
+<td><strong>0.891</strong></td>
+</tr>
+<tr class="even">
+<td>Decant <code>bayes_cell</code>
+</td>
+<td><strong>0.9945</strong></td>
+<td>0.531</td>
+</tr>
+<tr class="odd">
+<td>DecontX</td>
+<td>0.9920</td>
+<td>0.655</td>
+</tr>
+<tr class="even">
+<td>SoupX</td>
+<td>0.9931</td>
+<td>0.529</td>
+</tr>
+</tbody>
+</table>
+<p>It removes the most of every tool run here. It missed one pre-stated
+criterion: it keeps 0.02 points less than DecontX. It was made the
+default by the maintainer’s decision anyway, and the record says so. Its
+costs, in numbers:</p>
+<ul>
+<li>On the hardest mixture seen (hgmm 10k) it keeps 2.5 points less than
+<code>bayes_cell</code> (0.961 against 0.986).</li>
+<li>On real blood data (PBMC 4k) its gene-level call never applied (the
+clusters share most genes) and its output matched
+<code>bayes_cell</code>. Its gain is shown only where clusters differ
+sharply.</li>
+</ul>
+<p>Use <code>correction = "bayes_cell"</code> if keeping every native
+count matters most.</p>
 </div>
 <div class="section level2">
 <h2 id="ground-truth-negative-control">12.4 Ground truth: negative control<a class="anchor" aria-label="anchor" href="#ground-truth-negative-control"></a>

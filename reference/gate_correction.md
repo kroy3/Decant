@@ -1,10 +1,11 @@
 # GATE: which mass-conserving correction rule is closest to truth?
 
-Scores "subtract" (v0), "redistribute" (SoupX-style) and "bayes" with
-the ESTIMATED rho (not oracle), on easy and stress simulations. The
-default in
-[`decant()`](https://kroy3.github.io/Decant/reference/decant.md) is
-whichever has the lowest mean `l1_error` here.
+Scores "subtract" (v0), "redistribute" (SoupX-style), "bayes",
+"bayes_cell" and "bayes_absent" with the ESTIMATED rho (not oracle), on
+easy and stress simulations. The default in
+[`decant()`](https://kroy3.github.io/Decant/reference/decant.md) must
+have the lowest mean `l1_error` here; the gate fails otherwise
+(attribute `"pass"`).
 
 ## Usage
 

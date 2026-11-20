@@ -2,6 +2,19 @@
 
 ## Decant (development version)
 
+- **The default correction is now `bayes_absent`** (was `bayes_cell`).
+  It removes the most ambient RNA of every tool run here: 0.891 on two
+  unused 10x mixtures, against `bayes_cell` 0.531 and DecontX 0.655. It
+  missed its pre-registered retain criterion by 0.02 points against
+  DecontX and was made the default by maintainer decision, recorded in
+  `validation/BENCHMARK.md` 1h. Costs: 0.3 to 0.6 points of native
+  signal against `bayes_cell` on most mixtures, 2.5 on the hardest (hgmm
+  10k). On PBMC 4k its output matches `bayes_cell`. Results from earlier
+  versions change; pass `correction = "bayes_cell"` to reproduce them.
+  [`gate_correction()`](https://kroy3.github.io/Decant/reference/gate_correction.md)
+  now includes `bayes_absent` and fails if the default is not the rule
+  with the lowest error (now 0.0628 against 0.0631, a narrow margin).
+
 - **`bayes_absent` now uses `cap_test = "hybrid"` and no longer removes
   doublet-level counts (PBMC identical to `bayes_cell`).** Judged on two
   unused 10x mixtures under a pre-registration: removal 0.891 against

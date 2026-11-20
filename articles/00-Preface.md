@@ -60,6 +60,7 @@ The chapters follow the order of a typical analysis. Read Chapters 1 to
 | 11 | [Diagnostics and Troubleshooting](https://kroy3.github.io/Decant/articles/11-Diagnostics-and-Troubleshooting.md) | Reading warnings, checking results, and fixing common problems |
 | 12 | [Validation and Benchmarks](https://kroy3.github.io/Decant/articles/12-Validation-and-Benchmarks.md) | How Decant performs against other tools and against ground truth |
 | 13 | [Function Reference](https://kroy3.github.io/Decant/articles/13-Function-Reference.md) | Every exported function, grouped by task |
+| 14 | [Cell-Cell Communication](https://kroy3.github.io/Decant/articles/14-Cell-Cell-Communication.md) | Ligand-receptor calls that discount ambient RNA; experimental |
 
 ### Conventions used in this guide
 
