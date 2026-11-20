@@ -536,6 +536,60 @@ not as a pass. What was known when it was made:
   default has the lowest mean L1 error: 0.0628 against 0.0631 for
   `bayes_cell`. The margin is narrow.
 
+## 1i. Ambient removal in real tissue: brain (pre-registered)
+
+Pre-registration: `preregistration/real_tissue_removal.md`, committed with
+the script (548f1d5) before any correction was run on these data for this
+question. Script: `benchmark_removal_real_tissue.R`. Results:
+`results/removal_real_tissue_*.csv`.
+
+Question: does the default's removal gain on species mixtures (1h) hold in
+real tissue whose cell types differ sharply? Data: six GSE272082 prefrontal
+cortex libraries, with cell types from the fixed marker recipe as clusters.
+Truth: genes foreign or native-specific to each type in an independent C1
+reference (Darmanis 2015). Mean over libraries (microglia: five libraries;
+NIH28 had 9 microglia, below the 20-cell minimum):
+
+| type | method | foreign removed | native removed | doublet-level kept |
+|---|---|---|---|---|
+| microglia (primary) | `bayes_absent` (default) | 0.092 | 0.0034 | 0.988 |
+| | `bayes_cell` | 0.091 | 0.0034 | 0.996 |
+| | DecontX | 0.090 | 0.0033 | 0.963 |
+| | SoupX | 0.057 | 0.0021 | 0.987 |
+| oligodendrocyte | `bayes_absent` | 0.346 | 0.039 | 0.815 |
+| | `bayes_cell` | 0.319 | 0.039 | 0.902 |
+| | DecontX | 0.403 | 0.016 | 0.597 |
+| | SoupX | 0.088 | 0.004 | 0.959 |
+| astrocyte | `bayes_absent` | 0.326 | 0.021 | 0.834 |
+| | `bayes_cell` | 0.299 | 0.021 | 0.900 |
+| | DecontX | 0.533 | 0.043 | 0.456 |
+| | SoupX | 0.074 | 0.002 | 0.976 |
+
+**Pre-stated outcome, microglia: no gain (falls back).** `bayes_absent` minus
+`bayes_cell`: foreign removed +0.001, native removed +0.000.
+
+- **The gene-level call almost never applied.** It was used in 1 of 42
+  clusters: the 9-cell microglia cluster of NIH28, which was not scored. The
+  separation guard rejected every other cluster. The default's removal gain
+  is therefore shown only on species mixtures.
+- **Secondary types: in between.** Oligodendrocytes and astrocytes lost 2.7
+  points more foreign signal at the same native loss. This comes from the
+  hybrid cap, not the gene-level call, and matches fewer doublet-level
+  counts kept (0.90 to 0.82). Part of the extra removal is therefore counts
+  too high to be ambient.
+- **The primary test was weaker than planned.** In microglia most foreign
+  counts are too high to be ambient for every method (doublets, mislabelled
+  cells or phagocytosed RNA), so all methods removed about 9%.
+- **DecontX removes more** in oligodendrocytes and astrocytes. In astrocytes
+  it removes twice the native signal (4.3% against 2.1%), and it removes
+  most doublet-level counts.
+- **New risk found: tiny clusters.** In the one cluster where the call
+  applied (9 cells), it called 17,543 genes absent, with an ambient spread
+  of 0.07: a degenerate fit that removes nearly everything in those cells.
+  The guide now warns about it. A minimum cluster size for the call is the
+  obvious fix; it is not made here, because it would be designed on these
+  data.
+
 ## 2. Simulated data with ground truth
 
 `simulate_experiment()`, easy and stress settings, k-means clusters given to
@@ -856,7 +910,8 @@ against the papers before being cited.
 | Ambient removal with the default (`bayes_absent`) on unused mixtures | **ahead of every tool run**: 0.891 against DecontX 0.655, SoupX 0.529; retain 0.9918 against DecontX 0.9920 (missed the pre-registered bar by 0.02 points; made default by maintainer decision) | section 1h |
 | Ambient removal with `bayes_cell` (default until 1h) on held-out mixtures (hgmm 1k, 5k, 10k) | behind DecontX by 19 points (0.44 against 0.64) and SoupX (0.68); keeps the most (retain 0.992 against 0.984, 0.982) | section 1e |
 | Native signal kept by the default on hard data | behind `bayes_cell` by 2.5 points on hgmm 10k (0.961 against 0.986) | section 1h |
-| Default's gain on real tissue | unknown: on PBMC 4k its gene-level call never applied (output identical to `bayes_cell`) | section 1h |
+| Default's gain on real tissue | **none shown**: brain (pre-registered) no gain in microglia, +2.7 points in glia from the cap rule; the gene-level call applied in 1 of 42 brain clusters and none on PBMC 4k | sections 1h, 1i |
+| Default on tiny clusters | **risk**: a 9-cell cluster had 17,543 genes called absent (degenerate fit) | section 1i |
 | Contamination estimate on held-out species mixtures | lowest error of Decant, SoupX and DecontX on 1k and 5k; behind DecontX on 10k (per-cell correlation 0.18 against 0.67), where all tools underestimate | section 1d |
 | Endogenous counts kept with experimental ground truth | level with SoupX on the species mixture (0.989 against 0.992), ahead of DecontX (0.983); best of those run on the Smart-seq2 negative control (0.998 against SoupX 0.989, DecontX 0.952) | section 1c |
 | Contamination not identifiable (single cell type) | Decant warns (DecontX returns 9-39% silently; SoupX failed on one set); the number Decant reports is still wrong | section 1d |
