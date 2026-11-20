@@ -9,3 +9,7 @@
 ^docs$
 ^pkgdown$
 ^vignettes/articles$
+^\.readthedocs\.yaml$
+^mkdocs\.yml$
+^rtd$
+^site$

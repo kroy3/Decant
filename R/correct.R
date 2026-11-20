@@ -24,6 +24,22 @@
 ##                   an entry above the upper Poisson bound of its own ambient
 ##                   expectation loses only that expectation, and the cluster
 ##                   profile is built from the remaining entries.
+##  "bayes_absent" : "bayes_cell" with an absence posterior. The rules above
+##                   remove a gene's EXPECTED ambient count and keep the rest
+##                   as native. But ambient levels scatter 2 to 4 times more
+##                   than Poisson from gene to gene, so a gene a cluster does
+##                   not express usually sits above its expectation and keeps
+##                   the excess (20k species mixture: at most 0.77 of foreign
+##                   signal removable even with the true rho). Here each gene
+##                   in each cluster gets a posterior probability of being
+##                   absent, from a two-component Poisson-lognormal mixture
+##                   over genes of cluster count against ambient expectation
+##                   (ambient-only genes scatter around the expectation;
+##                   expressed genes lie far above it). An absent gene's
+##                   native rate is zero, so all its counts are removed.
+##                   Counts too high to be ambient are still set aside
+##                   (cap_test = "hybrid": too high anywhere in the cluster,
+##                   or too high in the cell itself and at least 5 UMIs).
 ## Which rule is the default is decided by gate_correction(), not by taste.
 
 #' Remove ambient counts from each cell (mass-conserving).
@@ -32,8 +48,13 @@
 #' @param soup length-G ambient probability vector (one soup for all cells;
 #'   for per-sample soups use [decant()]).
 #' @param rho length-cells contamination fractions.
-#' @param method one of "subtract", "redistribute", "bayes", "bayes_cell"
-#'   (see Details).
+#' @param method one of "subtract", "redistribute", "bayes", "bayes_cell",
+#'   "bayes_absent" (see Details).
+#' @param soup_umis for "bayes_absent": total UMIs the soup profile was
+#'   estimated from. If given, the absence test compares each gene's count
+#'   in a cluster with its count in the empty droplets (a binomial given
+#'   their total), which carries the soup's own sampling noise; otherwise
+#'   the soup is taken as known.
 #' @param clusters cluster labels, required for the two bayes methods.
 #' @param max_iter iterations for "redistribute".
 #' @param cap_q for "bayes_cell": an entry is treated as not explainable by
@@ -50,7 +71,10 @@
 #'   "cluster" removes more but also keeps less of the cells' own rare
 #'   counts: on held-out mixtures removal 0.519 vs 0.444, retain 0.974 vs
 #'   0.986 on the 10k mixture (`validation/BENCHMARK.md`, section 1e), so
-#'   it is not the default.
+#'   it is not the default. "hybrid" (used by "bayes_absent") sets an entry
+#'   aside if it passes the "cluster" test, or the "entry" test with at
+#'   least 5 UMIs: a single UMI against a tiny expectation is weak evidence
+#'   on its own, but five are not, so doublet-level counts stay protected.
 #' @param drop_zeros for sparse input, drop entries corrected to exactly 0.
 #'   FALSE keeps the input's sparsity pattern (explicit zeros).
 #' @return corrected counts, same class as `observed` (dense or dgCMatrix).
@@ -59,9 +83,9 @@
 #'   [gate_correction()] for how they compare against ground truth.
 #' @export
 correct_counts <- function(observed, soup, rho,
-                           method = c("subtract", "redistribute", "bayes", "bayes_cell"),
+                           method = c("subtract", "redistribute", "bayes", "bayes_cell", "bayes_absent"),
                            clusters = NULL, max_iter = 50, drop_zeros = TRUE, cap_q = 1e-3,
-                           cap_test = c("entry", "cluster")) {
+                           cap_test = c("entry", "cluster", "hybrid"), soup_umis = NULL) {
   method <- match.arg(method); cap_test <- match.arg(cap_test)
   observed <- .as_counts(observed, "observed")
   if (length(soup) != nrow(observed)) stop("length(soup) must equal nrow(observed)", call. = FALSE)
@@ -81,6 +105,11 @@ correct_counts <- function(observed, soup, rho,
     bayes_cell = {
       if (is.null(clusters)) stop("method = 'bayes_cell' needs `clusters`", call. = FALSE)
       .corr_bayes_cell(observed, nz, soup, rho, T_c, clusters, cap_q, cap_test)
+    },
+    bayes_absent = {
+      if (is.null(clusters)) stop("method = 'bayes_absent' needs `clusters`", call. = FALSE)
+      .corr_bayes_cell(observed, nz, soup, rho, T_c, clusters, cap_q, "hybrid",
+                       absent = TRUE, soup_umis = soup_umis)
     })
   ## the guarantee, enforced (not assumed) on every path
   v <- pmin(pmax(v, 0), nz$v)
@@ -163,18 +192,20 @@ estimate_rho <- function(observed, soup, low_expr_q = 0.5) {
 ## ambient alone: it keeps everything but lambda. The cluster's native profile
 ## is then estimated from the other entries only, against the ambient expected
 ## in those same cells, and applied to them as in "bayes".
-.corr_bayes_cell <- function(observed, nz, soup, rho, T_c, clusters, cap_q, cap_test = "entry") {
+.corr_bayes_cell <- function(observed, nz, soup, rho, T_c, clusters, cap_q, cap_test = "entry",
+                             absent = FALSE, soup_umis = NULL) {
   ks <- sort(unique(clusters)); K <- length(ks); G <- nrow(observed)
   kj <- match(clusters, ks)[nz$j]
   amb_c <- rho * T_c
   lam <- amb_c[nz$j] * soup[nz$i]
-  high <- if (cap_test == "entry") {
-    nz$v > stats::qpois(1 - cap_q, lam)
-  } else {
+  entry_high <- function() nz$v > stats::qpois(1 - cap_q, lam)
+  cluster_high <- function() {
     ## P(count >= observed | ambient only), times the cells it is tested in
     n_k <- tabulate(match(clusters, ks), K)
     stats::ppois(nz$v - 1, lam, lower.tail = FALSE) * n_k[kj] < cap_q
   }
+  high <- switch(cap_test, entry = entry_high(), cluster = cluster_high(),
+                 hybrid = cluster_high() | (nz$v >= 5 & entry_high()))
   gk <- function(w) {                       # sum w over entries, by (gene, cluster)
     m <- matrix(0, G, K)
     s <- rowsum(w, (kj - 1L) * G + nz$i, reorder = FALSE)
@@ -187,6 +218,14 @@ estimate_rho <- function(observed, soup, low_expr_q = 0.5) {
   X_low <- gk(ifelse(high, 0, nz$v))
   E_low <- outer(soup, amb_k) - soup * gk(ifelse(high, amb_c[nz$j], 0))
   native <- pmax(X_low - E_low, 0)
+  if (absent) {
+    ## absence posterior per gene and cluster; an absent gene has no native rate
+    ## judged on the cluster's FULL counts: for an expressed gene nearly
+    ## every entry is "high", and the few entries left would look ambient
+    X_all <- gk(nz$v)
+    for (k in seq_len(K))
+      native[, k] <- native[, k] * (1 - as.numeric(.absence_posterior(X_all[, k], soup, amb_k[k], soup_umis)))
+  }
   ## native rate per native UMI, among the same cells: their native depth is
   ## the cluster's minus that of the cells set aside for this gene
   nat_c <- (1 - rho) * T_c
@@ -195,5 +234,104 @@ estimate_rho <- function(observed, soup, low_expr_q = 0.5) {
   phi <- native / D_low
   a <- (1 - rho[nz$j]) * phi[cbind(nz$i, kj)]
   b <- rho[nz$j] * soup[nz$i]
-  ifelse(high, nz$v - pmin(lam, nz$v), nz$v * a / pmax(a + b, 1e-300))
+  ## a + b = 0: no native rate and no soup (a gene absent from the cluster
+  ## that the empties never showed); with the absence posterior it is removed
+  ## (written in place: these vectors have one element per non-zero count)
+  out <- nz$v * a / pmax(a + b, 1e-300)
+  if (absent) out[a + b <= 0] <- 0
+  out[high] <- nz$v[high] - pmin(lam[high], nz$v[high])
+  out
+}
+
+## Posterior probability that each gene is absent from a cluster (all of its
+## counts ambient), from a two-component mixture over genes. A gene's cluster
+## count X is compared with its count C in the empty droplets (soup * M):
+## given their total, X ~ Binomial(X + C, p), with
+##   p = A r / (A r + M),   r = exp(m + s * z),  z ~ N(0, 1),
+## A the cluster's expected ambient UMIs and M the soup's. r is the gene's
+## rate in the cluster relative to pure ambient: (m, s) = (m_A, s_A) for
+## ambient-only genes (r near 1, with the gene-to-gene scatter of ambient
+## levels) and (m_B, s_B) for expressed genes (r far above 1). Conditioning
+## on the total removes the gene's unknown soup rate and carries the sampling
+## noise of the soup itself, so a gene the empties never showed is not
+## treated as ambient on the strength of a guess. Without M (soup_umis) the
+## soup is taken as known: X ~ Poisson(soup * A * r).
+## The likelihood is integrated over z by Gauss-Hermite quadrature; (m, s)
+## come from posterior-weighted moments of log ratios among genes with
+## enough counts, with the sampling part of the variance removed. m_A is
+## free, so a cluster rho that is too low moves the ambient component
+## instead of turning absent genes into expressed ones.
+.absence_posterior <- function(X, soup, A, M = NULL, n_iter = 30, min_count = 5, n_nodes = 15) {
+  w <- numeric(length(X))
+  C <- if (is.null(M)) NULL else round(soup * M)
+  ok <- if (is.null(M)) soup > 0 else (X + C) > 0
+  if (A <= 0 || sum(ok & X > 0) < 20) return(w)
+  x <- round(X[ok]); e <- soup[ok] * A; cc <- if (is.null(M)) NULL else C[ok]
+  gh <- .gauss_hermite(n_nodes)
+  loglik <- function(m, s) {
+    L <- vapply(seq_len(n_nodes), function(q) {
+      r <- exp(m + s * gh$x[q])
+      (if (is.null(M)) stats::dpois(x, e * r, log = TRUE)
+       else stats::dbinom(x, x + cc, A * r / (A * r + M), log = TRUE)) + log(gh$w[q])
+    }, numeric(length(x)))
+    mx <- apply(L, 1, max); mx + log(rowSums(exp(L - mx)))
+  }
+  cnt <- if (is.null(M)) rep(Inf, length(x)) else cc
+  ## start from the two modes of the log ratios themselves (two-means on
+  ## well-covered genes), not from a test against the ambient expectation:
+  ## when ambient genes sit well above it (rho too low, or plain scatter with
+  ## large counts) such a test rejects most of them, the expressed component
+  ## starts as a blend of both groups, and EM does not recover (hgmm 10k).
+  lr_all <- log(pmax(x, 0.5) / pmax(e, 1e-300))
+  cov <- e > 0 & x >= min_count & cnt >= min_count
+  if (sum(cov) < 20) cov <- e > 0 & x >= 1
+  ctr <- stats::quantile(lr_all[cov], c(0.1, 0.9), names = FALSE)
+  for (i in 1:50) {
+    lowg <- abs(lr_all[cov] - ctr[1]) <= abs(lr_all[cov] - ctr[2])
+    if (!any(lowg) || all(lowg)) break
+    nc <- c(mean(lr_all[cov][lowg]), mean(lr_all[cov][!lowg]))
+    if (max(abs(nc - ctr)) < 1e-6) break
+    ctr <- nc
+  }
+  wA <- as.numeric(e > 0 & lr_all < mean(ctr))
+  moments <- function(wt, use) {
+    u <- use & wt > 1e-6 & e > 0
+    if (sum(wt[u]) < 5) return(NULL)
+    lr <- log(pmax(x[u], 0.5) / e[u]); ww <- wt[u] / sum(wt[u])
+    m <- sum(ww * lr); v <- sum(ww * (lr - m)^2) - sum(ww * (1 / pmax(x[u], 1) + 1 / pmax(cnt[u], 1)))
+    c(m = m, s = sqrt(max(v, 1e-4)))
+  }
+  pA <- c(m = 0, s = 0.5); pB <- NULL
+  for (it in seq_len(n_iter)) {
+    a <- moments(wA, e >= min_count & cnt >= min_count); b <- moments(1 - wA, x >= min_count & cnt >= min_count)
+    if (is.null(b)) b <- moments(1 - wA, x >= min_count)
+    if (is.null(b)) { wA[] <- 1; break }          # nothing looks expressed
+    if (!is.null(a)) pA <- a
+    pB <- b
+    if (pB[["m"]] <= pA[["m"]]) break              # components not separable
+    piA <- min(max(mean(wA), 1e-4), 1 - 1e-4)
+    lA <- log(piA) + loglik(pA[["m"]], pA[["s"]]); lB <- log(1 - piA) + loglik(pB[["m"]], pB[["s"]])
+    new <- 1 / (1 + exp(pmin(lB - lA, 700)))
+    new[!is.finite(new)] <- 0
+    if (max(abs(new - wA)) < 1e-4) { wA <- new; break }
+    wA <- new
+  }
+  ## The posterior is used only when the two groups are well apart: at least
+  ## two standard deviations each between the component means. In a small or
+  ## heavily contaminated cluster (expressed genes only a few times above
+  ## ambient) they overlap and no classification is reliable; the cluster then
+  ## keeps the plain rule (w = 0).
+  sep_ok <- !is.null(pB) && (pB[["m"]] - pA[["m"]]) >= 2 * (pA[["s"]] + pB[["s"]])
+  if (sep_ok) w[ok] <- wA
+  attr(w, "fit") <- c(m_A = pA[["m"]], s_A = pA[["s"]], m_B = if (is.null(pB)) NA else pB[["m"]],
+                      s_B = if (is.null(pB)) NA else pB[["s"]], used = sep_ok)
+  w
+}
+
+## Gauss-Hermite nodes and weights for a standard normal (Golub-Welsch)
+.gauss_hermite <- function(n) {
+  J <- matrix(0, n, n); i <- seq_len(n - 1)
+  J[cbind(i, i + 1)] <- J[cbind(i + 1, i)] <- sqrt(i)
+  ev <- eigen(J, symmetric = TRUE)
+  list(x = ev$values, w = ev$vectors[1, ]^2)
 }
