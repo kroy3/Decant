@@ -75,17 +75,18 @@ Five safeguards make the estimate reliable on real data:
   such clusters, rho cannot be estimated from the data at all, and `decant()`
   warns ([Chapter 11.4](11-Diagnostics-and-Troubleshooting.html)).
 
-## 7.3 The four correction rules
+## 7.3 The five correction rules
 
 | Rule | How it removes contamination | When to use |
 |---|---|---|
-| `bayes_cell` (default) | Assigns each count to cell or soup by how well each explains it, cell by cell. Counts far too high to be ambient keep all but their ambient expectation | General use |
+| `bayes_absent` (default) | First decides, gene by gene and cluster by cluster, whether the cluster expresses the gene at all; a gene it does not express loses all its counts. Otherwise as `bayes_cell`. Where the two groups of genes overlap, it does not decide and behaves as `bayes_cell` | General use; removes the most |
+| `bayes_cell` | Assigns each count to cell or soup by how well each explains it, cell by cell. Counts far too high to be ambient keep all but their ambient expectation | Keeping the most native signal |
 | `bayes` | The same, but one ratio for the whole cluster | Reproducing earlier results |
 | `redistribute` | Removes exactly `rho × total` counts per cell, in soup proportion (SoupX's approach) | Comparing with SoupX |
 | `subtract` | Subtracts the expectation gene by gene and stops at zero | Simplest reference; removes too little |
 
 ```r
-for (m in c("subtract", "redistribute", "bayes", "bayes_cell")) {
+for (m in c("subtract", "redistribute", "bayes", "bayes_cell", "bayes_absent")) {
   r <- decant(sim$observed, sim$empty, clusters = sim$labels, correction = m)
   e <- score_correction(sim$observed, r$corrected, sim$truth)$l1_error
   cat(sprintf("%-13s %.3f\n", m, e))
@@ -94,14 +95,26 @@ for (m in c("subtract", "redistribute", "bayes", "bayes_cell")) {
 #> redistribute  0.063
 #> bayes         0.047
 #> bayes_cell    0.049
+#> bayes_absent  0.048
 ```
 
 - The loop runs Decant once per rule and prints the error against the
   truth (lower is better; no correction scores 0.245).
-- On this one simulation `bayes` and `bayes_cell` are close. Across all
-  simulated settings in `gate_correction()`, `bayes_cell` has the lowest
-  average error. On real blood data it also keeps the counts of likely
-  doublets, which `bayes` removes. That is why it is the default.
+- On this one simulation the three Bayesian rules are close. Across all
+  simulated settings in `gate_correction()`, `bayes_absent` has the lowest
+  average error, by a small margin over `bayes_cell`.
+- The difference shows on real mixtures of human and mouse cells, where the
+  truth is known. On two 10x mixtures never used to design it,
+  `bayes_absent` removed 0.891 of the ambient signal (`bayes_cell` 0.531,
+  DecontX 0.655), and kept 0.9918 of the cells' own signal (`bayes_cell`
+  0.9945). On the hardest mixture it kept 2.5 points less than
+  `bayes_cell`. That is why it is the default, and why `bayes_cell` stays
+  available: use `correction = "bayes_cell"` when keeping every native
+  count matters more than removing the soup.
+- On real blood data (PBMC 4k) the clusters share most of their genes, the
+  two groups overlap, and `bayes_absent` gives the same result as
+  `bayes_cell`. Both keep the counts of likely doublets, which `bayes`
+  removes.
 
 ## 7.4 The guarantee
 
@@ -121,7 +134,7 @@ The defaults were chosen on test data and rarely need changing.
 | `estimate_rho_cluster()` | `floor_rho` | `0.005` | Smallest contamination considered possible; also the lowest starting value |
 | `estimate_rho_cluster()` | `max_rho` | `0.5` | Largest contamination treated as identifiable |
 | `estimate_rho_cluster()` | `overdispersed` | `TRUE` | Allow for gene-to-gene spread of absent genes; `FALSE` gives the earlier Poisson test |
-| `correct_counts()` | `cap_q` | `0.001` | For `bayes_cell`: how unusual a count must be before it is treated as not ambient |
+| `correct_counts()` | `cap_q` | `0.001` | For `bayes_cell` and `bayes_absent`: how unusual a count must be before it is treated as not ambient |
 
 ---
 

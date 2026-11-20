@@ -57,8 +57,8 @@ The full walk-through is in [Quick Start](guide/03-Quick-Start.md).
 | Function | Purpose | Status |
 |---|---|---|
 | `decant()`, `RunDecant()` | Estimate contamination per cell and correct counts | stable |
-| `correct_counts(method = "bayes_cell")` | Default correction: removes each count's expected ambient share and keeps counts too high to be ambient (doublets, rare expressers) | stable, default |
-| `correct_counts(method = "bayes_absent")` | Decides per gene and cluster whether a gene is expressed at all, and removes all counts of genes that are not. Removes the most ambient RNA, at a small cost in retained native signal | opt-in |
+| `correct_counts(method = "bayes_absent")` | Default correction: decides per gene and cluster whether a gene is expressed at all, and removes all counts of genes that are not; keeps counts too high to be ambient (doublets, rare expressers). Removes the most ambient RNA, at a small cost in retained native signal | default |
+| `correct_counts(method = "bayes_cell")` | Removes each count's expected ambient share only; keeps the most native signal | stable, previous default |
 | `ambient_de()`, `DecantDE()` | Differential expression with each sample's ambient RNA inside the negative binomial model: `mu = native + ambient` | experimental |
 | `chirp()` | Ligand-receptor calls that do not mistake soup for signalling | experimental, simulation only |
 
@@ -79,24 +79,31 @@ the share of ambient signal removed (1 is best). They are measured on 10x
 human/mouse mixtures, where cross-species counts give the truth. All tools
 were run on the same inputs.
 
-| | Decant default (`bayes_cell`) | Decant `bayes_absent` (opt-in) | DecontX | SoupX |
+| | Decant default (`bayes_absent`) | Decant `bayes_cell` | DecontX | SoupX |
 |---|---|---|---|---|
-| Removal, two mixtures never used in design | 0.531 | **0.891** | 0.655 | 0.529 |
-| Retain, same mixtures | **0.9945** | 0.9918 | 0.9920 | 0.9931 |
+| Removal, two mixtures never used in design | **0.891** | 0.531 | 0.655 | 0.529 |
+| Retain, same mixtures | 0.9918 | **0.9945** | 0.9920 | 0.9931 |
+| Retain, hardest mixture seen (hgmm 10k) | 0.961 | **0.986** | not run here | not run here |
 | Retain, Smart-seq2 control with no ambient RNA | **0.998** | **0.998** | 0.952 | 0.989 |
 
 **What this means in practice:**
 
-- **The default keeps the most and removes the least.** It protects the
-  cells' own RNA, but it leaves more ambient RNA than DecontX.
-- **`bayes_absent` removes the most of any tool run here.** It keeps about
-  as much as DecontX, 0.02 points less on the pre-registered test. That
-  missed the pre-stated bar, so it is opt-in. Use it when removing ambient
-  RNA matters more than the last fraction of a point of native signal:
+- **The default removes the most of any tool run here.** It keeps about as
+  much as DecontX: 0.02 points less on the pre-registered test. That missed
+  the pre-stated bar; it was made the default by the maintainer's decision,
+  and the record says so.
+- **It costs native signal on hard data.** Against `bayes_cell` it keeps
+  0.3 to 0.6 points less on most mixtures and 2.5 points less on the
+  hardest. If keeping every native count matters most, use the previous
+  default:
 
   ```r
-  res <- decant(d$cells, d$empties, clusters = my_clusters, correction = "bayes_absent")
+  res <- decant(d$cells, d$empties, clusters = my_clusters, correction = "bayes_cell")
   ```
+
+- **Its gain is shown only where clusters differ sharply.** On real blood
+  data (PBMC 4k) the clusters share most genes, its gene-level call never
+  applied, and the output matched `bayes_cell`.
 
 - **Neither rule removes counts that cannot be ambient.** On real PBMC data
   both keep counts far above what ambient RNA could produce, which DecontX,

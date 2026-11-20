@@ -79,9 +79,10 @@ gate_rho <- function(rho_grid = c(0, 0.02, 0.05, 0.1, 0.2, 0.3), seeds = 1:3,
 
 #' GATE: which mass-conserving correction rule is closest to truth?
 #'
-#' Scores "subtract" (v0), "redistribute" (SoupX-style) and "bayes" with the
-#' ESTIMATED rho (not oracle), on easy and stress simulations. The default in
-#' [decant()] is whichever has the lowest mean `l1_error` here.
+#' Scores "subtract" (v0), "redistribute" (SoupX-style), "bayes", "bayes_cell"
+#' and "bayes_absent" with the ESTIMATED rho (not oracle), on easy and stress
+#' simulations. The default in [decant()] must have the lowest mean `l1_error`
+#' here; the gate fails otherwise (attribute `"pass"`).
 #'
 #' @param rho_grid true mean contamination levels.
 #' @param seeds replicate seeds.
@@ -89,16 +90,17 @@ gate_rho <- function(rho_grid = c(0, 0.02, 0.05, 0.1, 0.2, 0.3), seeds = 1:3,
 #' @return invisibly, a data.frame with attribute `"winner"`.
 #' @export
 gate_correction <- function(rho_grid = c(0.05, 0.2), seeds = 1:3, verbose = TRUE) {
-  methods <- c("subtract", "redistribute", "bayes", "bayes_cell")
+  methods <- c("subtract", "redistribute", "bayes", "bayes_cell", "bayes_absent")
   rows <- list()
   for (setting in names(.gate_settings())) for (rm in rho_grid) for (s in seeds) {
     sim <- .gate_sim(setting, rm, s)
-    soup <- ambient_global(sim$empty)
+    soup <- ambient_global(sim$empty); su <- sum(.col_sums(sim$empty))
     cl <- quick_labels(sim$observed, k = length(sim$lysis_true), seed = s)
     rho <- as.numeric(estimate_rho_cluster(sim$observed, soup, cl))
     for (m in methods) {
       sc <- score_correction(sim$observed,
-                             correct_counts(sim$observed, soup, rho, method = m, clusters = cl),
+                             correct_counts(sim$observed, soup, rho, method = m, clusters = cl,
+                                            soup_umis = if (m == "bayes_absent") su),
                              sim$truth)
       rows[[length(rows) + 1]] <- data.frame(
         setting = setting, rho = rm, seed = s, method = m,
@@ -122,7 +124,11 @@ gate_correction <- function(rho_grid = c(0.05, 0.2), seeds = 1:3, verbose = TRUE
         paste(sprintf("%s=%.3f", names(overall), overall), collapse = "  "), "\n", sep = "")
     cat(sprintf("  => lowest error: %s\n", winner))
   }
+  default <- eval(formals(decant)$correction)[1]
+  pass <- identical(winner, default)
+  if (verbose) cat(sprintf("  default in decant(): %s -> %s\n", default, if (pass) "PASS" else "FAIL"))
   attr(agg, "winner") <- winner
   attr(agg, "overall") <- overall
+  attr(agg, "pass") <- pass
   invisible(agg)
 }

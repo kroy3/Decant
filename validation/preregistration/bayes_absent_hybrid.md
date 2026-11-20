@@ -79,3 +79,11 @@ Whatever the outcome, nothing is tuned on these data afterwards.
 ## Amendments
 None. Library check: hgmm_1k and hgmm_1k_v2 share 5 of about 1,000 filtered
 barcodes, so both are scored as pre-stated. Results: BENCHMARK.md 1h.
+
+## Decision after the result (not an amendment)
+
+Criterion 2 failed, so under the rule above `bayes_absent` should have stayed
+opt-in. After seeing the result the maintainer made it the default anyway.
+That overrides the pre-registered rule and is recorded as such, with its
+reasons and known costs, in BENCHMARK.md 1h. The result itself is unchanged:
+criterion 2 failed.
