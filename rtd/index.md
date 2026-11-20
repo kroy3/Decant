@@ -59,7 +59,7 @@ The full walk-through is in [Quick Start](guide/03-Quick-Start.md).
 | Function | Purpose | Status |
 |---|---|---|
 | `decant()`, `RunDecant()` | Estimate contamination per cell and correct counts | stable |
-| `correct_counts(method = "bayes_absent")` | Default correction: decides per gene and cluster whether a gene is expressed at all, and removes all counts of genes that are not; keeps counts too high to be ambient (doublets, rare expressers). Removes the most ambient RNA, at a small cost in retained native signal | default |
+| `correct_counts(method = "bayes_absent")` | Default correction: decides per gene and cluster whether a gene is expressed at all, and removes all counts of genes that are not; keeps counts too high to be ambient (doublets, rare expressers). Removes the most ambient RNA on species mixtures, at a small cost in retained native signal; no gain shown yet in real tissue | default |
 | `correct_counts(method = "bayes_cell")` | Removes each count's expected ambient share only; keeps the most native signal | stable, previous default |
 | `ambient_de()`, `DecantDE()` | Differential expression with each sample's ambient RNA inside the negative binomial model: `mu = native + ambient` | experimental |
 | `chirp()` | Ligand-receptor calls that do not mistake soup for signalling | experimental, simulation only |
@@ -90,7 +90,7 @@ were run on the same inputs.
 
 **What this means in practice:**
 
-- **The default removes the most of any tool run here.** It keeps about as
+- **On species mixtures, the default removes the most of any tool run here.** It keeps about as
   much as DecontX: 0.02 points less on the pre-registered test. That missed
   the pre-stated bar; it was made the default by the maintainer's decision,
   and the record says so.
@@ -103,9 +103,17 @@ were run on the same inputs.
   res <- decant(d$cells, d$empties, clusters = my_clusters, correction = "bayes_cell")
   ```
 
-- **Its gain is shown only where clusters differ sharply.** On real blood
-  data (PBMC 4k) the clusters share most genes, its gene-level call never
-  applied, and the output matched `bayes_cell`.
+- **Its gain is shown only on species mixtures.** In real tissue its
+  gene-level call almost never applies, and it then behaves as `bayes_cell`.
+  On PBMC 4k it never applied and the output matched. In brain (six GSE272082
+  libraries, pre-registered) it applied in 1 of 42 clusters, and microglia
+  lost the same share of genes foreign to them as with `bayes_cell` (0.092
+  against 0.091). Oligodendrocytes and astrocytes lost 2.7 points more
+  foreign signal, from its cap rule, not its gene-level call; part of that is
+  counts too high to be ambient.
+- **Tiny clusters:** the one brain cluster where it applied had 9 cells, and
+  it called 17,543 genes absent there, which looks like a degenerate fit.
+  Avoid it on clusters of a few cells, or merge them first.
 
 - **Neither rule removes counts that cannot be ambient.** On real PBMC data
   both keep counts far above what ambient RNA could produce, which DecontX,

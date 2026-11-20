@@ -43,7 +43,8 @@ The same user guide is on the [GitHub wiki](https://github.com/kroy3/Decant/wiki
    removes all counts of genes it does not express. Counts far above what
    ambient RNA could produce in a cell (doublets, rare expressers) keep their
    molecules. On two 10x mixtures never used in its design it removed the
-   most ambient RNA of every tool run here.
+   most ambient RNA of every tool run here on species mixtures; in real
+   tissue it has not yet shown a gain (see How it compares).
 3. **Never adds counts.** Corrected counts are bounded by the observed counts,
    checked on every run.
 4. **Ambient-aware ligand-receptor calls** (`chirp()`). A ligand made by the
@@ -75,8 +76,9 @@ numbers are the paper's own, not a run here.
 | mixture 20k: retain / removal | not rerun | 0.989 / 0.616 | 0.992 / 0.345 | 0.983 / 0.722 | 0.996 / 0.729 |
 | Smart-seq2, no ambient RNA: retain | 0.998 | 0.998 | 0.989 | 0.952 | 0.797 |
 
-**The default removes the most ambient RNA of every tool run here, at a
-small cost in the cells' own signal.** On the two mixtures that judged it
+**On human/mouse mixtures the default removes the most ambient RNA of every
+tool run here, at a small cost in the cells' own signal. In real tissue
+(brain, blood) it has not shown a gain over `bayes_cell`; see below.** On the two mixtures that judged it
 (downloaded only after the method was frozen and the criteria were
 committed) it removed 0.891 of ambient signal against DecontX's 0.655, and
 kept 0.9918 against DecontX's 0.9920. That missed the pre-stated bar of
@@ -87,9 +89,17 @@ What it costs, against the previous default `bayes_cell`:
 
 - 0.3 to 0.6 points of native signal on most mixtures, and 2.5 points on the
   hardest (hgmm 10k: 0.961 against 0.986).
-- Its gain is shown only where clusters differ sharply. On real blood data
-  (PBMC 4k) the clusters share most genes, its gene-level call never
-  applied, and its output matched `bayes_cell`.
+- **Its gain is shown only on species mixtures.** In real tissue its
+  gene-level call almost never applies, and it then behaves as `bayes_cell`.
+  On PBMC 4k it never applied and the output matched. In brain (six GSE272082
+  libraries, pre-registered) it applied in 1 of 42 clusters, and microglia
+  lost the same share of genes foreign to them as with `bayes_cell` (0.092
+  against 0.091). Oligodendrocytes and astrocytes lost 2.7 points more
+  foreign signal, from its cap rule, not its gene-level call; part of that is
+  counts too high to be ambient.
+- **Tiny clusters:** the one brain cluster where it applied had 9 cells, and
+  it called 17,543 genes absent there, which looks like a degenerate fit.
+  Avoid it on clusters of a few cells, or merge them first.
 
 Use `correction = "bayes_cell"` when keeping every native count matters
 more than removing the soup. Results on further mixtures and the history
