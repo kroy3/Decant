@@ -14,3 +14,4 @@
 - [11. Diagnostics and Troubleshooting](11-Diagnostics-and-Troubleshooting)
 - [12. Validation and Benchmarks](12-Validation-and-Benchmarks)
 - [13. Function Reference](13-Function-Reference)
+- [14. Cell-Cell Communication](14-Cell-Cell-Communication)

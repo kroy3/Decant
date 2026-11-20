@@ -26,7 +26,13 @@ expression and diagnostics, chapter by chapter.
    keep their molecules; only the expected ambient share is removed.
 3. **Never adds counts.** Corrected counts are bounded by the observed counts,
    checked on every run.
-4. **Every default is gated.** Each component must pass a falsification test
+4. **Ambient-aware ligand-receptor calls** (`chirp()`). A ligand made by the
+   cell type that dominates the soup is detected in every cluster, so the
+   usual detection rule makes every cluster look like a sender. `chirp()`
+   calls a gene in a cluster only when its count is well above what ambient
+   RNA would put there, and scores pairs on the excess. **Status:
+   experimental, simulation only** (see [Limits](#limits)).
+5. **Every default is gated.** Each component must pass a falsification test
    against ground truth in CI. Components that failed are kept off and
    documented.
 
@@ -187,6 +193,12 @@ subset(res, ambient_driven)   # hits a standard pipeline reports that the soup e
   remove (`validation/BENCHMARK.md`, 3c and 3d). Until there is real-data evidence, report `ambient_de` hits together
   with a standard pseudobulk test. Analyses made with earlier versions
   should be rerun.
+- **`chirp()` is experimental and untested on real data.** On simulated
+  data it made no false sender calls where the 10% detection rule made
+  608-944 and correcting with `bayes_cell` first still left 70-388. The
+  simulator matches its model, CellChat and CellPhoneDB were not run, and
+  it misses most pairs expressed at 5-20 per 10k. It relies on `rho`; with
+  `rho` at half its true value it made up to 100 false calls.
 - Empty droplets that over-represent genes the cells also express are not
   detected and make the contamination estimate too low.
 
