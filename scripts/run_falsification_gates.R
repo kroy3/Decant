@@ -11,7 +11,7 @@ cat("=========================================================\n\n")
 
 must <- list()
 cat("[CORE] Contamination-fraction (rho) estimator\n");  must$rho <- gate_rho(); cat("\n")
-cat("[CORE] Correction rule\n");                          gate_correction(); cat("\n")
+cat("[CORE] Correction rule\n");                          must$correction <- gate_correction(); cat("\n")
 cat("[GAP 1] Splice-aware layer decontamination\n");      gate_splice();   cat("\n")
 cat("[GAP 3] Hierarchical multi-sample soup pooling\n");  gate_hier();     cat("\n")
 cat("[GAP 5] Allelic / genotype-aware rho estimation\n"); gate_allelic();  cat("\n")
