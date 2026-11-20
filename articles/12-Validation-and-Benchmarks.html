@@ -304,17 +304,28 @@ committed:</p>
 </tr>
 </tbody>
 </table>
-<p>It removes the most of every tool run here. It missed one pre-stated
-criterion: it keeps 0.02 points less than DecontX. It was made the
-default by the maintainer’s decision anyway, and the record says so. Its
-costs, in numbers:</p>
+<p>On these mixtures it removes the most of every tool run here. It
+missed one pre-stated criterion: it keeps 0.02 points less than DecontX.
+It was made the default by the maintainer’s decision anyway, and the
+record says so. Its costs, in numbers:</p>
 <ul>
 <li>On the hardest mixture seen (hgmm 10k) it keeps 2.5 points less than
 <code>bayes_cell</code> (0.961 against 0.986).</li>
-<li>On real blood data (PBMC 4k) its gene-level call never applied (the
-clusters share most genes) and its output matched
-<code>bayes_cell</code>. Its gain is shown only where clusters differ
-sharply.</li>
+<li>
+<strong>Its gain is shown only on species mixtures.</strong> In real
+tissue its gene-level call almost never applies, and it then behaves as
+<code>bayes_cell</code>. On PBMC 4k it never applied and the output
+matched. In brain (six GSE272082 libraries, pre-registered) it applied
+in 1 of 42 clusters, and microglia lost the same share of genes foreign
+to them as with <code>bayes_cell</code> (0.092 against 0.091).
+Oligodendrocytes and astrocytes lost 2.7 points more foreign signal,
+from its cap rule, not its gene-level call; part of that is counts too
+high to be ambient.</li>
+<li>
+<strong>Tiny clusters:</strong> the one brain cluster where it
+applied had 9 cells, and it called 17,543 genes absent there, which
+looks like a degenerate fit. Avoid it on clusters of a few cells, or
+merge them first.</li>
 </ul>
 <p>Use <code>correction = "bayes_cell"</code> if keeping every native
 count matters most.</p>

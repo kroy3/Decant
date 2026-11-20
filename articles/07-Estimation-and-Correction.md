@@ -84,7 +84,7 @@ Five safeguards make the estimate reliable on real data:
 
 | Rule | How it removes contamination | When to use |
 |----|----|----|
-| `bayes_absent` (default) | First decides, gene by gene and cluster by cluster, whether the cluster expresses the gene at all; a gene it does not express loses all its counts. Otherwise as `bayes_cell`. Where the two groups of genes overlap, it does not decide and behaves as `bayes_cell` | General use; removes the most |
+| `bayes_absent` (default) | First decides, gene by gene and cluster by cluster, whether the cluster expresses the gene at all; a gene it does not express loses all its counts. Otherwise as `bayes_cell`. Where the two groups of genes overlap, it does not decide and behaves as `bayes_cell` | General use; removes the most on species mixtures, about the same as `bayes_cell` in real tissue so far |
 | `bayes_cell` | Assigns each count to cell or soup by how well each explains it, cell by cell. Counts far too high to be ambient keep all but their ambient expectation | Keeping the most native signal |
 | `bayes` | The same, but one ratio for the whole cluster | Reproducing earlier results |
 | `redistribute` | Removes exactly `rho × total` counts per cell, in soup proportion (SoupX’s approach) | Comparing with SoupX |
