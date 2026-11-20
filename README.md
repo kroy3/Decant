@@ -6,10 +6,22 @@ Ambient RNA decontamination for single-cell and single-nucleus RNA-seq, with a
 differential expression test that models ambient RNA instead of subtracting
 it. No other ambient RNA tool we found offers one.
 
-**Documentation:** [decant.readthedocs.io](https://decant.readthedocs.io/en/latest/).
-The user guide covers installation, the Seurat workflow, multi-sample data,
-differential expression and diagnostics, chapter by chapter (also on the
-[GitHub wiki](https://github.com/kroy3/Decant/wiki)).
+## Documentation
+
+Full documentation: **[decant.readthedocs.io](https://decant.readthedocs.io/en/latest/)**
+
+| Start here | |
+|---|---|
+| [Installation](https://decant.readthedocs.io/en/latest/guide/01-Installation/) | Install Decant and its optional dependencies |
+| [Quick Start](https://decant.readthedocs.io/en/latest/guide/03-Quick-Start/) | A complete run on simulated data with a known answer |
+| [Running Decant](https://decant.readthedocs.io/en/latest/guide/05-Running-Decant/) | Arguments, the result object, your own data |
+| [Seurat Integration](https://decant.readthedocs.io/en/latest/guide/06-Seurat-Integration/) | `RunDecant()` and `DecantDE()` on Seurat objects |
+| [Estimation and Correction](https://decant.readthedocs.io/en/latest/guide/07-Estimation-and-Correction/) | How contamination is estimated; the correction rules and when to use each |
+| [Differential Expression](https://decant.readthedocs.io/en/latest/guide/09-Differential-Expression/) | Contamination-aware DE with `ambient_de()` |
+| [Diagnostics and Troubleshooting](https://decant.readthedocs.io/en/latest/guide/11-Diagnostics-and-Troubleshooting/) | Warnings, checks and what to do about them |
+| [Validation and Benchmarks](https://decant.readthedocs.io/en/latest/guide/12-Validation-and-Benchmarks/) | Ground-truth results, including where Decant is behind |
+
+The same user guide is on the [GitHub wiki](https://github.com/kroy3/Decant/wiki).
 
 ## What is new
 
