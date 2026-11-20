@@ -110,16 +110,24 @@ the method was frozen and the pass criteria were committed:
 | DecontX | 0.9920 | 0.655 |
 | SoupX | 0.9931 | 0.529 |
 
-It removes the most of every tool run here. It missed one pre-stated
+On these mixtures it removes the most of every tool run here. It missed one pre-stated
 criterion: it keeps 0.02 points less than DecontX. It was made the default
 by the maintainer's decision anyway, and the record says so. Its costs, in
 numbers:
 
 - On the hardest mixture seen (hgmm 10k) it keeps 2.5 points less than
   `bayes_cell` (0.961 against 0.986).
-- On real blood data (PBMC 4k) its gene-level call never applied (the
-  clusters share most genes) and its output matched `bayes_cell`. Its gain
-  is shown only where clusters differ sharply.
+- **Its gain is shown only on species mixtures.** In real tissue its
+  gene-level call almost never applies, and it then behaves as `bayes_cell`.
+  On PBMC 4k it never applied and the output matched. In brain (six GSE272082
+  libraries, pre-registered) it applied in 1 of 42 clusters, and microglia
+  lost the same share of genes foreign to them as with `bayes_cell` (0.092
+  against 0.091). Oligodendrocytes and astrocytes lost 2.7 points more
+  foreign signal, from its cap rule, not its gene-level call; part of that is
+  counts too high to be ambient.
+- **Tiny clusters:** the one brain cluster where it applied had 9 cells, and
+  it called 17,543 genes absent there, which looks like a degenerate fit.
+  Avoid it on clusters of a few cells, or merge them first.
 
 Use `correction = "bayes_cell"` if keeping every native count matters most.
 
