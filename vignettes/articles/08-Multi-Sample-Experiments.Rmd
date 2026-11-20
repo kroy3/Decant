@@ -34,7 +34,7 @@ res <- decant(mm$obs_total, empties,
               sample_of = mm$sample_of, clusters = mm$labels)
 res
 #> <decant> 600 genes x 1500 cells
-#>   modules : hierarchical_ambient, cluster_rho, correction_bayes_cell
+#>   modules : hierarchical_ambient, cluster_rho, correction_bayes_absent
 #>   rho     : median 0.203 (10%-90%: 0.115-0.315)
 ```
 

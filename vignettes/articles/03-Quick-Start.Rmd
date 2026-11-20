@@ -34,7 +34,7 @@ dim(sim$empty)
 res <- decant(sim$observed, sim$empty, clusters = sim$labels)
 res
 #> <decant> 600 genes x 1200 cells
-#>   modules : cluster_rho, correction_bayes_cell
+#>   modules : cluster_rho, correction_bayes_absent
 #>   rho     : median 0.199 (10%-90%: 0.117-0.305)
 ```
 
@@ -67,14 +67,14 @@ cor(res$rho, sim$rho_true)
 score_correction(sim$observed, sim$observed, sim$truth)$l1_error
 #> [1] 0.2451949
 score_correction(sim$observed, res$corrected, sim$truth)$l1_error
-#> [1] 0.04877535
+#> [1] 0.04837206
 ```
 
 - `score_correction()` compares a matrix with the clean truth. Its
   `l1_error` adds up every count that is wrong, whether contamination left
   behind or real signal removed, as a fraction of the true total.
 - Without correction (first line) 24.5% of counts are wrong. After Decant
-  the error falls to 4.9%.
+  the error falls to 4.8%.
 
 ## 3.5 Use the corrected counts
 

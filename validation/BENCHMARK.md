@@ -517,6 +517,25 @@ in a cluster were 3-fold enriched in another cluster of the same species).
 That is a property of the scorer, stated here, not a pass. No 10x human/mouse
 mixture is left unused, so nothing further is tuned on these.
 
+**Decision after the result: `bayes_absent` made the default anyway.** The
+pre-registered rule said it stays opt-in. The maintainer overrode that rule,
+after seeing the result above, because the default removed the least ambient
+RNA of the tools compared, while `bayes_absent` removed the most for 0.02
+points of retain against DecontX. This is recorded as a maintainer decision,
+not as a pass. What was known when it was made:
+
+- Retain cost against `bayes_cell`: 0.27 points on the unused mixtures, 0.57
+  on the fresh ones (1g, earlier cap), 2.5 on hgmm 10k v3 (0.961 against
+  0.986, seen in design).
+- On PBMC 4k the absence posterior was not used in any of the 11 clusters
+  (the separation guard: components overlap), and the output matched
+  `bayes_cell`. Its gain is shown only on species mixtures, where absent
+  genes are sharply separated. Whether it fires, and helps, on real tissue
+  with very distinct cell types is untested.
+- `gate_correction()` now scores `bayes_absent` and fails CI unless the
+  default has the lowest mean L1 error: 0.0628 against 0.0631 for
+  `bayes_cell`. The margin is narrow.
+
 ## 2. Simulated data with ground truth
 
 `simulate_experiment()`, easy and stress settings, k-means clusters given to
@@ -834,7 +853,10 @@ against the papers before being cited.
 | Native signal kept, against scAR | far ahead (1 to 4% lost against 18 to 26%) | section 1a |
 | Speed | level with SoupX, faster than the other four on this dataset | section 1a |
 | Ambient removal with experimental ground truth (20k species mixture) | behind DecontX and the published CellBender (0.62 against 0.72 to 0.73); well ahead of SoupX run here (0.35) and published (0.42) | section 1c |
-| Ambient removal on held-out mixtures (hgmm 1k, 5k, 10k) | **behind DecontX by 19 points** (0.44 against 0.64) and SoupX (0.68); keeps the most (retain 0.992 against 0.984, 0.982); a correction change that recovered 7.5 points failed retain on 10k | section 1e |
+| Ambient removal with the default (`bayes_absent`) on unused mixtures | **ahead of every tool run**: 0.891 against DecontX 0.655, SoupX 0.529; retain 0.9918 against DecontX 0.9920 (missed the pre-registered bar by 0.02 points; made default by maintainer decision) | section 1h |
+| Ambient removal with `bayes_cell` (default until 1h) on held-out mixtures (hgmm 1k, 5k, 10k) | behind DecontX by 19 points (0.44 against 0.64) and SoupX (0.68); keeps the most (retain 0.992 against 0.984, 0.982) | section 1e |
+| Native signal kept by the default on hard data | behind `bayes_cell` by 2.5 points on hgmm 10k (0.961 against 0.986) | section 1h |
+| Default's gain on real tissue | unknown: on PBMC 4k its gene-level call never applied (output identical to `bayes_cell`) | section 1h |
 | Contamination estimate on held-out species mixtures | lowest error of Decant, SoupX and DecontX on 1k and 5k; behind DecontX on 10k (per-cell correlation 0.18 against 0.67), where all tools underestimate | section 1d |
 | Endogenous counts kept with experimental ground truth | level with SoupX on the species mixture (0.989 against 0.992), ahead of DecontX (0.983); best of those run on the Smart-seq2 negative control (0.998 against SoupX 0.989, DecontX 0.952) | section 1c |
 | Contamination not identifiable (single cell type) | Decant warns (DecontX returns 9-39% silently; SoupX failed on one set); the number Decant reports is still wrong | section 1d |

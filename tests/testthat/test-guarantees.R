@@ -5,7 +5,7 @@ test_that("no correction rule ever adds or negates counts", {
   soup <- ambient_global(sim$empty)
   cl   <- quick_labels(sim$observed, k = 4)
   rho  <- as.numeric(estimate_rho_cluster(sim$observed, soup, cl))
-  for (m in c("subtract", "redistribute", "bayes", "bayes_cell")) for (sp in c(FALSE, TRUE)) {
+  for (m in c("subtract", "redistribute", "bayes", "bayes_cell", "bayes_absent")) for (sp in c(FALSE, TRUE)) {
     obs  <- if (sp) as_sparse(sim$observed) else sim$observed
     corr <- as.matrix(correct_counts(obs, soup, rho, method = m, clusters = cl))
     expect_true(all(corr >= 0), info = paste(m, sp))

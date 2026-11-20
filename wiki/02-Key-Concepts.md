@@ -59,8 +59,8 @@ expectation, gene by gene, with two guarantees:
 - a corrected count is never negative, and
 - a corrected count is never larger than the observed count.
 
-Decant offers four rules for distributing the removal; the default,
-`bayes_cell`, is explained in [Chapter 7](07-Estimation-and-Correction).
+Decant offers five rules for distributing the removal; the default,
+`bayes_absent`, is explained in [Chapter 7](07-Estimation-and-Correction).
 
 ## 2.7 Ambient RNA and differential expression
 

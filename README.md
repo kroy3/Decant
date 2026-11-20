@@ -21,9 +21,14 @@ expression and diagnostics, chapter by chapter.
    labels on three real datasets it now rarely reports false hits, a little
    more often than standard edgeR; it has not yet been shown to beat a
    standard test on real data (see [Limits](#limits)).
-2. **Correction that keeps what cannot be ambient** (`bayes_cell`). Counts far
-   above what ambient RNA could produce in a cell (doublets, rare expressers)
-   keep their molecules; only the expected ambient share is removed.
+2. **Correction that decides whether a gene is expressed at all**
+   (`bayes_absent`, the default). For each gene in each cluster it computes
+   the probability that the cluster does not express the gene, from the
+   gene's count in the cluster against its count in the empty droplets, and
+   removes all counts of genes it does not express. Counts far above what
+   ambient RNA could produce in a cell (doublets, rare expressers) keep their
+   molecules. On two 10x mixtures never used in its design it removed the
+   most ambient RNA of every tool run here.
 3. **Never adds counts.** Corrected counts are bounded by the observed counts,
    checked on every run.
 4. **Ambient-aware ligand-receptor calls** (`chirp()`). A ligand made by the
@@ -46,32 +51,35 @@ is kept, and removal the share of ambient signal removed, both per gene, 1
 is best. Decant, SoupX and DecontX were run on the same inputs. CellBender's
 numbers are the paper's own, not a run here.
 
-| | Decant | SoupX | DecontX | CellBender (published) |
-|---|---|---|---|---|
-| human/mouse mixture 20k: retain | 0.989 | 0.992 | 0.983 | 0.996 |
-| human/mouse mixture 20k: **removal** | **0.616** | 0.345 | **0.722** | 0.729 |
-| held-out mixtures 1k, 5k, 10k: retain (mean) | **0.992** | 0.982 | 0.984 | not run |
-| held-out mixtures 1k, 5k, 10k: **removal** (mean) | **0.444** | 0.679 | **0.637** | not run |
-| Smart-seq2, no ambient RNA: retain | 0.998 | 0.989 | 0.952 | 0.797 |
+| | Decant `bayes_absent` (default) | Decant `bayes_cell` | SoupX | DecontX | CellBender (published) |
+|---|---|---|---|---|---|
+| 2 mixtures never used in design (hgmm 1k): retain | 0.9918 | **0.9945** | 0.9931 | 0.9920 | not run |
+| 2 mixtures never used in design (hgmm 1k): **removal** | **0.891** | 0.531 | 0.529 | 0.655 | not run |
+| mixtures 1k, 5k, 10k v3 (seen in design): retain | 0.982 | **0.992** | 0.982 | 0.984 | not run |
+| mixtures 1k, 5k, 10k v3 (seen in design): **removal** | **0.862** | 0.444 | 0.679 | 0.637 | not run |
+| mixture 20k: retain / removal | not rerun | 0.989 / 0.616 | 0.992 / 0.345 | 0.983 / 0.722 | 0.996 / 0.729 |
+| Smart-seq2, no ambient RNA: retain | 0.998 | 0.998 | 0.989 | 0.952 | 0.797 |
 
-**Decant removes less ambient RNA than DecontX: 10 points less on the 20k
-mixture and 19 points less on held-out mixtures**, where its contamination
-estimate is too low. It keeps more of the cells' own counts than DecontX and
-SoupX. It removes almost nothing where there is nothing to remove.
-Its contamination estimate now matches the cross-species truth (median 0.027
-against 0.029; before this release 0.013). That mixture was used to find the
-estimator's flaw; results on held-out mixtures are in
-[`validation/BENCHMARK.md`](validation/BENCHMARK.md), sections 1c and 1d.
+**The default removes the most ambient RNA of every tool run here, at a
+small cost in the cells' own signal.** On the two mixtures that judged it
+(downloaded only after the method was frozen and the criteria were
+committed) it removed 0.891 of ambient signal against DecontX's 0.655, and
+kept 0.9918 against DecontX's 0.9920. That missed the pre-stated bar of
+keeping at least as much as DecontX by 0.02 points; it was made the default
+by the maintainer's decision anyway (`validation/BENCHMARK.md`, 1h).
 
-**Opt-in alternative: `correction = "bayes_absent"`.** It decides, gene by
-gene and cluster by cluster, whether a gene is expressed at all, and removes
-all counts of genes that are not. On two 10x mixtures never used in its
-design (pre-registered), it removed 0.891 of ambient signal against DecontX's
-0.655 and the default's 0.531. The cost is retain: 0.9918 against DecontX's
-0.9920 and the default's 0.9945. That missed the pre-stated bar, so it is not
-the default (`validation/BENCHMARK.md`, sections 1g and 1h). Use it when
-removing ambient RNA matters more than the last fraction of a point of
-native signal.
+What it costs, against the previous default `bayes_cell`:
+
+- 0.3 to 0.6 points of native signal on most mixtures, and 2.5 points on the
+  hardest (hgmm 10k: 0.961 against 0.986).
+- Its gain is shown only where clusters differ sharply. On real blood data
+  (PBMC 4k) the clusters share most genes, its gene-level call never
+  applied, and its output matched `bayes_cell`.
+
+Use `correction = "bayes_cell"` when keeping every native count matters
+more than removing the soup. Results on further mixtures and the history
+of the contamination estimate are in
+[`validation/BENCHMARK.md`](validation/BENCHMARK.md), sections 1c to 1h.
 
 ### Correction: six tools on real 10x PBMC 4k data
 

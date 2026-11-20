@@ -17,7 +17,8 @@ gate_correction(rho_grid = c(0.05, 0.2), seeds = 1:3, verbose = TRUE)
 invisibly, a data.frame with attribute \code{"winner"}.
 }
 \description{
-Scores "subtract" (v0), "redistribute" (SoupX-style) and "bayes" with the
-ESTIMATED rho (not oracle), on easy and stress simulations. The default in
-\code{\link[=decant]{decant()}} is whichever has the lowest mean \code{l1_error} here.
+Scores "subtract" (v0), "redistribute" (SoupX-style), "bayes", "bayes_cell"
+and "bayes_absent" with the ESTIMATED rho (not oracle), on easy and stress
+simulations. The default in \code{\link[=decant]{decant()}} must have the lowest mean \code{l1_error}
+here; the gate fails otherwise (attribute \code{"pass"}).
 }
