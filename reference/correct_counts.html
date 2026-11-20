@@ -64,12 +64,13 @@
 <span>  <span class="va">observed</span>,</span>
 <span>  <span class="va">soup</span>,</span>
 <span>  <span class="va">rho</span>,</span>
-<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"subtract"</span>, <span class="st">"redistribute"</span>, <span class="st">"bayes"</span>, <span class="st">"bayes_cell"</span><span class="op">)</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"subtract"</span>, <span class="st">"redistribute"</span>, <span class="st">"bayes"</span>, <span class="st">"bayes_cell"</span>, <span class="st">"bayes_absent"</span><span class="op">)</span>,</span>
 <span>  clusters <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_iter <span class="op">=</span> <span class="fl">50</span>,</span>
 <span>  drop_zeros <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  cap_q <span class="op">=</span> <span class="fl">0.001</span>,</span>
-<span>  cap_test <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"entry"</span>, <span class="st">"cluster"</span><span class="op">)</span></span>
+<span>  cap_test <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"entry"</span>, <span class="st">"cluster"</span>, <span class="st">"hybrid"</span><span class="op">)</span>,</span>
+<span>  soup_umis <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -91,8 +92,8 @@ for per-sample soups use <code><a href="decant.html">decant()</a></code>).</p></
 
 
 <dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
-<dd><p>one of "subtract", "redistribute", "bayes", "bayes_cell"
-(see Details).</p></dd>
+<dd><p>one of "subtract", "redistribute", "bayes", "bayes_cell",
+"bayes_absent" (see Details).</p></dd>
 
 
 <dt id="arg-clusters">clusters<a class="anchor" aria-label="anchor" href="#arg-clusters"></a></dt>
@@ -126,7 +127,18 @@ mixture this kept most ambient counts of rarely contaminating genes.
 "cluster" removes more but also keeps less of the cells' own rare
 counts: on held-out mixtures removal 0.519 vs 0.444, retain 0.974 vs
 0.986 on the 10k mixture (<code>validation/BENCHMARK.md</code>, section 1e), so
-it is not the default.</p></dd>
+it is not the default. "hybrid" (used by "bayes_absent") sets an entry
+aside if it passes the "cluster" test, or the "entry" test with at
+least 5 UMIs: a single UMI against a tiny expectation is weak evidence
+on its own, but five are not, so doublet-level counts stay protected.</p></dd>
+
+
+<dt id="arg-soup-umis">soup_umis<a class="anchor" aria-label="anchor" href="#arg-soup-umis"></a></dt>
+<dd><p>for "bayes_absent": total UMIs the soup profile was
+estimated from. If given, the absence test compares each gene's count
+in a cluster with its count in the empty droplets (a binomial given
+their total), which carries the soup's own sampling noise; otherwise
+the soup is taken as known.</p></dd>
 
 </dl></div>
     <div class="section level2">

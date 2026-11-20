@@ -2,6 +2,23 @@
 
 ## Decant (development version)
 
+- **`bayes_absent` now uses `cap_test = "hybrid"` and no longer removes
+  doublet-level counts (PBMC identical to `bayes_cell`).** Judged on two
+  unused 10x mixtures under a pre-registration: removal 0.891 against
+  DecontX 0.655, retain 0.99183 against 0.99201. The retain criterion
+  fails by 0.02 points, so it stays opt-in; the default is unchanged
+  (`validation/BENCHMARK.md` 1h).
+
+- **New opt-in correction `correction = "bayes_absent"`, judged on fresh
+  data: removes the most, fails two pre-stated criteria.** On three 10x
+  mixtures never used for design it removes 0.885 of ambient signal
+  (DecontX 0.761, SoupX 0.614, default `bayes_cell` 0.566). But its mean
+  retain is 0.9837 vs DecontX 0.9847, and on PBMC 4k it removes more
+  counts too high to be ambient (likely doublets), so it is not the
+  default. The negative control (0.998), native markers and the
+  simulation gate pass (`validation/BENCHMARK.md` 1g,
+  `validation/check_bayes_absent.R`).
+
 - **New, experimental:
   [`chirp()`](https://kroy3.github.io/Decant/reference/chirp.md),
   ambient-aware ligand-receptor calls.** A ligand made by the cell type

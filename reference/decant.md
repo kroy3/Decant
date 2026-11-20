@@ -12,8 +12,8 @@ decant(
   clusters = NULL,
   k = 8,
   rho = NULL,
-  correction = c("bayes_cell", "bayes", "subtract", "redistribute"),
-  cap_test = c("entry", "cluster"),
+  correction = c("bayes_cell", "bayes", "subtract", "redistribute", "bayes_absent"),
+  cap_test = c("entry", "cluster", "hybrid"),
   obs_unspliced = NULL,
   obs_spliced = NULL,
   empties_unspliced = NULL,
@@ -71,8 +71,8 @@ decant(
 
 - cap_test:
 
-  for "bayes_cell": "entry" or "cluster", how the test that sets aside
-  counts too high to be ambient is applied; see
+  for "bayes_cell": "entry", "cluster" or "hybrid", how the test that
+  sets aside counts too high to be ambient is applied; see
   [`correct_counts()`](https://kroy3.github.io/Decant/reference/correct_counts.md).
 
 - obs_unspliced, obs_spliced:

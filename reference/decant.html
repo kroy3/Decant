@@ -67,8 +67,8 @@
 <span>  clusters <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  k <span class="op">=</span> <span class="fl">8</span>,</span>
 <span>  rho <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  correction <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"bayes_cell"</span>, <span class="st">"bayes"</span>, <span class="st">"subtract"</span>, <span class="st">"redistribute"</span><span class="op">)</span>,</span>
-<span>  cap_test <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"entry"</span>, <span class="st">"cluster"</span><span class="op">)</span>,</span>
+<span>  correction <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"bayes_cell"</span>, <span class="st">"bayes"</span>, <span class="st">"subtract"</span>, <span class="st">"redistribute"</span>, <span class="st">"bayes_absent"</span><span class="op">)</span>,</span>
+<span>  cap_test <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"entry"</span>, <span class="st">"cluster"</span>, <span class="st">"hybrid"</span><span class="op">)</span>,</span>
 <span>  obs_unspliced <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  obs_spliced <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  empties_unspliced <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -121,7 +121,7 @@ too high in a cell to be ambient (likely doublets), which "bayes" removed.</p></
 
 
 <dt id="arg-cap-test">cap_test<a class="anchor" aria-label="anchor" href="#arg-cap-test"></a></dt>
-<dd><p>for "bayes_cell": "entry" or "cluster", how the test that
+<dd><p>for "bayes_cell": "entry", "cluster" or "hybrid", how the test that
 sets aside counts too high to be ambient is applied; see
 <code><a href="correct_counts.html">correct_counts()</a></code>.</p></dd>
 
