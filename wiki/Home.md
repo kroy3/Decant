@@ -56,6 +56,7 @@ first; the remaining chapters can be read as needed.
 | 11 | [Diagnostics and Troubleshooting](11-Diagnostics-and-Troubleshooting) | Reading warnings, checking results, and fixing common problems |
 | 12 | [Validation and Benchmarks](12-Validation-and-Benchmarks) | How Decant performs against other tools and against ground truth |
 | 13 | [Function Reference](13-Function-Reference) | Every exported function, grouped by task |
+| 14 | [Cell-Cell Communication](14-Cell-Cell-Communication) | Ligand-receptor calls that discount ambient RNA; experimental |
 
 ### Conventions used in this guide
 

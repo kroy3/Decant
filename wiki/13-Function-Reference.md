@@ -36,6 +36,8 @@ the full documentation.
 | `soup_eb()` | Per-sample soups shrunk by empirical Bayes, used by `ambient_de()` | |
 | `de_naive()`, `de_ambient_aware()`, `decant_de_experimental()` | Earlier approaches; `decant_de_experimental()` failed its gate and is kept only for reproducibility | |
 
+| `chirp()` | Ambient-aware ligand-receptor calls between clusters (experimental) | [14](14-Cell-Cell-Communication) |
+
 ## 13.4 Simulation
 
 | Function | Simulates |
@@ -60,4 +62,4 @@ the full documentation.
 
 ---
 
-**Previous:** [Chapter 12, Validation and Benchmarks](12-Validation-and-Benchmarks) | **Back to:** [Preface](Home)
+**Previous:** [Chapter 12, Validation and Benchmarks](12-Validation-and-Benchmarks) | **Next:** [Chapter 14, Cell-Cell Communication](14-Cell-Cell-Communication)
