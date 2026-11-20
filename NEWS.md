@@ -1,5 +1,15 @@
 # Decant (development version)
 
+* **Real-tissue test of the default (pre-registered): no gain.** In six brain
+  libraries (GSE272082), scored against genes foreign to each cell type in an
+  independent C1 reference, `bayes_absent` removed the same share of foreign
+  signal from microglia as `bayes_cell` (0.092 against 0.091). Its gene-level
+  call applied in 1 of 42 clusters, so its large gain is shown only on
+  species mixtures. Oligodendrocytes and astrocytes lost 2.7 points more
+  foreign signal, from the cap rule. The one cluster where the call applied
+  had 9 cells and 17,543 genes called absent, a degenerate fit; avoid the
+  default on tiny clusters (`validation/BENCHMARK.md` 1i).
+
 * **The default correction is now `bayes_absent`** (was `bayes_cell`).
   It removes the most ambient RNA of every tool run here: 0.891 on two
   unused 10x mixtures, against `bayes_cell` 0.531 and DecontX 0.655.
