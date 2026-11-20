@@ -14,7 +14,7 @@ Description: A research toolkit for developing and honestly evaluating ambient
     published benchmarks. Every component is enabled by default only after it
     passes a falsification gate against ground truth.
 License: MIT + file LICENSE
-URL: https://github.com/kroy3/Decant
+URL: https://github.com/kroy3/Decant, https://decant.readthedocs.io/en/latest/
 BugReports: https://github.com/kroy3/Decant/issues
 biocViews: SingleCell, RNASeq, Transcriptomics, GeneExpression,
     DifferentialExpression, QualityControl, Preprocessing, Software
