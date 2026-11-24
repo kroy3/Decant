@@ -213,7 +213,8 @@ estimate_rho <- function(observed, soup, low_expr_q = 0.5) {
 ## is then estimated from the other entries only, against the ambient expected
 ## in those same cells, and applied to them as in "bayes".
 .corr_bayes_cell <- function(observed, nz, soup, rho, T_c, clusters, cap_q, cap_test = "entry",
-                             absent = FALSE, soup_umis = NULL) {
+                             absent = FALSE, soup_umis = NULL, absent_min_genes = 50,
+                             absent_cap = 0.10) {
   ks <- sort(unique(clusters)); K <- length(ks); G <- nrow(observed)
   kj <- match(clusters, ks)[nz$j]
   amb_c <- rho * T_c
@@ -243,8 +244,11 @@ estimate_rho <- function(observed, soup, low_expr_q = 0.5) {
     ## judged on the cluster's FULL counts: for an expressed gene nearly
     ## every entry is "high", and the few entries left would look ambient
     X_all <- gk(nz$v)
-    for (k in seq_len(K))
-      native[, k] <- native[, k] * (1 - as.numeric(.absence_posterior(X_all[, k], soup, amb_k[k], soup_umis)))
+    W <- vapply(seq_len(K), function(k)
+      as.numeric(.absence_posterior(X_all[, k], soup, amb_k[k], soup_umis, min_info_genes = absent_min_genes)),
+      numeric(G))
+    W <- .absence_degeneracy_cap(matrix(W, G, K), X_all, absent_cap)
+    native <- native * (1 - W)
   }
   ## native rate per native UMI, among the same cells: their native depth is
   ## the cluster's minus that of the cells set aside for this gene
@@ -281,12 +285,27 @@ estimate_rho <- function(observed, soup, low_expr_q = 0.5) {
 ## enough counts, with the sampling part of the variance removed. m_A is
 ## free, so a cluster rho that is too low moves the ambient component
 ## instead of turning absent genes into expressed ones.
-.absence_posterior <- function(X, soup, A, M = NULL, n_iter = 30, min_count = 5, n_nodes = 15) {
+.absence_posterior <- function(X, soup, A, M = NULL, n_iter = 30, min_count = 5, n_nodes = 15,
+                               min_info_genes = 50) {
   w <- numeric(length(X))
   C <- if (is.null(M)) NULL else round(soup * M)
   ok <- if (is.null(M)) soup > 0 else (X + C) > 0
   if (A <= 0 || sum(ok & X > 0) < 20) return(w)
   x <- round(X[ok]); e <- soup[ok] * A; cc <- if (is.null(M)) NULL else C[ok]
+  ## Information guard. The ambient component's spread s_A is estimated from
+  ## genes with at least `min_count` expected ambient counts in this cluster
+  ## (and in the empties). With n such genes the log-SD has a standard error
+  ## of about 1 / sqrt(2 n): ~10% at n = 50, the precision the 2-SD separation
+  ## rule below takes for granted. A cluster with fewer (in practice a
+  ## cluster of a handful of cells) cannot tell an absent gene from a weakly
+  ## expressed one, and its fit was seen to call nearly every gene absent
+  ## (17,543 genes in a 9-cell brain cluster; simulated 1-5 cell clusters:
+  ## 93% of the genes called absent were expressed). It keeps the plain rule.
+  n_info <- sum(e >= min_count & (if (is.null(M)) TRUE else cc >= min_count))
+  if (n_info < min_info_genes) {
+    attr(w, "fit") <- c(m_A = NA, s_A = NA, m_B = NA, s_B = NA, used = FALSE, n_info = n_info)
+    return(w)
+  }
   gh <- .gauss_hermite(n_nodes)
   loglik <- function(m, s) {
     L <- vapply(seq_len(n_nodes), function(q) {
@@ -344,8 +363,26 @@ estimate_rho <- function(observed, soup, low_expr_q = 0.5) {
   sep_ok <- !is.null(pB) && (pB[["m"]] - pA[["m"]]) >= 2 * (pA[["s"]] + pB[["s"]])
   if (sep_ok) w[ok] <- wA
   attr(w, "fit") <- c(m_A = pA[["m"]], s_A = pA[["s"]], m_B = if (is.null(pB)) NA else pB[["m"]],
-                      s_B = if (is.null(pB)) NA else pB[["s"]], used = sep_ok)
+                      s_B = if (is.null(pB)) NA else pB[["s"]], used = sep_ok, n_info = n_info)
   w
+}
+
+## Degeneracy cap across clusters. Among genes with counts in a cluster, the
+## share called absent (posterior > 0.5) may exceed that of the OTHER clusters
+## whose call applied by at most `cap` (default 0.10); a cluster above it keeps
+## the plain rule (its column set to 0). With no other cluster to compare to,
+## nothing is changed (the information guard in .absence_posterior() is then
+## the only protection).
+.absence_degeneracy_cap <- function(W, X, cap = 0.10) {
+  if (!is.finite(cap) || ncol(W) < 2) return(W)
+  used <- colSums(W) > 0
+  frac <- vapply(seq_len(ncol(W)), function(k) {
+    h <- X[, k] > 0; if (!any(h)) 0 else mean(W[h, k] > 0.5) }, 0)
+  for (k in which(used)) {
+    ref <- frac[used & seq_along(frac) != k]
+    if (length(ref) && frac[k] > max(ref) + cap) W[, k] <- 0
+  }
+  W
 }
 
 ## Gauss-Hermite nodes and weights for a standard normal (Golub-Welsch)
