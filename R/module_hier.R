@@ -4,16 +4,17 @@
 ## estimation breaks); samples with rich empties keep their own estimate.
 
 #' Empirical-Bayes-style shrinkage of per-sample soup profiles.
-#' @param empties_total list of genes x droplets matrices, one per sample.
+#' @param empties_total list of genes x droplets matrices (or [soup_summary()]
+#'   objects), one per sample.
 #' @return list with $pooled (genes x samples) and $independent (genes x samples).
 #' @export
 pool_soup <- function(empties_total) {
-  empties_total <- lapply(empties_total, .as_counts, what = "empties")
+  empties_total <- lapply(empties_total, function(e) if (.is_soup(e)) e else .as_counts(e, "empties"))
   S <- length(empties_total)
   ## independent per-sample estimate + the count mass behind it
-  indep <- vapply(empties_total, function(e) { p <- .row_sums(e); p / sum(p) },
-                  numeric(nrow(empties_total[[1]])))
-  mass <- vapply(empties_total, function(e) sum(e), numeric(1))
+  indep <- vapply(empties_total, function(e) { p <- .soup_gene_sums(e); p / sum(p) },
+                  numeric(.soup_nrow(empties_total[[1]])))
+  mass <- vapply(empties_total, .soup_umis, numeric(1))
   global <- rowMeans(indep)
 
   ## between-sample variance per gene (signal) vs within-sample sampling noise.

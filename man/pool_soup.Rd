@@ -7,7 +7,8 @@
 pool_soup(empties_total)
 }
 \arguments{
-\item{empties_total}{list of genes x droplets matrices, one per sample.}
+\item{empties_total}{list of genes x droplets matrices (or \code{\link[=soup_summary]{soup_summary()}}
+objects), one per sample.}
 }
 \value{
 list with $pooled (genes x samples) and $independent (genes x samples).

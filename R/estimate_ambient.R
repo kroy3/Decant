@@ -11,11 +11,12 @@
 ##     CORRECTOR this was falsified (see README); it survives as a diagnostic.
 
 #' Global soup profile: normalised aggregate of the empty-droplet pool.
-#' @param empty genes x droplets matrix of background counts (dense or sparse).
+#' @param empty genes x droplets matrix of background counts (dense or sparse),
+#'   or a [soup_summary()] of them.
 #' @return length-G probability vector.
 #' @export
 ambient_global <- function(empty) {
-  p <- .row_sums(.as_counts(empty, "empty"))
+  p <- .soup_gene_sums(empty)
   if (sum(p) == 0) stop("empty droplets contain no counts", call. = FALSE)
   p / sum(p)
 }
