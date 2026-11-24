@@ -590,6 +590,102 @@ NIH28 had 9 microglia, below the 20-cell minimum):
   obvious fix; it is not made here, because it would be designed on these
   data.
 
+## 1j. Engineering pass: what was re-measured, and what is still open
+
+This pass changed speed, memory, input handling, guards and diagnostics,
+not the estimator or the default correction's output. Every claim below
+was measured in one environment: a 4-core Xeon at 2.1 GHz, R 4.3.3,
+reference BLAS, Seurat 5.0.1 (Ubuntu package), harmony from CRAN.
+
+**Output unchanged.** On hgmm 10k the corrected counts differ from the
+previous code by at most 2.6e-10 (summation order). On PBMC 4k the previous
+commit (3e22338) and this code give identical tables. Falsification gate
+output is byte-identical.
+
+**Run time and memory** (`decant()`, default correction):
+
+| data | before | after |
+|---|---|---|
+| PBMC 4k (4,155 cells x 33,694 genes) | 37.3 s | 12.5 s (`bayes_cell` 4.4 s) |
+| hgmm 10k (11,456 cells x 112,137 genes, 55M non-zeros) | 193 s, 8.6 GB peak RSS | 55 s; correction step 2.2 GB above its input (was 4.7 GB) |
+| hgmm 10k raw matrix read (6.8M barcodes, 1.9M empties) | 4.3 GB (`read_10x_counts`) | 1.8 GB (`read_10x_streaming`); soup summary 12 MB |
+
+The empty droplets were not the main memory cost: once split from the raw
+matrix they take a few hundred MB; the cells (two genomes, 112k genes) did.
+
+**PBMC 4k, regression check** (same scorer as `check_bayes_absent.R`):
+ambient-compatible foreign counts removed 94.7 / 95.3 / 87.5%
+(immunoglobulin / monocyte / NK), ambient-incompatible (doublet-level)
+12.7 / 16.1 / 32.1%, native 1.3 / 4.7 / 2.1%, 0 counts added: identical to
+the recorded values. Three clusters are reported weakly identified (almost
+no absent genes; they borrow rho), the clusters the earlier low-power
+warning named.
+
+**Smart-seq2 negative control: the recorded 0.998 does not reproduce here,
+with either version.** Mean retain over the three donors:
+
+| clustering | previous commit 3e22338 | this code |
+|---|---|---|
+| PCA (harmony not installed) | 0.990 | 0.990 |
+| Harmony | 0.994 | 0.994 |
+| recorded (1c) | 0.998 | |
+
+The code does not change it; the clustering does. Donor HP1506401 gives
+0.984 (rho 0.019) with Harmony here. The negative control is therefore
+sensitive to the clustering recipe's package versions, and the 0.998
+figure should be read as one environment's result. "Soup = pooled cells"
+gives 0.998 in both runs.
+
+**Held-out mixtures, re-baselined in this environment** (default
+`bayes_absent`; `results/removal_heldout_rebaseline.csv`):
+
+| mixture | Decant retain / removal | recorded (`results/removal_heldout_bayes_absent.csv`) | SoupX here |
+|---|---|---|---|
+| hgmm 1k v3 | 0.9968 / 0.912 | 0.9966 / 0.935 | 0.994 / 0.767 |
+| hgmm 5k v3 | 0.9874 / 0.862 | 0.9873 / 0.863 | 0.988 / 0.609 |
+| hgmm 10k v3 | 0.9609 / 0.811 | 0.9372 / 0.573 | 0.962 / 0.686 |
+
+The 1k and 10k differences come from the Seurat clusters, not the code
+(the commit before the tiny-cluster guard gives the same 1k numbers here).
+On hgmm 10k they are large, so results on this mixture depend strongly on
+clustering. DecontX could not be run here (decontX 1.0.0 and celda 1.18.2
+both fail inside a dependency on R 4.3); the recorded DecontX numbers stand.
+
+**Tiny-cluster guard.** The 9-cell brain cluster of 1i was not re-run (the
+GSE272082 pipeline was not run in this pass). In simulation, 1 and 5-cell
+clusters no longer get the call; on hgmm 1k the guard changes nothing.
+
+**Not achieved, with the next step for each.**
+
+- *rho on hgmm 10k (development data).* Unchanged: median 0.0267 vs truth
+  0.0377, Spearman 0.66 here; 4 of 5 clusters borrow rho. A candidate that
+  re-estimated each cluster's rho from the absence mixture's posterior-
+  absent genes (count-weighted) moved hgmm 1k toward the truth (0.0045 to
+  0.0062 against 0.0063) but overshot 10k 1.5-2x (0.093 against a cluster
+  mean of 0.045), so it was not pre-registered. Before any further
+  candidate: pre-register hgmm 5k held-out median within 25% and Spearman
+  >= 0.6, Smart-seq2 rho no higher than the previous code in the same
+  environment, PBMC median 0.05-0.08, `gate_rho`.
+- *A cross-species anchor mode* (other-species genes as the informative
+  set) is the formula the species-mixture truth is computed with; it may be
+  offered as an opt-in like `allelic`, but no hgmm result may be claimed
+  from it.
+- *Borrowed clusters' per-cell rho* can run high (simulation: cluster mean
+  0.26 against borrowed 0.101, truth 0.103), because per-cell shrinkage
+  still uses the cluster's few absent genes. Skipping it would flatten the
+  only within-cluster ranking on hgmm 10k. Candidate: rescale each borrowed
+  cluster's per-cell posteriors to the borrowed level; judge on the
+  collinear simulation and the checks above.
+- *PBMC ambient-compatible removal >= 0.97* (Objective B): not met (94.7 /
+  95.3 / 87.5%). The criterion must keep the incompatible (doublet-level)
+  removal at or below 12.7 / 16.1 / 32.1%; DecontX's 100% comes from
+  removing those counts too.
+- *ambient_de without `max_rho`, donor-level EB, robust QL* (Objective D)
+  and *chirp() uncertainty propagation and permutation nulls* (Objective
+  E): not started. For E, the simulation design and the power / FDR bars
+  must be committed to `preregistration/` before measuring, since a power
+  target can be met by choosing the simulator.
+
 ## 2. Simulated data with ground truth
 
 `simulate_experiment()`, easy and stress settings, k-means clusters given to
