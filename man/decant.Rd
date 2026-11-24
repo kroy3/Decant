@@ -77,6 +77,11 @@ diagnostic (Gap 4).}
 an object of class \code{decant}: a list with $corrected (same class as
 the input; + $corrected_unspliced/$corrected_spliced in splice mode),
 $rho, $rho_diagnostics (per-cluster, from \code{\link[=estimate_rho_cluster]{estimate_rho_cluster()}}),
+$identifiability (per cluster: cosine and Gram condition number kappa
+between the cluster and the soup, Jensen-Shannon divergence, Fisher
+information per UMI and its effective number of genes, rho's standard
+error and 95\% CI width, and whether it is weak, why, and what was done;
+NULL when rho was supplied),
 $ambient (genes x samples), $clusters, $lysis (if basis), $modules.
 }
 \description{

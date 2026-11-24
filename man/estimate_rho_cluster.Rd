@@ -14,7 +14,11 @@ estimate_rho_cluster(
   min_expected = 5,
   floor_rho = 0.005,
   overdispersed = TRUE,
-  max_rho = 0.5
+  max_rho = 0.5,
+  weak_cosine = 0.9,
+  weak_kappa = 30,
+  weak_ci_width = 0.05,
+  weak_rule = c("evidence", "any")
 )
 }
 \arguments{
@@ -62,13 +66,33 @@ about 0.5 mean the cells would be mostly soup, which points to a soup
 that resembles the cells (a single cell type, or a cluster that dominates
 the soup) rather than to real contamination: on a mouse-only cell line
 with 0.4\% true contamination the estimator returned 0.5 to 0.94.}
+
+\item{weak_cosine, weak_kappa}{thresholds above which a cluster's profile
+counts as close to the soup (\code{collinear}): the weighted cosine between
+the cluster's raw profile and the soup (0.9: a two-profile fit's
+variance inflation 1 / (1 - c^2) then exceeds 5) and the Gram condition
+number (30, i.e. a cosine of 0.935, so it only matters if \code{weak_cosine}
+is raised).}
+
+\item{weak_ci_width}{a cluster whose rho has a 95\% interval wider than
+this is weakly identified (0.05: wider than typical contamination
+itself, 0.01-0.1).}
+
+\item{weak_rule}{"evidence" (default): a cluster is \code{weak} when the
+estimator's own evidence is thin (interval wider than \code{weak_ci_width},
+almost no absent genes, or an implausible own estimate). "any": also
+when it is \code{collinear}. A collinear cluster whose absent genes still
+cover enough soup is usually estimated well, so "any" raises false
+alarms on soup-dominant cell types.}
 }
 \value{
 numeric vector of per-cell rho, with attribute \code{"clusters"}: a
 data.frame of per-cluster diagnostics (n_cells, rho, n_absent_genes,
 absent_soup_frac, absent_counts, low_power, borrowed, rho_two_sided,
 dispersion: the extra squared coefficient of variation used,
-implausible: rho above \code{max_rho}), attribute \code{"unidentifiable"} (no
+implausible: rho above \code{max_rho}; identifiability: cosine, kappa, js,
+fisher_umi, n_eff, rho_se, ci_width, collinear, and weak / weak_reason /
+action_taken), attribute \code{"unidentifiable"} (no
 cluster had usable evidence, or more than half the cells are in
 implausible clusters; rho should then be supplied), and
 attributes \code{"soup_mismatch"} (logical), \code{"soup_only"} (logical per gene)

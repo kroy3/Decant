@@ -49,24 +49,43 @@ estimating rho.
 - If rho still looks too low, supply an independent estimate with
   `rho = ...` ([Chapter 5.6](05-Running-Decant)).
 
-## 11.3 Warning: low-power clusters
+## 11.3 Warning: weakly identified clusters
 
-> *N cluster(s) have almost no genes that are cleanly absent or an
-> implausible rho above 0.5 (M), so rho is weakly identified there; they
-> borrow rho from the other clusters.*
+> *N cluster(s) with weakly identified contamination: 4 (almost no absent
+> genes; rho borrowed from the other clusters). ...*
 
-**Meaning.** In these clusters almost every gene in the soup is also
-expressed, so there is little evidence about the soup alone, or the estimate
-came out above 0.5, which would mean the cells are mostly soup. This happens
-with very small clusters and with cell types whose expression resembles the
-soup.
+The warning has class `decant_weak_identifiability`, so it can be caught
+with `withCallingHandlers()` or `tryCatch()`; its `identifiability` field,
+and `res$identifiability`, hold one row per cluster:
 
-**What Decant does.** It gives these clusters the rho of the other
-clusters, weighted by their evidence (`borrowed = TRUE` in
-`res$rho_diagnostics`).
+| column | meaning |
+|---|---|
+| `cosine`, `kappa` | similarity of the cluster's raw profile to the soup (weighted cosine) and the condition number `(1 + c) / (1 - c)`; `collinear` is `TRUE` above 0.9 or 30 |
+| `js` | Jensen-Shannon divergence between the cluster's profile and the soup |
+| `fisher_umi`, `n_eff` | information about rho per UMI, and how many genes carry it |
+| `rho_se`, `ci_width` | standard error of the cluster's rho and the width of its 95% interval |
+| `weak`, `weak_reason`, `action_taken` | whether rho is weakly identified, why, and what Decant did |
+
+**Meaning.** A cluster is weak when the estimator's own evidence is thin:
+almost every gene in the soup is also expressed in it, its estimate came out
+above 0.5 (the cells would be mostly soup), or its 95% interval is wider
+than 0.05. This happens with very small clusters and with cell types whose
+expression resembles the soup. A cluster that is merely close to the soup
+(`collinear`) but still has enough absent genes is usually estimated well
+and is not flagged; pass `weak_rule = "any"` to `estimate_rho_cluster()` to
+flag it too.
+
+**What Decant does.** A cluster without usable evidence takes the rho of the
+other clusters, weighted by their evidence (`borrowed = TRUE` in
+`res$rho_diagnostics`). Its own estimate tends to run high, so it is not
+used at cluster level. Known limitation: the per-cell values of a borrowed
+cluster are still adjusted using its own (unreliable) absent genes, which
+can pull them up.
 
 **What to do.** Merge very small clusters, or cluster at a lower
-resolution, and run again.
+resolution, and run again. Supply the raw matrix so the empty droplets
+measure the soup cleanly. If the cluster matters, supply `rho` from an
+independent source.
 
 ## 11.4 Warning: contamination not identifiable
 
