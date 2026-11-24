@@ -115,3 +115,37 @@ test_that("default correction keeps rare high expressers (I2)", {
   fit <- decant(as_sparse(obs), as_sparse(sim$empty), clusters = sim$labels)
   expect_gte(sum(as.matrix(fit$corrected)[g, host]) / 120, 0.9)
 })
+
+## Tiny-cluster degeneracy (seen on real brain data: a 9-cell cluster had
+## 17,543 genes called absent). A cluster too small to estimate the ambient
+## spread must not have its genes called absent; it keeps the bayes_cell rule.
+test_that("tiny clusters do not get a degenerate absence call", {
+  sim <- simulate_experiment(n_genes = 4000, n_types = 6, n_cells = 3000, n_empty = 3000,
+                             rho_mean = 0.1, seed = 1, overdispersion = 0.3)
+  for (ntiny in c(1, 5)) {
+    keep <- sim$labels != 6 | cumsum(sim$labels == 6) <= ntiny
+    obs <- sim$observed[, keep]; tru <- sim$truth[, keep]; cl <- sim$labels[keep]
+    soup <- ambient_global(sim$empty); su <- sum(sim$empty)
+    rho <- as.numeric(suppressWarnings(estimate_rho_cluster(obs, soup, cl)))
+    amb <- sum(rho[cl == 6] * colSums(obs)[cl == 6])
+    X <- rowSums(obs[, cl == 6, drop = FALSE])
+    w <- Decant:::.absence_posterior(X, soup, amb, su)
+    ## at most 1% of the genes with counts are called absent
+    expect_lte(mean(w[X > 0] > 0.5), 0.01, label = paste("absent share,", ntiny, "cells"))
+    tk <- cl == 6
+    ret <- function(m) {
+      cc <- correct_counts(obs, soup, rho, m, clusters = cl, soup_umis = su)
+      sum(pmin(cc[, tk], tru[, tk])) / sum(tru[, tk])
+    }
+    expect_gte(ret("bayes_absent"), ret("bayes_cell") - 1e-6)
+  }
+})
+
+test_that("degeneracy cap drops a cluster far above the others", {
+  W <- cbind(c(1, 1, 0, 0), c(1, 1, 1, 1), c(1, 0, 0, 0))
+  X <- matrix(1, 4, 3)
+  out <- Decant:::.absence_degeneracy_cap(W, X, cap = 0.10)
+  expect_equal(out[, 2], rep(0, 4))          # 100% vs others' 50% / 25%
+  expect_equal(out[, c(1, 3)], W[, c(1, 3)])
+  expect_equal(Decant:::.absence_degeneracy_cap(W, X, cap = Inf), W)
+})
