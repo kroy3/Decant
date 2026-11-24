@@ -149,3 +149,18 @@ test_that("degeneracy cap drops a cluster far above the others", {
   expect_equal(out[, c(1, 3)], W[, c(1, 3)])
   expect_equal(Decant:::.absence_degeneracy_cap(W, X, cap = Inf), W)
 })
+
+test_that("blockwise cell-aware correction does not depend on the block size", {
+  sim <- small_sim(rho_mean = 0.15)
+  soup <- ambient_global(sim$empty); su <- sum(sim$empty)
+  cl <- quick_labels(sim$observed, k = 4)
+  rho <- as.numeric(estimate_rho_cluster(sim$observed, soup, cl))
+  T_c <- colSums(sim$observed)
+  for (abs in c(FALSE, TRUE)) {
+    f <- function(x, bn) Decant:::.corr_bayes_cell(x, soup, rho, T_c, cl, 1e-3, if (abs) "hybrid" else "entry",
+                                                   absent = abs, soup_umis = su, block_nnz = bn)
+    one <- f(as_sparse(sim$observed), 1e9)
+    expect_equal(f(as_sparse(sim$observed), 500), one, tolerance = 1e-10)
+    expect_equal(f(sim$observed, 500), one, tolerance = 1e-10)     # dense, same order
+  }
+})
