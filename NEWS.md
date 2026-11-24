@@ -1,5 +1,40 @@
 # Decant (development version)
 
+* **Large raw matrices without loading the empty droplets.**
+  `read_10x_streaming()` reads a raw 10x `matrix.mtx(.gz)` in two chunked
+  passes and returns the cells as a sparse matrix plus a `soup_summary()`:
+  per-gene sums, sums of squares and detection counts of the empty droplets
+  (O(genes)). `decant()`, `ambient_global()` and `pool_soup()` accept such a
+  summary wherever they took an empty-droplet matrix, with identical
+  results. `soup_dispersion()` gives per-gene negative binomial dispersions
+  of the empties from those moments. On hgmm 10k (6.8M barcodes, 1.9M empty
+  droplets) the read peaks at 1.8 GB instead of 4.3 GB, and the soup
+  summary takes 12 MB. Measured on that channel, the empties were never the
+  main memory cost: the cells (112k genes x 11k cells, 55M non-zeros) are.
+
+* **Correction is about 3x faster and uses half the memory.** The
+  cell-aware rules run over column blocks, group the absence likelihood by
+  distinct count pairs, and compute each tail probability once. On hgmm 10k
+  `decant()` takes 55 s instead of 193 s and the correction step peaks at
+  2.2 GB instead of 4.7 GB above its input; output is unchanged (largest
+  difference 2.6e-10).
+
+* **`bayes_absent` no longer fits degenerate absence calls in tiny
+  clusters.** The call now needs at least 50 genes with 5 or more expected
+  ambient counts in the cluster (and in the empties), and a cluster whose
+  share of genes called absent exceeds every other cluster's by more than
+  0.10 keeps the `bayes_cell` rule. In simulation a 1-cell cluster kept
+  0.37 of its native counts before and 0.83 now (`bayes_cell`: 0.83). The
+  9-cell brain cluster of 1i is the case this targets; it has not been
+  re-run.
+
+* **The bound 0 <= corrected <= raw is now asserted, not clipped.** Every
+  rule satisfies it by construction (checked over 64.5M entries of the gate
+  simulations before the change); a violation is now an error of class
+  `decant_invariant_violation`. New property tests cover random negative
+  binomial data across contamination levels and degenerate clusters, and
+  doublet-level counts.
+
 * **Real-tissue test of the default (pre-registered): no gain.** In six brain
   libraries (GSE272082), scored against genes foreign to each cell type in an
   independent C1 reference, `bayes_absent` removed the same share of foreign

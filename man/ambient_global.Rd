@@ -7,7 +7,8 @@
 ambient_global(empty)
 }
 \arguments{
-\item{empty}{genes x droplets matrix of background counts (dense or sparse).}
+\item{empty}{genes x droplets matrix of background counts (dense or sparse),
+or a \code{\link[=soup_summary]{soup_summary()}} of them.}
 }
 \value{
 length-G probability vector.
