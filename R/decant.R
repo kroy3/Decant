@@ -191,7 +191,11 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
     modules <- c(modules, "lysis_diagnostic")
   }
 
-  ## hard guarantee check, element-wise (cheap slot comparison when sparse)
+  ## hard guarantee checks: rho in [0, 1] and, element-wise, 0 <= corrected <= raw
+  ## (cheap slot comparison when sparse)
+  if (anyNA(out$rho) || any(out$rho < 0 | out$rho > 1))
+    stop(structure(class = c("decant_invariant_violation", "error", "condition"),
+                   list(message = "internal error: rho outside [0, 1]", call = NULL)))
   if (!splice_mode) {
     .check_mass(obs_total, out$corrected)
     out$corrected <- .drop0(out$corrected)

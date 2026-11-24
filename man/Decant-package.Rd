@@ -14,6 +14,7 @@ re-derive every default from ground truth.
 Useful links:
 \itemize{
   \item \url{https://github.com/kroy3/Decant}
+  \item \url{https://decant.readthedocs.io/en/latest/}
   \item Report bugs at \url{https://github.com/kroy3/Decant/issues}
 }
 
