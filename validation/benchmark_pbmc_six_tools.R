@@ -22,9 +22,13 @@ DIR <- file.path("validation", "data", "bench_pbmc"); OUT <- file.path("validati
 
 CACHE <- file.path("validation", "data", "SoupX")
 if (!dir.exists(CACHE))
-  system2("git", c("clone", "-q", "--depth", "1", "https://github.com/constantAmateur/SoupX", CACHE))
+  try(system2("git", c("clone", "-q", "--depth", "1", "https://github.com/constantAmateur/SoupX", CACHE)))
 e <- new.env()
-load(file.path(CACHE, "data", "PBMC_sc.RData"), e); load(file.path(CACHE, "data", "PBMC_metaData.RData"), e)
+## The same objects ship with the CRAN SoupX package; use them when
+## github.com cannot be reached.
+if (file.exists(file.path(CACHE, "data", "PBMC_sc.RData"))) {
+  load(file.path(CACHE, "data", "PBMC_sc.RData"), e); load(file.path(CACHE, "data", "PBMC_metaData.RData"), e)
+} else utils::data(list = c("PBMC_sc", "PBMC_metaData"), package = "SoupX", envir = e)
 md <- e$PBMC_metaData[colnames(e$PBMC_sc$toc), ]; ok <- md$Annotation != "?"
 cells <- methods::as(methods::as(e$PBMC_sc$toc, "CsparseMatrix"), "dgCMatrix")[, ok]; md <- md[ok, ]
 colnames(cells) <- paste0(colnames(cells), "-1")
