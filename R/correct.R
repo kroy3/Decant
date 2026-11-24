@@ -111,13 +111,33 @@ correct_counts <- function(observed, soup, rho,
       .corr_bayes_cell(observed, nz, soup, rho, T_c, clusters, cap_q, "hybrid",
                        absent = TRUE, soup_umis = soup_umis)
     })
-  ## the guarantee, enforced (not assumed) on every path
-  v <- pmin(pmax(v, 0), nz$v)
+  ## The guarantee holds by construction on every path (each rule removes a
+  ## non-negative share of an entry, at most the entry itself). It is checked
+  ## here, O(nnz), and a violation is an error, not something clipped away:
+  ## only floating-point rounding (a relative 1e-10) is snapped back.
+  v <- .assert_bounds(v, nz$v, where = paste0("correct_counts(method = \"", method, "\")"))
   .nz_set(observed, nz, v, drop = drop_zeros)
 }
 
+## O(nnz) runtime check of invariant I1: 0 <= corrected <= observed, finite.
+## Violations beyond rounding raise a classed error (`decant_invariant_violation`).
+.assert_bounds <- function(v, x, where = "correction", rel_tol = 1e-10) {
+  tol <- rel_tol * pmax(abs(x), 1)
+  bad <- !is.finite(v) | v < -tol | v > x + tol
+  if (any(bad)) {
+    i <- which(bad)[1]
+    stop(structure(class = c("decant_invariant_violation", "error", "condition"), list(
+      message = sprintf(paste0("internal error in %s: %d corrected value(s) outside [0, observed] ",
+                               "(first: corrected %g vs observed %g)"), where, sum(bad), v[i], x[i]),
+      call = NULL, n_violations = sum(bad))))
+  }
+  pmin(pmax(v, 0), x)            # rounding only: every value is within tol
+}
+
+## "subtract" is defined as clamp(x - expected ambient, 0, x): the clamp at 0 is
+## the rule itself (and why it under-removes), not a safety net.
 .corr_subtract <- function(nz, soup, rho, T_c) {
-  nz$v - (rho * T_c)[nz$j] * soup[nz$i]
+  pmax(nz$v - (rho * T_c)[nz$j] * soup[nz$i], 0)
 }
 
 .corr_redistribute <- function(nz, soup, rho, T_c, max_iter) {

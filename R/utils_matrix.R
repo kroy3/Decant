@@ -65,7 +65,9 @@
     d <- methods::as(observed - corrected, "CsparseMatrix")
     all(d@x >= -tol) && all(.nz(corrected)$v >= 0)
   }
-  if (!isTRUE(ok)) stop("internal error: mass-conservation guarantee violated", call. = FALSE)
+  if (!isTRUE(ok))
+    stop(structure(class = c("decant_invariant_violation", "error", "condition"),
+                   list(message = "internal error: mass-conservation guarantee violated", call = NULL)))
   invisible(TRUE)
 }
 
