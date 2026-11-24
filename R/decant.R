@@ -13,7 +13,9 @@
 #' @param obs_total genes x cells total counts (base matrix or dgCMatrix).
 #' @param empties EITHER a genes x droplets matrix (single sample) OR a list of
 #'   such matrices, one per sample, which triggers hierarchical pooling (Gap 3).
-#'   See [split_droplets()] to obtain these from a raw 10x matrix.
+#'   Each may instead be a [soup_summary()] (O(genes) statistics of the empty
+#'   droplets), e.g. from [read_10x_streaming()], which never loads the
+#'   empties. See [split_droplets()] to obtain matrices from a raw 10x matrix.
 #' @param sample_of length-cells sample index (required if empties is a list).
 #' @param clusters optional length-cells cluster labels (e.g. from Seurat/SCE).
 #'   Used by the rho estimator. If NULL, k-means with `k` clusters is run.
@@ -59,7 +61,7 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
   correction <- match.arg(correction); cap_test <- match.arg(cap_test)
   obs_total <- .as_counts(obs_total, "obs_total")
   modules <- character(0)
-  multi <- is.list(empties) && !is.data.frame(empties)
+  multi <- is.list(empties) && !is.data.frame(empties) && !.is_soup(empties)
   G <- nrow(obs_total); N <- ncol(obs_total)
   if (N < 2) stop("need at least 2 cells", call. = FALSE)
 
@@ -67,21 +69,21 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
   if (multi) {
     if (is.null(sample_of)) stop("`sample_of` is required when `empties` is a list", call. = FALSE)
     if (length(sample_of) != N) stop("length(sample_of) must equal ncol(obs_total)", call. = FALSE)
-    empties <- lapply(empties, .as_counts, what = "empties")
-    if (any(vapply(empties, nrow, 1L) != G)) stop("every empties matrix needs nrow(obs_total) genes", call. = FALSE)
+    empties <- lapply(empties, function(e) if (.is_soup(e)) e else .as_counts(e, "empties"))
+    if (any(vapply(empties, .soup_nrow, 1L) != G)) stop("every empties matrix needs nrow(obs_total) genes", call. = FALSE)
     sample_idx <- if (is.numeric(sample_of)) as.integer(sample_of)
                   else match(sample_of, if (is.null(names(empties))) unique(sample_of) else names(empties))
     if (anyNA(sample_idx) || any(sample_idx < 1L | sample_idx > length(empties)))
       stop("`sample_of` does not map onto `empties`", call. = FALSE)
     pp <- pool_soup(empties)
     soup_by_sample <- pp$pooled
-    soup_umis <- vapply(empties, function(e) sum(.col_sums(e)), 1)
+    soup_umis <- vapply(empties, .soup_umis, 1)
     modules <- c(modules, "hierarchical_ambient")
   } else {
-    empties <- .as_counts(empties, "empties")
-    if (nrow(empties) != G) stop("empties needs nrow(obs_total) genes", call. = FALSE)
+    if (!.is_soup(empties)) empties <- .as_counts(empties, "empties")
+    if (.soup_nrow(empties) != G) stop("empties needs nrow(obs_total) genes", call. = FALSE)
     soup_by_sample <- matrix(ambient_global(empties), ncol = 1)
-    soup_umis <- sum(.col_sums(empties))
+    soup_umis <- .soup_umis(empties)
     sample_idx <- rep(1L, N)
   }
   rownames(soup_by_sample) <- rownames(obs_total)
@@ -186,6 +188,8 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
 
   ## ---- lysis diagnostic [GAP 4] ----
   if (!is.null(basis)) {
+    if (if (multi) any(vapply(empties, .is_soup, NA)) else .is_soup(empties))
+      stop("`basis` (lysis diagnostic) needs empty-droplet matrices, not soup summaries", call. = FALSE)
     st <- ambient_structured(if (multi) do.call(cbind, empties) else empties, basis)
     out$lysis <- st$lysis
     modules <- c(modules, "lysis_diagnostic")
