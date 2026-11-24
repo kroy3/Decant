@@ -213,7 +213,7 @@ read_10x_streaming <- function(dir, cells = NULL, cell_min_umi = 500, empty_umi_
     r <- (pp[k] + 1):pp[k + 1]; o <- order(ci[r]); ci[r] <- ci[r][o]; cx[r] <- cx[r][o]
   }
   gn <- make.unique(feats[, gene_column])[gene_keep]
-  cellm <- new("dgCMatrix", i = ci, p = as.integer(pp), x = cx, Dim = c(as.integer(G), as.integer(nc)),
+  cellm <- methods::new("dgCMatrix", i = ci, p = as.integer(pp), x = cx, Dim = c(as.integer(G), as.integer(nc)),
                Dimnames = list(gn, cell_names))
   rm(ci, cx)
   soup <- .new_soup(s1, s2, dt, sum(is_empty), gn)

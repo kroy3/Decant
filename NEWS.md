@@ -1,5 +1,23 @@
 # Decant (development version)
 
+* **Identifiability diagnostics and a classed warning.** `decant()` returns
+  `$identifiability`: per cluster, the weighted cosine and Gram condition
+  number between its profile and the soup, their Jensen-Shannon divergence,
+  the Fisher information about rho per UMI and how many genes carry it, and
+  rho's standard error and 95% interval width (from the absent-gene
+  estimator's negative binomial variance). A cluster is flagged `weak` when
+  its estimate rests on thin evidence (interval wider than 0.05, almost no
+  absent genes, or an implausible own estimate), with the reason and what
+  was done; the warning has class `decant_weak_identifiability` (and
+  `decant_unidentifiable` when nothing can be estimated) and carries the
+  table. Closeness to the soup alone (`collinear`: cosine > 0.9) is
+  reported but does not flag a cluster by default: in simulation such a
+  cluster with enough absent genes was estimated within 0.005 of the truth.
+  `weak_rule = "any"` flags it too. Known limitation, found with these
+  diagnostics: a borrowed cluster's per-cell values still use its own
+  absent genes and can run high (simulation: cluster mean 0.26, borrowed
+  0.101, truth 0.103); not changed here.
+
 * **Large raw matrices without loading the empty droplets.**
   `read_10x_streaming()` reads a raw 10x `matrix.mtx(.gz)` in two chunked
   passes and returns the cells as a sparse matrix plus a `soup_summary()`:
