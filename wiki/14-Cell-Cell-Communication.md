@@ -33,6 +33,7 @@ ambient, per 10,000 of the cluster's own UMIs.
 ## 14.3 Running it
 
 ```r
+# Requires your own data
 fit <- decant(counts, empties, clusters = clusters)
 
 pairs <- data.frame(ligand   = c("TGFB1", "CXCL12"),

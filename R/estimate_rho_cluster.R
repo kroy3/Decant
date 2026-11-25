@@ -71,11 +71,28 @@
 #'   halved rho. The variance is estimated from the lower tail of the absent
 #'   genes, which cannot contain expressed genes. With no extra variance the
 #'   test reduces to the Poisson one.
+#' @param weak_cosine,weak_kappa thresholds above which a cluster's profile
+#'   counts as close to the soup (`collinear`): the weighted cosine between
+#'   the cluster's raw profile and the soup (0.9: a two-profile fit's
+#'   variance inflation 1 / (1 - c^2) then exceeds 5) and the Gram condition
+#'   number (30, i.e. a cosine of 0.935, so it only matters if `weak_cosine`
+#'   is raised).
+#' @param weak_ci_width a cluster whose rho has a 95% interval wider than
+#'   this is weakly identified (0.05: wider than typical contamination
+#'   itself, 0.01-0.1).
+#' @param weak_rule "evidence" (default): a cluster is `weak` when the
+#'   estimator's own evidence is thin (interval wider than `weak_ci_width`,
+#'   almost no absent genes, or an implausible own estimate). "any": also
+#'   when it is `collinear`. A collinear cluster whose absent genes still
+#'   cover enough soup is usually estimated well, so "any" raises false
+#'   alarms on soup-dominant cell types.
 #' @return numeric vector of per-cell rho, with attribute `"clusters"`: a
 #'   data.frame of per-cluster diagnostics (n_cells, rho, n_absent_genes,
 #'   absent_soup_frac, absent_counts, low_power, borrowed, rho_two_sided,
 #'   dispersion: the extra squared coefficient of variation used,
-#'   implausible: rho above `max_rho`), attribute `"unidentifiable"` (no
+#'   implausible: rho above `max_rho`; identifiability: cosine, kappa, js,
+#'   fisher_umi, n_eff, rho_se, ci_width, collinear, and weak / weak_reason /
+#'   action_taken), attribute `"unidentifiable"` (no
 #'   cluster had usable evidence, or more than half the cells are in
 #'   implausible clusters; rho should then be supplied), and
 #'   attributes `"soup_mismatch"` (logical), `"soup_only"` (logical per gene)
@@ -86,7 +103,10 @@
 #' @export
 estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
                                  min_absent_soup = 0.02, max_iter = 100, min_expected = 5,
-                                 floor_rho = 0.005, overdispersed = TRUE, max_rho = 0.5) {
+                                 floor_rho = 0.005, overdispersed = TRUE, max_rho = 0.5,
+                                 weak_cosine = 0.9, weak_kappa = 30, weak_ci_width = 0.05,
+                                 weak_rule = c("evidence", "any")) {
+  weak_rule <- match.arg(weak_rule)
   observed <- .as_counts(observed, "observed")
   N <- ncol(observed)
   if (length(clusters) != N) stop("length(clusters) must equal ncol(observed)", call. = FALSE)
@@ -139,6 +159,7 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
     }
     absent[[i]] <- which(A)
     SA <- sum(soup[absent[[i]]])
+    idf <- .identifiability(X, soup, rho, e, A, phi)
     diag[[i]] <- data.frame(cluster = ks[i], n_cells = length(idx), rho = rho,
                             n_absent_genes = length(absent[[i]]), absent_soup_frac = SA,
                             absent_counts = sum(X[absent[[i]]]),
@@ -147,6 +168,7 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
                             rho_two_sided = rho2,
                             dispersion = phi,
                             implausible = rho > max_rho,
+                            idf,
                             stringsAsFactors = FALSE)
   }
   diag <- do.call(rbind, diag)
@@ -167,6 +189,14 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
     diag$rho[weak] <- if (sum(w) > 0) .weighted_median(diag$rho[!weak], w) else stats::median(diag$rho[!weak])
     diag$borrowed[weak] <- TRUE
   }
+
+  ## weak identifiability: the reasons, and what was done about it
+  wi <- .weak_identifiability(diag, weak_cosine, weak_kappa, weak_ci_width, weak_rule)
+  diag$collinear <- wi$collinear
+  diag$weak_reason <- wi$reason
+  diag$weak <- nzchar(diag$weak_reason)
+  diag$action_taken <- ifelse(diag$borrowed, "rho borrowed from the other clusters",
+                              ifelse(diag$weak, "none: rho kept, treat it with caution", ""))
 
   ## pass 2: per-cell empirical-Bayes shrinkage toward the cluster rho
   ## (Gamma prior, Poisson counts on that cluster's absent genes)
@@ -200,6 +230,69 @@ estimate_rho_cluster <- function(observed, soup, clusters, alpha = 0.01,
   imp_share <- sum(diag$n_cells[diag$implausible]) / sum(diag$n_cells)
   attr(out, "unidentifiable") <- all(diag$low_power) || imp_share > 0.5
   out
+}
+
+## Identifiability diagnostics for one cluster (Objective C).
+## X: cluster gene sums; soup: profile; rho: cluster estimate; e: soup *
+## cluster UMIs; A: absent set; phi: extra squared CV used by the test.
+##  * cosine: weighted cosine between the cluster's RAW profile p and the soup,
+##    weights 1/q with q = (p + soup) / 2 (the multinomial Fisher metric at the
+##    midpoint; weighting by 1/p alone would let any soup gene with a sampling
+##    zero in the cluster set it to 0). Near 1, the cluster looks like the soup:
+##    with p = (1 - rho) theta + rho soup, theta is then ~ soup and rho cannot
+##    be separated from expression. The soup-subtracted profile is not used:
+##    subtracting rho * soup biases the similarity down by construction.
+##  * kappa = (1 + |c|) / (1 - |c|): condition number of the 2 x 2 Gram matrix
+##    of the two unit profiles; it grows like the variance inflation of rho in
+##    a two-profile fit.
+##  * js: Jensen-Shannon divergence (nats) between p and the soup.
+##  * fisher_umi: Fisher information about rho per UMI, sum (theta - soup)^2 / m,
+##    m = (1 - rho) theta + rho soup, theta = soup-subtracted profile. It
+##    treats theta as known, so it is an upper bound on what the data carry.
+##    n_eff: (sum w)^2 / sum w^2 of its per-gene terms: how many genes carry it.
+##  * rho_se, ci_width: sampling SD of the absent-gene estimator
+##    rho = sum_A X / sum_A e under the negative binomial used by the test,
+##    Var = (rho sum_A e + phi sum_A (rho e)^2) / (sum_A e)^2, and the width of
+##    the 95% interval. NA when no gene is absent.
+.identifiability <- function(X, soup, rho, e, A, phi) {
+  tot <- sum(X)
+  if (tot <= 0) return(data.frame(cosine = NA_real_, kappa = NA_real_, js = NA_real_, fisher_umi = NA_real_,
+                                  n_eff = NA_real_, rho_se = NA_real_, ci_width = NA_real_))
+  p <- X / tot
+  mid <- (p + soup) / 2; u <- mid > 0
+  cosine <- sum(p[u] * soup[u] / mid[u]) / sqrt(sum(p[u]^2 / mid[u]) * sum(soup[u]^2 / mid[u]))
+  kappa <- (1 + cosine) / (1 - cosine)
+  kl <- function(a) { v <- a > 0; sum(a[v] * log(a[v] / mid[v])) }
+  js <- 0.5 * kl(p) + 0.5 * kl(soup)
+  th <- pmax(X - rho * e, 0); th <- if (sum(th) > 0) th / sum(th) else p
+  m <- (1 - rho) * th + rho * soup; v <- m > 0
+  w <- (th[v] - soup[v])^2 / m[v]
+  EA <- sum(e[A])
+  se <- if (EA > 0) sqrt((rho * EA + phi * sum((rho * e[A])^2)) / EA^2) else NA_real_
+  data.frame(cosine = cosine, kappa = kappa, js = js, fisher_umi = sum(w),
+             n_eff = if (sum(w) > 0) sum(w)^2 / sum(w^2) else 0,
+             rho_se = se, ci_width = 2 * stats::qnorm(0.975) * se)
+}
+
+## Which clusters are weakly identified, and why (Objective C). Two kinds of
+## reason: the estimator's own evidence is thin (wide interval, almost no
+## absent genes, implausible own estimate), and the cluster's profile is close
+## to the soup's (cosine / kappa: "collinear"). With rule "evidence" (default)
+## only the first kind makes a cluster weak: in simulation a cluster at cosine
+## 0.93 whose absent genes still covered 4.7% of the soup was estimated at
+## 0.100 against a true 0.105 (95% CI width 0.009). Rule "any" also flags
+## collinear clusters.
+.weak_identifiability <- function(d, max_cosine = 0.9, max_kappa = 30, max_ci_width = 0.05,
+                                  rule = c("evidence", "any")) {
+  rule <- match.arg(rule)
+  coll <- (d$cosine > max_cosine) %in% TRUE | (d$kappa > max_kappa) %in% TRUE
+  why <- vapply(seq_len(nrow(d)), function(i) paste(c(
+    if (isTRUE(d$ci_width[i] > max_ci_width)) sprintf("95%% CI width %.3f > %g", d$ci_width[i], max_ci_width),
+    if (isTRUE(d$implausible[i])) "own estimate above max_rho",
+    if (isTRUE(d$low_power[i]) && !isTRUE(d$implausible[i])) "almost no absent genes",
+    if (rule == "any" && coll[i]) sprintf("profile close to the soup (cosine %.2f, kappa %.0f)", d$cosine[i], d$kappa[i])),
+    collapse = "; "), "")
+  list(reason = why, collinear = coll)
 }
 
 .weighted_median <- function(x, w) {

@@ -40,8 +40,8 @@ res
 ```r
 names(res)
 #> [1] "rho"                "rho_diagnostics"    "soup_mismatch"     
-#> [4] "rho_unidentifiable" "ambient"            "clusters"          
-#> [7] "corrected"          "modules"           
+#> [4] "rho_unidentifiable" "identifiability"    "ambient"           
+#> [7] "clusters"           "corrected"          "modules"           
 ```
 
 | Element | Content |
@@ -51,6 +51,7 @@ names(res)
 | `rho_diagnostics` | One row per cluster: its rho and how well it was determined |
 | `soup_mismatch` | `TRUE` if much of the soup is in genes no cell contains ([Chapter 11](11-Diagnostics-and-Troubleshooting)) |
 | `rho_unidentifiable` | `TRUE` if contamination could not be estimated from the data; supply `rho` ([Chapter 11.4](11-Diagnostics-and-Troubleshooting)) |
+| `identifiability` | One row per cluster: how close its profile is to the soup (`cosine`, `kappa`, `js`), the information about rho (`fisher_umi`, `n_eff`), rho's standard error and 95% interval width, and whether rho is weakly identified, why, and what was done ([Chapter 11.3](11-Diagnostics-and-Troubleshooting)) |
 | `ambient` | The soup profile, genes × samples |
 | `clusters` | The cluster labels used |
 | `modules` | The steps that ran |

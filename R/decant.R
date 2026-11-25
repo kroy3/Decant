@@ -13,7 +13,9 @@
 #' @param obs_total genes x cells total counts (base matrix or dgCMatrix).
 #' @param empties EITHER a genes x droplets matrix (single sample) OR a list of
 #'   such matrices, one per sample, which triggers hierarchical pooling (Gap 3).
-#'   See [split_droplets()] to obtain these from a raw 10x matrix.
+#'   Each may instead be a [soup_summary()] (O(genes) statistics of the empty
+#'   droplets), e.g. from [read_10x_streaming()], which never loads the
+#'   empties. See [split_droplets()] to obtain matrices from a raw 10x matrix.
 #' @param sample_of length-cells sample index (required if empties is a list).
 #' @param clusters optional length-cells cluster labels (e.g. from Seurat/SCE).
 #'   Used by the rho estimator. If NULL, k-means with `k` clusters is run.
@@ -48,6 +50,11 @@
 #' @return an object of class `decant`: a list with $corrected (same class as
 #'   the input; + $corrected_unspliced/$corrected_spliced in splice mode),
 #'   $rho, $rho_diagnostics (per-cluster, from [estimate_rho_cluster()]),
+#'   $identifiability (per cluster: cosine and Gram condition number kappa
+#'   between the cluster and the soup, Jensen-Shannon divergence, Fisher
+#'   information per UMI and its effective number of genes, rho's standard
+#'   error and 95% CI width, and whether it is weak, why, and what was done;
+#'   NULL when rho was supplied),
 #'   $ambient (genes x samples), $clusters, $lysis (if basis), $modules.
 #' @export
 decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
@@ -59,7 +66,7 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
   correction <- match.arg(correction); cap_test <- match.arg(cap_test)
   obs_total <- .as_counts(obs_total, "obs_total")
   modules <- character(0)
-  multi <- is.list(empties) && !is.data.frame(empties)
+  multi <- is.list(empties) && !is.data.frame(empties) && !.is_soup(empties)
   G <- nrow(obs_total); N <- ncol(obs_total)
   if (N < 2) stop("need at least 2 cells", call. = FALSE)
 
@@ -67,21 +74,21 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
   if (multi) {
     if (is.null(sample_of)) stop("`sample_of` is required when `empties` is a list", call. = FALSE)
     if (length(sample_of) != N) stop("length(sample_of) must equal ncol(obs_total)", call. = FALSE)
-    empties <- lapply(empties, .as_counts, what = "empties")
-    if (any(vapply(empties, nrow, 1L) != G)) stop("every empties matrix needs nrow(obs_total) genes", call. = FALSE)
+    empties <- lapply(empties, function(e) if (.is_soup(e)) e else .as_counts(e, "empties"))
+    if (any(vapply(empties, .soup_nrow, 1L) != G)) stop("every empties matrix needs nrow(obs_total) genes", call. = FALSE)
     sample_idx <- if (is.numeric(sample_of)) as.integer(sample_of)
                   else match(sample_of, if (is.null(names(empties))) unique(sample_of) else names(empties))
     if (anyNA(sample_idx) || any(sample_idx < 1L | sample_idx > length(empties)))
       stop("`sample_of` does not map onto `empties`", call. = FALSE)
     pp <- pool_soup(empties)
     soup_by_sample <- pp$pooled
-    soup_umis <- vapply(empties, function(e) sum(.col_sums(e)), 1)
+    soup_umis <- vapply(empties, .soup_umis, 1)
     modules <- c(modules, "hierarchical_ambient")
   } else {
-    empties <- .as_counts(empties, "empties")
-    if (nrow(empties) != G) stop("empties needs nrow(obs_total) genes", call. = FALSE)
+    if (!.is_soup(empties)) empties <- .as_counts(empties, "empties")
+    if (.soup_nrow(empties) != G) stop("empties needs nrow(obs_total) genes", call. = FALSE)
     soup_by_sample <- matrix(ambient_global(empties), ncol = 1)
-    soup_umis <- sum(.col_sums(empties))
+    soup_umis <- .soup_umis(empties)
     sample_idx <- rep(1L, N)
   }
   rownames(soup_by_sample) <- rownames(obs_total)
@@ -96,7 +103,7 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
     stop("length(clusters) must equal ncol(obs_total)", call. = FALSE)
 
   ## ---- per-cell rho: user > allelic [GAP 5] > cluster/absent-gene ----
-  rho_diag <- NULL; mismatch <- FALSE
+  rho_diag <- NULL; mismatch <- FALSE; out_identifiability <- NULL
   if (!is.null(rho)) {
     if (length(rho) == 1L) rho <- rep(rho, N)
     if (length(rho) != N || any(rho < 0 | rho > 1)) stop("`rho` must be in [0,1], length 1 or ncol(obs_total)", call. = FALSE)
@@ -128,20 +135,26 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
               "affected too, in which case rho is UNDERestimated. ",
               "See $rho_diagnostics; consider supplying `rho`.", call. = FALSE)
     if (unidentifiable) {
-      warning("rho could not be identified: no cluster has genes that are cleanly ",
-              "absent, or most cells are in clusters whose estimate is implausibly high ",
-              "(> 0.5). This happens ",
-              "when the soup resembles the cells, e.g. a single cell type. The estimate ",
-              "(median ", sprintf("%.2f", stats::median(rho)), ") is NOT reliable and correction may ",
-              "remove real signal. Supply `rho` from an independent source (genotypes, a ",
-              "species-mixing control, or a value from comparable data).", call. = FALSE)
-    } else if (any(rho_diag$low_power)) {
-      n_imp <- sum(rho_diag$implausible)
-      warning(sum(rho_diag$low_power), " cluster(s) have almost no genes that are ",
-              "cleanly absent", if (n_imp) sprintf(" or an implausible rho above 0.5 (%d)", n_imp) else "",
-              ", so rho is weakly identified there; they borrow rho from the other ",
-              "clusters. See $rho_diagnostics.", call. = FALSE)
+      .decant_warn("decant_unidentifiable", paste0(
+        "rho could not be identified: no cluster has genes that are cleanly ",
+        "absent, or most cells are in clusters whose estimate is implausibly high ",
+        "(> 0.5). This happens ",
+        "when the soup resembles the cells, e.g. a single cell type. The estimate ",
+        "(median ", sprintf("%.2f", stats::median(rho)), ") is NOT reliable and correction may ",
+        "remove real signal. Supply `rho` from an independent source (genotypes, a ",
+        "species-mixing control, or a value from comparable data)."),
+        identifiability = .identifiability_table(rho_diag))
+    } else if (any(rho_diag$weak)) {
+      idt <- .identifiability_table(rho_diag)
+      wk <- idt[idt$weak, ]
+      .decant_warn("decant_weak_identifiability", paste0(
+        nrow(wk), " cluster(s) with weakly identified contamination: ",
+        paste(sprintf("%s (%s; %s)", wk$cluster, wk$weak_reason,
+                      ifelse(nzchar(wk$action_taken), wk$action_taken, "no action")), collapse = "; "),
+        ". ", .identifiability_guidance, " See $identifiability."),
+        identifiability = idt)
     }
+    out_identifiability <- .identifiability_table(rho_diag)
   }
 
   ## ---- correction ----
@@ -149,6 +162,7 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
                  !is.null(empties_unspliced) && !is.null(empties_spliced)
   out <- list(rho = rho, rho_diagnostics = rho_diag, soup_mismatch = mismatch,
               rho_unidentifiable = if (is.null(rho_diag)) FALSE else unidentifiable,
+              identifiability = out_identifiability,
               ambient = soup_by_sample,
               clusters = clusters)
 
@@ -186,12 +200,18 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
 
   ## ---- lysis diagnostic [GAP 4] ----
   if (!is.null(basis)) {
+    if (if (multi) any(vapply(empties, .is_soup, NA)) else .is_soup(empties))
+      stop("`basis` (lysis diagnostic) needs empty-droplet matrices, not soup summaries", call. = FALSE)
     st <- ambient_structured(if (multi) do.call(cbind, empties) else empties, basis)
     out$lysis <- st$lysis
     modules <- c(modules, "lysis_diagnostic")
   }
 
-  ## hard guarantee check, element-wise (cheap slot comparison when sparse)
+  ## hard guarantee checks: rho in [0, 1] and, element-wise, 0 <= corrected <= raw
+  ## (cheap slot comparison when sparse)
+  if (anyNA(out$rho) || any(out$rho < 0 | out$rho > 1))
+    stop(structure(class = c("decant_invariant_violation", "error", "condition"),
+                   list(message = "internal error: rho outside [0, 1]", call = NULL)))
   if (!splice_mode) {
     .check_mass(obs_total, out$corrected)
     out$corrected <- .drop0(out$corrected)
@@ -200,6 +220,28 @@ decant <- function(obs_total, empties, sample_of = NULL, clusters = NULL, k = 8,
   class(out) <- "decant"
   if (verbose) print(out)
   out
+}
+
+## identifiability columns of the rho diagnostics (Objective C)
+.identifiability_table <- function(d) {
+  if (is.null(d)) return(NULL)
+  d[, c("cluster", "n_cells", "rho", "cosine", "kappa", "js", "fisher_umi", "n_eff",
+        "rho_se", "ci_width", "collinear", "weak", "weak_reason", "action_taken")]
+}
+
+.identifiability_guidance <- paste(
+  "In these clusters the soup resembles the cells or too few genes are absent,",
+  "so their own estimate tends to run high and is not trustworthy.",
+  "Options: supply the raw (unfiltered) matrix so the empty droplets measure",
+  "the soup cleanly; merge very small clusters or cluster at lower resolution;",
+  "with several samples, pass one empties matrix per sample (`sample_of`);",
+  "or supply `rho` from an independent source (genotypes, a species-mixing",
+  "control).")
+
+## a classed warning carrying data (conditionCall NULL)
+.decant_warn <- function(class, message, ...) {
+  warning(structure(class = c(class, "decant_warning", "warning", "condition"),
+                    c(list(message = message, call = NULL), list(...))))
 }
 
 #' Print a decant result.
@@ -217,9 +259,9 @@ print.decant <- function(x, ...) {
     cat("  WARNING : soup/cell mismatch (soup-only genes dropped; rho may be UNDERestimated)\n")
   if (isTRUE(x$rho_unidentifiable))
     cat("  WARNING : rho NOT identifiable from these data; supply `rho`\n")
-  else if (!is.null(x$rho_diagnostics) && any(x$rho_diagnostics$low_power))
-    cat("  WARNING : ", sum(x$rho_diagnostics$low_power),
-        " cluster(s) without usable evidence for rho; they borrow it from the others\n", sep = "")
+  else if (!is.null(x$identifiability) && any(x$identifiability$weak))
+    cat("  WARNING : ", sum(x$identifiability$weak),
+        " cluster(s) with weakly identified rho (see $identifiability)\n", sep = "")
   invisible(x)
 }
 

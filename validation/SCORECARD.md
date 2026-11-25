@@ -260,6 +260,13 @@ did not survive, and they are corrected here rather than quietly edited:
 
 ## Known limitations (stated, not hidden)
 
+- **Re-measured in a second environment (BENCHMARK 1j).** The Smart-seq2
+  negative control gives 0.994 there (recorded 0.998) for both the previous
+  and current code, and hgmm 10k removal moves from 0.573 to 0.811 with
+  different Seurat clusters: both results depend on the clustering
+  recipe's package versions. rho on hgmm 10k is still underestimated
+  (median 0.027 vs 0.038).
+
 - **Empties that do not match the cells make rho collapse (partly handled).**
   Genes that are in the empties but in no cell at all are now detected and
   dropped from the soup, with a warning when they exceed 5% of it. Genes the

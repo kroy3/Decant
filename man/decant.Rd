@@ -27,7 +27,9 @@ decant(
 
 \item{empties}{EITHER a genes x droplets matrix (single sample) OR a list of
 such matrices, one per sample, which triggers hierarchical pooling (Gap 3).
-See \code{\link[=split_droplets]{split_droplets()}} to obtain these from a raw 10x matrix.}
+Each may instead be a \code{\link[=soup_summary]{soup_summary()}} (O(genes) statistics of the empty
+droplets), e.g. from \code{\link[=read_10x_streaming]{read_10x_streaming()}}, which never loads the
+empties. See \code{\link[=split_droplets]{split_droplets()}} to obtain matrices from a raw 10x matrix.}
 
 \item{sample_of}{length-cells sample index (required if empties is a list).}
 
@@ -75,6 +77,11 @@ diagnostic (Gap 4).}
 an object of class \code{decant}: a list with $corrected (same class as
 the input; + $corrected_unspliced/$corrected_spliced in splice mode),
 $rho, $rho_diagnostics (per-cluster, from \code{\link[=estimate_rho_cluster]{estimate_rho_cluster()}}),
+$identifiability (per cluster: cosine and Gram condition number kappa
+between the cluster and the soup, Jensen-Shannon divergence, Fisher
+information per UMI and its effective number of genes, rho's standard
+error and 95\% CI width, and whether it is weak, why, and what was done;
+NULL when rho was supplied),
 $ambient (genes x samples), $clusters, $lysis (if basis), $modules.
 }
 \description{
