@@ -123,11 +123,17 @@
 - [`print(`*`<decant>`*`)`](https://kroy3.github.io/Decant/reference/print.decant.md)
   : Print a decant result.
 
+- [`print(`*`<decant_soup>`*`)`](https://kroy3.github.io/Decant/reference/print.decant_soup.md)
+  : Print a soup summary.
+
 - [`quick_labels()`](https://kroy3.github.io/Decant/reference/quick_labels.md)
   : Default clustering used when the caller supplies none.
 
 - [`read_10x_counts()`](https://kroy3.github.io/Decant/reference/read_10x_counts.md)
   : Read a 10x Genomics matrix directory into a sparse matrix.
+
+- [`read_10x_streaming()`](https://kroy3.github.io/Decant/reference/read_10x_streaming.md)
+  : Read a raw 10x matrix in a streaming pass, keeping only the cells.
 
 - [`run_benchmark()`](https://kroy3.github.io/Decant/reference/run_benchmark.md)
   : Global vs structured soup benchmark.
@@ -161,11 +167,18 @@
   : Multi-sample, splice-resolved contaminated experiment with ground
   truth.
 
+- [`soup_dispersion()`](https://kroy3.github.io/Decant/reference/soup_dispersion.md)
+  : Per-gene negative-binomial dispersion of the empty droplets, from
+  moments.
+
 - [`soup_eb()`](https://kroy3.github.io/Decant/reference/soup_eb.md) :
   Empirical-Bayes soup profiles per sample.
 
 - [`soup_profile_error()`](https://kroy3.github.io/Decant/reference/soup_profile_error.md)
   : Soup-profile recovery error.
+
+- [`soup_summary()`](https://kroy3.github.io/Decant/reference/soup_summary.md)
+  : Summary statistics of empty droplets (a streamed soup).
 
 - [`species_mix_hidden()`](https://kroy3.github.io/Decant/reference/species_mix_hidden.md)
   : Hidden-species view of a mixture: one species' cells, only its

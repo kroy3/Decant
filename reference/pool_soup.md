@@ -12,7 +12,9 @@ pool_soup(empties_total)
 
 - empties_total:
 
-  list of genes x droplets matrices, one per sample.
+  list of genes x droplets matrices (or
+  [`soup_summary()`](https://kroy3.github.io/Decant/reference/soup_summary.md)
+  objects), one per sample.
 
 ## Value
 

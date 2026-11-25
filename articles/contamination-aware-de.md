@@ -170,12 +170,12 @@ sessionInfo()
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] cli_3.6.6         knitr_1.52        rlang_1.3.0       xfun_0.62        
-#>  [5] otel_0.3.0        textshaping_1.0.5 jsonlite_2.0.0    statmod_1.5.2    
-#>  [9] htmltools_0.5.9   ragg_1.5.2        sass_0.4.10       locfit_1.5-9.12  
+#>  [5] otel_0.3.0        textshaping_1.1.0 jsonlite_2.0.0    statmod_1.5.2    
+#>  [9] htmltools_0.5.9   ragg_1.5.2        sass_0.5.0        locfit_1.5-9.12  
 #> [13] rmarkdown_2.32    grid_4.6.2        evaluate_1.0.5    jquerylib_0.1.4  
 #> [17] fastmap_1.2.0     yaml_2.3.12       lifecycle_1.0.5   compiler_4.6.2   
 #> [21] fs_2.1.0          limma_3.68.5      edgeR_4.10.7      lattice_0.23-1   
-#> [25] systemfonts_1.3.3 digest_0.6.39     R6_2.6.1          splines_4.6.2    
+#> [25] systemfonts_1.3.4 digest_0.6.39     R6_2.6.1          splines_4.6.2    
 #> [29] Matrix_1.7-6      bslib_0.12.0      tools_4.6.2       pkgdown_2.2.1    
 #> [33] cachem_1.1.0      desc_1.4.3
 ```

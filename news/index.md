@@ -2,6 +2,71 @@
 
 ## Decant (development version)
 
+- **Identifiability diagnostics and a classed warning.**
+  [`decant()`](https://kroy3.github.io/Decant/reference/decant.md)
+  returns `$identifiability`: per cluster, the weighted cosine and Gram
+  condition number between its profile and the soup, their
+  Jensen-Shannon divergence, the Fisher information about rho per UMI
+  and how many genes carry it, and rho’s standard error and 95% interval
+  width (from the absent-gene estimator’s negative binomial variance). A
+  cluster is flagged `weak` when its estimate rests on thin evidence
+  (interval wider than 0.05, almost no absent genes, or an implausible
+  own estimate), with the reason and what was done; the warning has
+  class `decant_weak_identifiability` (and `decant_unidentifiable` when
+  nothing can be estimated) and carries the table. Closeness to the soup
+  alone (`collinear`: cosine \> 0.9) is reported but does not flag a
+  cluster by default: in simulation such a cluster with enough absent
+  genes was estimated within 0.005 of the truth. `weak_rule = "any"`
+  flags it too. Known limitation, found with these diagnostics: a
+  borrowed cluster’s per-cell values still use its own absent genes and
+  can run high (simulation: cluster mean 0.26, borrowed 0.101, truth
+  0.103); not changed here.
+
+- **Large raw matrices without loading the empty droplets.**
+  [`read_10x_streaming()`](https://kroy3.github.io/Decant/reference/read_10x_streaming.md)
+  reads a raw 10x `matrix.mtx(.gz)` in two chunked passes and returns
+  the cells as a sparse matrix plus a
+  [`soup_summary()`](https://kroy3.github.io/Decant/reference/soup_summary.md):
+  per-gene sums, sums of squares and detection counts of the empty
+  droplets (O(genes)).
+  [`decant()`](https://kroy3.github.io/Decant/reference/decant.md),
+  [`ambient_global()`](https://kroy3.github.io/Decant/reference/ambient_global.md)
+  and
+  [`pool_soup()`](https://kroy3.github.io/Decant/reference/pool_soup.md)
+  accept such a summary wherever they took an empty-droplet matrix, with
+  identical results.
+  [`soup_dispersion()`](https://kroy3.github.io/Decant/reference/soup_dispersion.md)
+  gives per-gene negative binomial dispersions of the empties from those
+  moments. On hgmm 10k (6.8M barcodes, 1.9M empty droplets) the read
+  peaks at 1.8 GB instead of 4.3 GB, and the soup summary takes 12 MB.
+  Measured on that channel, the empties were never the main memory cost:
+  the cells (112k genes x 11k cells, 55M non-zeros) are.
+
+- **Correction is about 3x faster and uses half the memory.** The
+  cell-aware rules run over column blocks, group the absence likelihood
+  by distinct count pairs, and compute each tail probability once. On
+  hgmm 10k
+  [`decant()`](https://kroy3.github.io/Decant/reference/decant.md) takes
+  55 s instead of 193 s and the correction step peaks at 2.2 GB instead
+  of 4.7 GB above its input; output is unchanged (largest difference
+  2.6e-10).
+
+- **`bayes_absent` no longer fits degenerate absence calls in tiny
+  clusters.** The call now needs at least 50 genes with 5 or more
+  expected ambient counts in the cluster (and in the empties), and a
+  cluster whose share of genes called absent exceeds every other
+  cluster’s by more than 0.10 keeps the `bayes_cell` rule. In simulation
+  a 1-cell cluster kept 0.37 of its native counts before and 0.83 now
+  (`bayes_cell`: 0.83). The 9-cell brain cluster of 1i is the case this
+  targets; it has not been re-run.
+
+- **The bound 0 \<= corrected \<= raw is now asserted, not clipped.**
+  Every rule satisfies it by construction (checked over 64.5M entries of
+  the gate simulations before the change); a violation is now an error
+  of class `decant_invariant_violation`. New property tests cover random
+  negative binomial data across contamination levels and degenerate
+  clusters, and doublet-level counts.
+
 - **Real-tissue test of the default (pre-registered): no gain.** In six
   brain libraries (GSE272082), scored against genes foreign to each cell
   type in an independent C1 reference, `bayes_absent` removed the same

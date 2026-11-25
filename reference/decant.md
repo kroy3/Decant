@@ -34,9 +34,13 @@ decant(
 
   EITHER a genes x droplets matrix (single sample) OR a list of such
   matrices, one per sample, which triggers hierarchical pooling (Gap 3).
-  See
+  Each may instead be a
+  [`soup_summary()`](https://kroy3.github.io/Decant/reference/soup_summary.md)
+  (O(genes) statistics of the empty droplets), e.g. from
+  [`read_10x_streaming()`](https://kroy3.github.io/Decant/reference/read_10x_streaming.md),
+  which never loads the empties. See
   [`split_droplets()`](https://kroy3.github.io/Decant/reference/split_droplets.md)
-  to obtain these from a raw 10x matrix.
+  to obtain matrices from a raw 10x matrix.
 
 - sample_of:
 
@@ -111,4 +115,9 @@ an object of class `decant`: a list with \$corrected (same class as the
 input; + \$corrected_unspliced/\$corrected_spliced in splice mode),
 \$rho, \$rho_diagnostics (per-cluster, from
 [`estimate_rho_cluster()`](https://kroy3.github.io/Decant/reference/estimate_rho_cluster.md)),
-\$ambient (genes x samples), \$clusters, \$lysis (if basis), \$modules.
+\$identifiability (per cluster: cosine and Gram condition number kappa
+between the cluster and the soup, Jensen-Shannon divergence, Fisher
+information per UMI and its effective number of genes, rho's standard
+error and 95% CI width, and whether it is weak, why, and what was done;
+NULL when rho was supplied), \$ambient (genes x samples), \$clusters,
+\$lysis (if basis), \$modules.

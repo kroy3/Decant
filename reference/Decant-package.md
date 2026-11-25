@@ -15,6 +15,8 @@ Useful links:
 
 - <https://github.com/kroy3/Decant>
 
+- <https://decant.readthedocs.io/en/latest/>
+
 - Report bugs at <https://github.com/kroy3/Decant/issues>
 
 ## Author

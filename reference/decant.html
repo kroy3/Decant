@@ -91,7 +91,9 @@
 <dt id="arg-empties">empties<a class="anchor" aria-label="anchor" href="#arg-empties"></a></dt>
 <dd><p>EITHER a genes x droplets matrix (single sample) OR a list of
 such matrices, one per sample, which triggers hierarchical pooling (Gap 3).
-See <code><a href="split_droplets.html">split_droplets()</a></code> to obtain these from a raw 10x matrix.</p></dd>
+Each may instead be a <code><a href="soup_summary.html">soup_summary()</a></code> (O(genes) statistics of the empty
+droplets), e.g. from <code><a href="read_10x_streaming.html">read_10x_streaming()</a></code>, which never loads the
+empties. See <code><a href="split_droplets.html">split_droplets()</a></code> to obtain matrices from a raw 10x matrix.</p></dd>
 
 
 <dt id="arg-sample-of">sample_of<a class="anchor" aria-label="anchor" href="#arg-sample-of"></a></dt>
@@ -163,6 +165,11 @@ diagnostic (Gap 4).</p></dd>
     <p>an object of class <code>decant</code>: a list with $corrected (same class as
 the input; + $corrected_unspliced/$corrected_spliced in splice mode),
 $rho, $rho_diagnostics (per-cluster, from <code><a href="estimate_rho_cluster.html">estimate_rho_cluster()</a></code>),
+$identifiability (per cluster: cosine and Gram condition number kappa
+between the cluster and the soup, Jensen-Shannon divergence, Fisher
+information per UMI and its effective number of genes, rho's standard
+error and 95% CI width, and whether it is weak, why, and what was done;
+NULL when rho was supplied),
 $ambient (genes x samples), $clusters, $lysis (if basis), $modules.</p>
     </div>
 

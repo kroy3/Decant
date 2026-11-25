@@ -12,7 +12,9 @@ ambient_global(empty)
 
 - empty:
 
-  genes x droplets matrix of background counts (dense or sparse).
+  genes x droplets matrix of background counts (dense or sparse), or a
+  [`soup_summary()`](https://kroy3.github.io/Decant/reference/soup_summary.md)
+  of them.
 
 ## Value
 

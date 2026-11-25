@@ -53,8 +53,10 @@
 <url><loc>https://kroy3.github.io/Decant/reference/index.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/pool_soup.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/print.decant.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/reference/print.decant_soup.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/quick_labels.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/read_10x_counts.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/reference/read_10x_streaming.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/run_benchmark.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/score_correction.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/score_species_mix.html</loc></url>
@@ -64,8 +66,10 @@
 <url><loc>https://kroy3.github.io/Decant/reference/simulate_de.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/simulate_experiment.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/simulate_multimodal.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/reference/soup_dispersion.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/soup_eb.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/soup_profile_error.html</loc></url>
+<url><loc>https://kroy3.github.io/Decant/reference/soup_summary.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/species_mix_hidden.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/species_mix_truth.html</loc></url>
 <url><loc>https://kroy3.github.io/Decant/reference/split_droplets.html</loc></url>
